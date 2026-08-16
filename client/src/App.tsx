@@ -6,6 +6,13 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [health, setHealth] = useState('')
+
+  const checkHealth = async () => {
+    const response = await fetch('/api/health')
+    const data = await response.json()
+    setHealth(data.status)
+  }
 
   return (
     <>
@@ -28,6 +35,11 @@ function App() {
         >
           Count is {count}
         </button>
+	<button type="button" onClick={checkHealth}>
+  Check server health
+</button>
+
+{health && <p>Server status: {health}</p>}
       </section>
 
       <div className="ticks"></div>
