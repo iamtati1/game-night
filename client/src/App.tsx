@@ -7,11 +7,26 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
   const [health, setHealth] = useState('')
+  const [healthError, setHealthError] = useState('')
 
   const checkHealth = async () => {
-    const response = await fetch('/api/health')
-    const data = await response.json()
-    setHealth(data.status)
+    setHealth('')
+    setHealthError('')
+
+    try {
+      const response = await fetch('/api/health')
+
+      // fetch only rejects on network failure, so HTTP errors need an explicit check
+      if (!response.ok) {
+        setHealthError(`Server responded with ${response.status}`)
+        return
+      }
+
+      const data = await response.json()
+      setHealth(data.status)
+    } catch {
+      setHealthError('Could not reach the server. Is it running on port 3000?')
+    }
   }
 
   return (
@@ -35,11 +50,12 @@ function App() {
         >
           Count is {count}
         </button>
-	<button type="button" onClick={checkHealth}>
-  Check server health
-</button>
+        <button type="button" onClick={checkHealth}>
+          Check server health
+        </button>
 
-{health && <p>Server status: {health}</p>}
+        {health && <p>Server status: {health}</p>}
+        {healthError && <p role="alert">{healthError}</p>}
       </section>
 
       <div className="ticks"></div>
