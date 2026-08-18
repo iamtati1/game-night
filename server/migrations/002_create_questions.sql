@@ -16,18 +16,8 @@ CREATE TABLE questions (
         CHECK (LENGTH(prompt) <= 5000)
 );
 
-CREATE OR REPLACE FUNCTION update_questions_updated_at()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$;
-
 CREATE TRIGGER questions_updated_at
 BEFORE UPDATE ON questions
 FOR EACH ROW
 WHEN (OLD.* IS DISTINCT FROM NEW.*)
-EXECUTE FUNCTION update_questions_updated_at();
+EXECUTE FUNCTION update_updated_at();

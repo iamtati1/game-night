@@ -13,6 +13,11 @@ CREATE TABLE users (
 
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    -- email is stored already-normalized, so a plain unique constraint is both
+    -- sufficient and usable by "WHERE email = $1" during login.
+    CONSTRAINT users_email_unique
+        UNIQUE (email),
+
     CONSTRAINT users_email_not_blank
         CHECK (TRIM(email) <> ''),
 
@@ -35,24 +40,14 @@ CREATE TABLE users (
         CHECK (TRIM(password_hash) <> '')
 );
 
-CREATE UNIQUE INDEX users_email_unique_idx
-ON users (LOWER(email));
-
+-- Usernames keep their display case, so uniqueness must be case-insensitive.
+-- An expression index is the only way to do this; lookups must therefore be
+-- written as "WHERE LOWER(username) = LOWER($1)" to use it.
 CREATE UNIQUE INDEX users_username_unique_idx
 ON users (LOWER(username));
-
-CREATE OR REPLACE FUNCTION update_users_updated_at()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$;
 
 CREATE TRIGGER users_updated_at
 BEFORE UPDATE ON users
 FOR EACH ROW
 WHEN (OLD.* IS DISTINCT FROM NEW.*)
-EXECUTE FUNCTION update_users_updated_at();
+EXECUTE FUNCTION update_updated_at();
