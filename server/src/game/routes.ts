@@ -1,0 +1,333 @@
+import { Router, type Request, type Response } from "express";
+import { requireAuth } from "../auth/middleware.js";
+import * as db from "./queries.js";
+import { submitAnswerSchema } from "./schemas.js";
+import {
+    QUESTIONS_PER_SESSION,
+    QUESTION_TIME_LIMIT_MS,
+    isExpired,
+    isResumable,
+    pointsForAnswer,
+    scoreForSession,
+    xpForSession
+} from "./scoring.js";
+
+export const gameRouter = Router();
+
+gameRouter.use(requireAuth);
+
+interface ServedQuestion {
+    sessionQuestionId: string;
+    displayOrder: number;
+    questionNumber: number;
+    totalQuestions: number;
+    prompt: string;
+    options: db.OptionRow[];
+    servedAt: string;
+    deadlineAt: string;
+    msRemaining: number;
+}
+
+/** Fisher-Yates. Option order is randomized per serve and never persisted; the
+ *  client answers with an option id, so position carries no meaning. */
+function shuffle<T>(items: T[]): T[] {
+    const copy = [...items];
+
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+    }
+
+    return copy;
+}
+
+function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[]) {
+    return {
+        id: session.id,
+        status: session.status,
+        score: session.score,
+        xpEarned: session.xp_earned,
+        startedAt: session.started_at.toISOString(),
+        completedAt: session.completed_at?.toISOString() ?? null,
+        totalQuestions: questions.length,
+        correctCount: questions.filter((q) => q.is_correct === true).length,
+        incorrectCount: questions.filter((q) => q.is_correct === false).length,
+        timedOutCount: questions.filter((q) => q.status === "timed_out").length,
+        // Everything below reads from snapshots, so a later edit to the source
+        // question cannot rewrite what this player saw.
+        questions: questions.map((q) => ({
+            displayOrder: q.display_order,
+            prompt: q.prompt_text,
+            status: q.status,
+            selectedOption: q.selected_option_text,
+            correctOption: q.correct_option_text,
+            isCorrect: q.is_correct,
+            responseTimeMs:
+                q.served_at && q.answered_at
+                    ? q.answered_at.getTime() - q.served_at.getTime()
+                    : null,
+            pointsAwarded:
+                q.is_correct === true && q.served_at && q.answered_at
+                    ? pointsForAnswer(true, q.answered_at.getTime() - q.served_at.getTime())
+                    : 0
+        }))
+    };
+}
+
+async function finishSession(sessionId: string): Promise<db.GameSessionRow> {
+    const questions = await db.listSessionQuestions(sessionId);
+    const scored = questions.map((q) => ({
+        isCorrect: q.is_correct,
+        servedAt: q.served_at,
+        answeredAt: q.answered_at
+    }));
+
+    return db.completeSession(sessionId, scoreForSession(scored), xpForSession(scored));
+}
+
+/**
+ * Adjudicates any pending question whose 30s window has passed, then returns the
+ * next genuinely playable question. Timeouts are resolved lazily on the next
+ * request rather than by a background job.
+ */
+async function nextPlayableQuestion(
+    sessionId: string,
+    now: Date
+): Promise<db.SessionQuestionRow | null> {
+    for (;;) {
+        const question = await db.findNextPendingQuestion(sessionId);
+
+        if (!question) {
+            return null;
+        }
+
+        if (question.served_at && isExpired(question.served_at, now)) {
+            const correct = await db.findCorrectOptionText(question.question_id);
+            await db.recordTimeout(question.id, correct ?? "(unavailable)");
+            continue;
+        }
+
+        return question;
+    }
+}
+
+async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQuestion> {
+    const servedAt = question.served_at ?? (await db.markServed(question.id));
+    const options = await db.listActiveOptions(question.question_id);
+    const deadline = servedAt.getTime() + QUESTION_TIME_LIMIT_MS;
+
+    return {
+        sessionQuestionId: question.id,
+        displayOrder: question.display_order,
+        questionNumber: question.display_order,
+        totalQuestions: QUESTIONS_PER_SESSION,
+        prompt: question.prompt_text,
+        // Note what is absent: is_correct and correct_option_text never appear here.
+        options: shuffle(options),
+        servedAt: servedAt.toISOString(),
+        deadlineAt: new Date(deadline).toISOString(),
+        msRemaining: Math.max(0, deadline - Date.now())
+    };
+}
+
+// POST /api/sessions -- start a new game, or resume one still inside its window.
+gameRouter.post("/sessions", async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const now = new Date();
+    const existing = await db.findInProgressSession(userId);
+
+    if (existing) {
+        if (isResumable(existing.started_at, now)) {
+            const question = await nextPlayableQuestion(existing.id, now);
+
+            if (!question) {
+                const finished = await finishSession(existing.id);
+                res.status(200).json({
+                    resumed: true,
+                    session: summarize(finished, await db.listSessionQuestions(finished.id))
+                });
+                return;
+            }
+
+            res.status(200).json({
+                resumed: true,
+                sessionId: existing.id,
+                question: await serveQuestion(question)
+            });
+            return;
+        }
+
+        // Past the resume window: lazy abandonment, exactly as designed.
+        await db.abandonSession(existing.id);
+    }
+
+    const available = await db.countActiveQuestions();
+
+    if (available < QUESTIONS_PER_SESSION) {
+        res.status(503).json({
+            error: "Not enough questions available",
+            details: [
+                {
+                    field: "questions",
+                    message: `Need ${QUESTIONS_PER_SESSION} active questions, found ${available}`
+                }
+            ]
+        });
+        return;
+    }
+
+    const session = await db.createSessionWithQuestions(userId);
+    const question = await nextPlayableQuestion(session.id, now);
+
+    res.status(201).json({
+        resumed: false,
+        sessionId: session.id,
+        question: question ? await serveQuestion(question) : null
+    });
+});
+
+// GET /api/sessions/current -- the question on screen. Fetching starts its timer.
+gameRouter.get("/sessions/current", async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const now = new Date();
+    const session = await db.findInProgressSession(userId);
+
+    if (!session) {
+        res.status(404).json({ error: "No game in progress" });
+        return;
+    }
+
+    if (!isResumable(session.started_at, now)) {
+        await db.abandonSession(session.id);
+        res.status(410).json({ error: "Session expired" });
+        return;
+    }
+
+    const question = await nextPlayableQuestion(session.id, now);
+
+    if (!question) {
+        const finished = await finishSession(session.id);
+        res.status(200).json({
+            complete: true,
+            session: summarize(finished, await db.listSessionQuestions(finished.id))
+        });
+        return;
+    }
+
+    res.status(200).json({
+        complete: false,
+        sessionId: session.id,
+        question: await serveQuestion(question)
+    });
+});
+
+// POST /api/sessions/:id/answers -- the server decides correctness and timing.
+gameRouter.post("/sessions/:id/answers", async (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const now = new Date();
+    const parsed = submitAnswerSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+    }
+
+    // Express 5 types a route param as string | string[]; coerce to the scalar.
+    const sessionId = String(req.params.id);
+    const session = await db.findSessionForUser(sessionId, userId);
+
+    // 404 rather than 403: do not confirm that someone else's session id exists.
+    if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+    }
+
+    if (session.status !== "in_progress") {
+        res.status(409).json({ error: `Session is ${session.status}` });
+        return;
+    }
+
+    const question = await db.findSessionQuestion(parsed.data.sessionQuestionId, session.id);
+
+    if (!question) {
+        res.status(404).json({ error: "Question not part of this session" });
+        return;
+    }
+
+    if (question.status !== "pending") {
+        res.status(409).json({ error: `Question already ${question.status}` });
+        return;
+    }
+
+    if (!question.served_at) {
+        res.status(409).json({ error: "Question has not been served yet" });
+        return;
+    }
+
+    const correctOptionText = (await db.findCorrectOptionText(question.question_id)) ?? "(unavailable)";
+
+    // The deadline is enforced here, against the server's own served_at. A late
+    // answer is refused outright, not merely scored zero.
+    if (isExpired(question.served_at, now)) {
+        await db.recordTimeout(question.id, correctOptionText);
+
+        const remaining = await nextPlayableQuestion(session.id, now);
+        const finished = remaining ? null : await finishSession(session.id);
+
+        res.status(200).json({
+            outcome: "timed_out",
+            pointsAwarded: 0,
+            correctOption: correctOptionText,
+            complete: !remaining,
+            question: remaining ? await serveQuestion(remaining) : null,
+            session: finished
+                ? summarize(finished, await db.listSessionQuestions(finished.id))
+                : null
+        });
+        return;
+    }
+
+    const option = await db.findOption(parsed.data.selectedOptionId, question.question_id);
+
+    if (!option) {
+        res.status(400).json({ error: "Option does not belong to this question" });
+        return;
+    }
+
+    const answeredAt = await db.recordAnswer(
+        question.id,
+        option.id,
+        option.optionText,
+        correctOptionText,
+        option.isCorrect
+    );
+
+    const elapsedMs = answeredAt.getTime() - question.served_at.getTime();
+    const pointsAwarded = pointsForAnswer(option.isCorrect, elapsedMs);
+
+    const remaining = await nextPlayableQuestion(session.id, now);
+    const finished = remaining ? null : await finishSession(session.id);
+
+    res.status(200).json({
+        outcome: option.isCorrect ? "correct" : "incorrect",
+        pointsAwarded,
+        responseTimeMs: elapsedMs,
+        correctOption: correctOptionText,
+        complete: !remaining,
+        question: remaining ? await serveQuestion(remaining) : null,
+        session: finished ? summarize(finished, await db.listSessionQuestions(finished.id)) : null
+    });
+});
+
+// GET /api/sessions/:id -- results, rendered entirely from snapshots.
+gameRouter.get("/sessions/:id", async (req: Request, res: Response) => {
+    const sessionId = String(req.params.id);
+    const session = await db.findSessionForUser(sessionId, req.user!.id);
+
+    if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+    }
+
+    res.status(200).json({ session: summarize(session, await db.listSessionQuestions(session.id)) });
+});

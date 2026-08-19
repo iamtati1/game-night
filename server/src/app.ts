@@ -5,6 +5,7 @@ import express, {
 } from "express";
 import { authRouter, meHandler } from "./auth/routes.js";
 import { pool } from "./db.js";
+import { gameRouter } from "./game/routes.js";
 import { sessionMiddleware } from "./session.js";
 
 const app = express();
@@ -41,6 +42,8 @@ app.get("/api/ready", async (_req, res) => {
 app.use("/api/auth", authRouter);
 
 app.get("/api/users/me", ...meHandler);
+
+app.use("/api", gameRouter);
 
 // Unmatched routes fall through to here. Responding with JSON keeps the API
 // consistent, so clients calling response.json() never hit Express's HTML page.
