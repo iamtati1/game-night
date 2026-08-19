@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
+import { ELIGIBLE_QUESTION_PREDICATE } from "../questions/queries.js";
 import { QUESTIONS_PER_SESSION } from "./scoring.js";
 
 export interface GameSessionRow {
@@ -106,7 +107,11 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
                     q.prompt,
                     'pending'
              FROM (
-                 SELECT id, prompt FROM questions WHERE is_active ORDER BY RANDOM() LIMIT $2
+                 SELECT q.id, q.prompt
+                 FROM questions q
+                 WHERE ${ELIGIBLE_QUESTION_PREDICATE}
+                 ORDER BY RANDOM()
+                 LIMIT $2
              ) AS q`,
             [sessionId, QUESTIONS_PER_SESSION]
         );

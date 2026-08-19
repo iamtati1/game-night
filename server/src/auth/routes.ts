@@ -1,6 +1,7 @@
 import argon2 from "argon2";
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "./middleware.js";
+import { loginRateLimiter } from "./rateLimit.js";
 import { findActiveUserByEmail, findActiveUserById, insertUser } from "./queries.js";
 import { loginSchema, registerSchema, toFieldErrors } from "./schemas.js";
 
@@ -75,7 +76,7 @@ authRouter.post("/register", async (req: Request, res: Response) => {
     }
 });
 
-authRouter.post("/login", async (req: Request, res: Response) => {
+authRouter.post("/login", loginRateLimiter, async (req: Request, res: Response) => {
     const parsed = loginSchema.safeParse(req.body);
 
     if (!parsed.success) {

@@ -1,5 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
+import { countEligibleQuestions } from "../questions/queries.js";
+import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
 import { submitAnswerSchema } from "./schemas.js";
 import {
@@ -22,7 +24,7 @@ interface ServedQuestion {
     questionNumber: number;
     totalQuestions: number;
     prompt: string;
-    options: db.OptionRow[];
+    options: { id: string; text: string }[];
     servedAt: string;
     deadlineAt: string;
     msRemaining: number;
@@ -74,6 +76,23 @@ function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[
     };
 }
 
+/**
+ * Points banked in this session so far, recomputed from stored answers. The
+ * client displays this value and never accumulates its own tally, so a reload
+ * mid-game cannot desynchronise the score from the server's truth.
+ */
+async function scoreSoFar(sessionId: string): Promise<number> {
+    const questions = await db.listSessionQuestions(sessionId);
+
+    return scoreForSession(
+        questions.map((q) => ({
+            isCorrect: q.is_correct,
+            servedAt: q.served_at,
+            answeredAt: q.answered_at
+        }))
+    );
+}
+
 async function finishSession(sessionId: string): Promise<db.GameSessionRow> {
     const questions = await db.listSessionQuestions(sessionId);
     const scored = questions.map((q) => ({
@@ -123,7 +142,7 @@ async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQue
         totalQuestions: QUESTIONS_PER_SESSION,
         prompt: question.prompt_text,
         // Note what is absent: is_correct and correct_option_text never appear here.
-        options: shuffle(options),
+        options: shuffle(options).map((o) => ({ id: o.id, text: o.option_text })),
         servedAt: servedAt.toISOString(),
         deadlineAt: new Date(deadline).toISOString(),
         msRemaining: Math.max(0, deadline - Date.now())
@@ -152,6 +171,7 @@ gameRouter.post("/sessions", async (req: Request, res: Response) => {
             res.status(200).json({
                 resumed: true,
                 sessionId: existing.id,
+                scoreSoFar: await scoreSoFar(existing.id),
                 question: await serveQuestion(question)
             });
             return;
@@ -161,7 +181,11 @@ gameRouter.post("/sessions", async (req: Request, res: Response) => {
         await db.abandonSession(existing.id);
     }
 
-    const available = await db.countActiveQuestions();
+    // Optional top-up. Never throws, never contacts the provider when the local
+    // pool is already healthy, and never turns a provider failure into a 500.
+    await ensureQuestionPool();
+
+    const available = await countEligibleQuestions();
 
     if (available < QUESTIONS_PER_SESSION) {
         res.status(503).json({
@@ -182,6 +206,7 @@ gameRouter.post("/sessions", async (req: Request, res: Response) => {
     res.status(201).json({
         resumed: false,
         sessionId: session.id,
+        scoreSoFar: 0,
         question: question ? await serveQuestion(question) : null
     });
 });
@@ -217,6 +242,7 @@ gameRouter.get("/sessions/current", async (req: Request, res: Response) => {
     res.status(200).json({
         complete: false,
         sessionId: session.id,
+        scoreSoFar: await scoreSoFar(session.id),
         question: await serveQuestion(question)
     });
 });
@@ -277,6 +303,7 @@ gameRouter.post("/sessions/:id/answers", async (req: Request, res: Response) => 
         res.status(200).json({
             outcome: "timed_out",
             pointsAwarded: 0,
+            scoreSoFar: await scoreSoFar(session.id),
             correctOption: correctOptionText,
             complete: !remaining,
             question: remaining ? await serveQuestion(remaining) : null,
@@ -311,6 +338,7 @@ gameRouter.post("/sessions/:id/answers", async (req: Request, res: Response) => 
     res.status(200).json({
         outcome: option.isCorrect ? "correct" : "incorrect",
         pointsAwarded,
+        scoreSoFar: await scoreSoFar(session.id),
         responseTimeMs: elapsedMs,
         correctOption: correctOptionText,
         complete: !remaining,
