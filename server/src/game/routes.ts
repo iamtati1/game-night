@@ -16,7 +16,10 @@ import {
 
 export const gameRouter = Router();
 
-gameRouter.use(requireAuth);
+// requireAuth is attached per route rather than with gameRouter.use(). Because
+// this router is mounted at /api, a router-wide guard would intercept every
+// unmatched /api/* path and answer 401 instead of letting it fall through to
+// the JSON 404 handler.
 
 interface ServedQuestion {
     sessionQuestionId: string;
@@ -150,7 +153,7 @@ async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQue
 }
 
 // POST /api/sessions -- start a new game, or resume one still inside its window.
-gameRouter.post("/sessions", async (req: Request, res: Response) => {
+gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
     const existing = await db.findInProgressSession(userId);
@@ -212,7 +215,7 @@ gameRouter.post("/sessions", async (req: Request, res: Response) => {
 });
 
 // GET /api/sessions/current -- the question on screen. Fetching starts its timer.
-gameRouter.get("/sessions/current", async (req: Request, res: Response) => {
+gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
     const session = await db.findInProgressSession(userId);
@@ -248,7 +251,7 @@ gameRouter.get("/sessions/current", async (req: Request, res: Response) => {
 });
 
 // POST /api/sessions/:id/answers -- the server decides correctness and timing.
-gameRouter.post("/sessions/:id/answers", async (req: Request, res: Response) => {
+gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
     const parsed = submitAnswerSchema.safeParse(req.body);
@@ -348,7 +351,7 @@ gameRouter.post("/sessions/:id/answers", async (req: Request, res: Response) => 
 });
 
 // GET /api/sessions/:id -- results, rendered entirely from snapshots.
-gameRouter.get("/sessions/:id", async (req: Request, res: Response) => {
+gameRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Response) => {
     const sessionId = String(req.params.id);
     const session = await db.findSessionForUser(sessionId, req.user!.id);
 
