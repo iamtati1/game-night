@@ -546,3 +546,26 @@ input:focus {
         gap: 0.6rem;
     }
 }
+
+/* ---------- per-game identity ----------
+   One accent token per game, swapped by a slug class. Adding a game means
+   adding three lines here, not touching any component. */
+
+.game-chip {
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--game-accent, var(--border));
+    border-radius: 999px;
+    color: var(--game-accent, var(--muted));
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.game-code-blitz {
+    --game-accent: #8b5cf6;
+}
+
+.game-tick {
+    --game-accent: #f0a94a;
+}

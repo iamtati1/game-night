@@ -116,6 +116,9 @@ export function HistoryPage() {
                     <li key={session.id}>
                         <Link className="history-row" to={targetFor(session)}>
                             <div className="history-main">
+                                <span className={`game-chip game-${session.game.slug}`}>
+                                    {session.game.name}
+                                </span>
                                 <StatusTag status={session.status} />
                                 <span className="muted">{formatWhen(session)}</span>
                             </div>
@@ -131,8 +134,9 @@ export function HistoryPage() {
                                     {session.status === "completed" ? `${session.xpEarned} XP` : "— XP"}
                                 </span>
                                 <span className="muted">
-                                    {session.correctCount}/{session.totalQuestions} correct
-                                    {session.timedOutCount > 0 && ` · ${session.timedOutCount} timed out`}
+                                    {session.progress.correct}/{session.progress.total} correct
+                                    {session.progress.timedOut > 0 &&
+                                        ` · ${session.progress.timedOut} timed out`}
                                 </span>
                             </div>
                         </Link>

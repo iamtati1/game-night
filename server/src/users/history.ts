@@ -1,23 +1,23 @@
-import { toNumber } from "./stats.js";
+import { toNumber, toProgress, type GameRef, type Numeric, type Progress } from "./shared.js";
+
+export type { GameRef, Progress };
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 50;
 
 export interface HistorySession {
     id: string;
+    game: GameRef;
     status: string;
-    /** The stored value, including 0 for abandoned/in-progress games. The UI
-     *  renders "—" for those; the API does not lie about what the row holds. */
+    /** Stored value, including 0 for abandoned/in-progress games. The UI shows
+     *  "—" for those; the API does not misreport what the row holds. */
     score: number;
     xpEarned: number;
     startedAt: string;
     /** COALESCE(completed_at, abandoned_at). null while in progress -- `status`
      *  already says which kind of ending it was. */
     endedAt: string | null;
-    totalQuestions: number;
-    correctCount: number;
-    incorrectCount: number;
-    timedOutCount: number;
+    progress: Progress;
 }
 
 export interface Pagination {
@@ -32,16 +32,16 @@ export interface HistoryPage {
     pagination: Pagination;
 }
 
-type Numeric = string | number | null | undefined;
-
 export interface HistorySessionRow {
     id: string;
+    game_slug: string;
+    game_name: string;
     status: string;
     score: Numeric;
     xp_earned: Numeric;
     started_at: Date;
     ended_at: Date | null;
-    total_questions: Numeric;
+    total_units: Numeric;
     correct_count: Numeric;
     incorrect_count: Numeric;
     timed_out_count: Numeric;
@@ -52,15 +52,13 @@ export interface HistorySessionRow {
 export function toHistorySession(row: HistorySessionRow): HistorySession {
     return {
         id: row.id,
+        game: { slug: row.game_slug, name: row.game_name },
         status: row.status,
         score: toNumber(row.score),
         xpEarned: toNumber(row.xp_earned),
         startedAt: row.started_at.toISOString(),
         endedAt: row.ended_at ? row.ended_at.toISOString() : null,
-        totalQuestions: toNumber(row.total_questions),
-        correctCount: toNumber(row.correct_count),
-        incorrectCount: toNumber(row.incorrect_count),
-        timedOutCount: toNumber(row.timed_out_count)
+        progress: toProgress(row)
     };
 }
 

@@ -13,12 +13,14 @@ import { historyQuerySchema } from "./schemas.js";
 function row(overrides: Partial<HistorySessionRow> = {}): HistorySessionRow {
     return {
         id: "31",
+        game_slug: "code-blitz",
+        game_name: "Code Blitz",
         status: "completed",
         score: 450,
         xp_earned: 55,
         started_at: new Date("2026-08-20T02:05:11.021Z"),
         ended_at: new Date("2026-08-20T02:07:48.442Z"),
-        total_questions: "10",
+        total_units: "10",
         correct_count: "3",
         incorrect_count: "7",
         timed_out_count: "0",
@@ -31,10 +33,15 @@ describe("toHistorySession", () => {
     it("coerces Postgres count strings into numbers", () => {
         const session = toHistorySession(row());
 
-        expect(session.totalQuestions).toBe(10);
-        expect(session.correctCount).toBe(3);
-        expect(session.incorrectCount).toBe(7);
-        expect(session.timedOutCount).toBe(0);
+        expect(session.progress).toEqual({ total: 10, correct: 3, incorrect: 7, timedOut: 0 });
+    });
+
+    it("attaches the game the session belongs to", () => {
+        // Game-agnostic shape: Code Blitz counts questions, Tick will count
+        // rounds, and the response looks identical either way.
+        const session = toHistorySession(row({ game_slug: "tick", game_name: "Tick" }));
+
+        expect(session.game).toEqual({ slug: "tick", name: "Tick" });
     });
 
     it("serializes timestamps as ISO strings", () => {
@@ -66,15 +73,12 @@ describe("toHistorySession", () => {
     it("keeps every numeric field a number, never a string", () => {
         const session = toHistorySession(row());
 
-        for (const key of [
-            "score",
-            "xpEarned",
-            "totalQuestions",
-            "correctCount",
-            "incorrectCount",
-            "timedOutCount"
-        ] as const) {
+        for (const key of ["score", "xpEarned"] as const) {
             expect(typeof session[key], `${key} must be numeric`).toBe("number");
+        }
+
+        for (const [key, value] of Object.entries(session.progress)) {
+            expect(typeof value, `progress.${key} must be numeric`).toBe("number");
         }
     });
 });

@@ -82,18 +82,29 @@ export interface FieldError {
     message: string;
 }
 
+export interface GameRef {
+    slug: string;
+    name: string;
+}
+
+/** Game-agnostic round summary: Code Blitz counts questions, Tick counts rounds. */
+export interface Progress {
+    total: number;
+    correct: number;
+    incorrect: number;
+    timedOut: number;
+}
+
 export interface HistorySession {
     id: string;
+    game: GameRef;
     status: "completed" | "abandoned" | "in_progress";
     /** Stored value. 0 for abandoned/in-progress games, which the UI shows as "—". */
     score: number;
     xpEarned: number;
     startedAt: string;
     endedAt: string | null;
-    totalQuestions: number;
-    correctCount: number;
-    incorrectCount: number;
-    timedOutCount: number;
+    progress: Progress;
 }
 
 export interface HistoryResponse {
