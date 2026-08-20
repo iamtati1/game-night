@@ -492,3 +492,57 @@ input:focus {
         font-size: 0.87rem;
     }
 }
+
+/* ---------- game history ---------- */
+
+.breakdown.history li {
+    padding: 0;
+}
+
+.history-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 1rem 0.25rem;
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+
+.history-row:hover {
+    background: var(--surface);
+}
+
+.history-main {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-size: 0.9rem;
+}
+
+.history-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.tag.in-progress {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+@media (max-width: 560px) {
+    .history-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .history-stats {
+        gap: 0.6rem;
+    }
+}

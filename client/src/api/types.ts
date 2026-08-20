@@ -81,3 +81,27 @@ export interface FieldError {
     field: string;
     message: string;
 }
+
+export interface HistorySession {
+    id: string;
+    status: "completed" | "abandoned" | "in_progress";
+    /** Stored value. 0 for abandoned/in-progress games, which the UI shows as "—". */
+    score: number;
+    xpEarned: number;
+    startedAt: string;
+    endedAt: string | null;
+    totalQuestions: number;
+    correctCount: number;
+    incorrectCount: number;
+    timedOutCount: number;
+}
+
+export interface HistoryResponse {
+    sessions: HistorySession[];
+    pagination: {
+        limit: number;
+        offset: number;
+        total: number;
+        hasMore: boolean;
+    };
+}

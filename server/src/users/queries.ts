@@ -1,4 +1,10 @@
 import { pool } from "../db.js";
+import {
+    toHistoryPage,
+    totalFromRows,
+    type HistoryPage,
+    type HistorySessionRow
+} from "./history.js";
 import { toUserStats, type UserStats, type UserStatsRow } from "./stats.js";
 
 /**
@@ -46,4 +52,73 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     );
 
     return toUserStats(result.rows[0]!);
+}
+
+/**
+ * One page of a player's games, newest first.
+ *
+ * Paginate first, aggregate second. If the per-question counts were joined
+ * before the LIMIT, the aggregate would run for every session the player has
+ * ever played in order to return ten rows. The CTE narrows to the page, then
+ * LEFT JOIN LATERAL executes exactly `limit` times.
+ *
+ * ORDER BY started_at DESC, id DESC is a *total* order -- id is unique, so no
+ * two rows can tie. Without the id, two sessions sharing a started_at could
+ * appear on both page 1 and page 2, or on neither.
+ *
+ * LEFT (not INNER) so a session with no question rows still appears; COALESCE
+ * turns its missing counts into zeros.
+ */
+export async function listUserSessions(
+    userId: string,
+    limit: number,
+    offset: number
+): Promise<HistoryPage> {
+    const result = await pool.query<HistorySessionRow>(
+        `WITH page AS (
+             SELECT id,
+                    status,
+                    score,
+                    xp_earned,
+                    started_at,
+                    COALESCE(completed_at, abandoned_at) AS ended_at,
+                    COUNT(*) OVER ()                     AS total_rows
+             FROM game_sessions
+             WHERE user_id = $1
+             ORDER BY started_at DESC, id DESC
+             LIMIT $2 OFFSET $3
+         )
+         SELECT p.*,
+                COALESCE(q.total, 0)     AS total_questions,
+                COALESCE(q.correct, 0)   AS correct_count,
+                COALESCE(q.incorrect, 0) AS incorrect_count,
+                COALESCE(q.timed_out, 0) AS timed_out_count
+         FROM page p
+         LEFT JOIN LATERAL (
+             SELECT COUNT(*)                                     AS total,
+                    COUNT(*) FILTER (WHERE is_correct)           AS correct,
+                    COUNT(*) FILTER (WHERE is_correct = FALSE)   AS incorrect,
+                    COUNT(*) FILTER (WHERE status = 'timed_out') AS timed_out
+             FROM session_questions
+             WHERE game_session_id = p.id
+         ) q ON TRUE
+         ORDER BY p.started_at DESC, p.id DESC`,
+        [userId, limit, offset]
+    );
+
+    // COUNT(*) OVER () yields nothing when the page is empty, which happens for
+    // a player with no games and for an offset past the end. Those two cases
+    // need different UI, so the count is fetched separately rather than assumed.
+    const total = totalFromRows(result.rows) ?? (await countUserSessions(userId));
+
+    return toHistoryPage(result.rows, limit, offset, total);
+}
+
+async function countUserSessions(userId: string): Promise<number> {
+    const result = await pool.query<{ count: string }>(
+        `SELECT COUNT(*) AS count FROM game_sessions WHERE user_id = $1`,
+        [userId]
+    );
+
+    return Number(result.rows[0]!.count);
 }

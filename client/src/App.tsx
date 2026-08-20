@@ -2,6 +2,7 @@ import { Link, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { GamePage } from "./pages/GamePage.js";
+import { HistoryPage } from "./pages/HistoryPage.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { RegisterPage } from "./pages/RegisterPage.js";
@@ -18,6 +19,7 @@ function Header() {
 
             {user && (
                 <nav>
+                    <Link to="/history">History</Link>
                     <span className="muted">{user.username}</span>
                     <button className="button ghost small" onClick={() => void logout()}>
                         Log out
@@ -43,6 +45,14 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <GamePage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/history"
+                        element={
+                            <ProtectedRoute>
+                                <HistoryPage />
                             </ProtectedRoute>
                         }
                     />
