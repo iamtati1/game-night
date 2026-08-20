@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
+import { CODE_BLITZ } from "../games/constants.js";
 import { ELIGIBLE_QUESTION_PREDICATE } from "../questions/queries.js";
 import { QUESTIONS_PER_SESSION } from "./scoring.js";
 
@@ -87,11 +88,14 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
     try {
         await client.query("BEGIN");
 
+        // The game is resolved by slug inside the INSERT rather than passed in,
+        // so a caller cannot accidentally attribute a Code Blitz session to
+        // another game.
         const session = await client.query<GameSessionRow>(
-            `INSERT INTO game_sessions (user_id)
-             VALUES ($1)
+            `INSERT INTO game_sessions (user_id, game_id)
+             VALUES ($1, (SELECT id FROM games WHERE slug = $2))
              RETURNING id, status, started_at, completed_at, abandoned_at, score, xp_earned`,
-            [userId]
+            [userId, CODE_BLITZ]
         );
 
         const sessionId = session.rows[0]!.id;
