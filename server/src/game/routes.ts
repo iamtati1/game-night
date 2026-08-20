@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { countEligibleQuestions } from "../questions/queries.js";
+import { isActiveSessionConflict } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
 import { submitAnswerSchema } from "./schemas.js";
@@ -96,6 +97,34 @@ async function scoreSoFar(sessionId: string): Promise<number> {
     );
 }
 
+/**
+ * The "you already have a game" response. Extracted so the concurrent-request
+ * handler below can reuse it rather than duplicating the completion branch.
+ */
+async function respondResumed(
+    res: Response,
+    session: db.GameSessionRow,
+    now: Date
+): Promise<void> {
+    const question = await nextPlayableQuestion(session.id, now);
+
+    if (!question) {
+        const finished = await finishSession(session.id);
+        res.status(200).json({
+            resumed: true,
+            session: summarize(finished, await db.listSessionQuestions(finished.id))
+        });
+        return;
+    }
+
+    res.status(200).json({
+        resumed: true,
+        sessionId: session.id,
+        scoreSoFar: await scoreSoFar(session.id),
+        question: await serveQuestion(question)
+    });
+}
+
 async function finishSession(sessionId: string): Promise<db.GameSessionRow> {
     const questions = await db.listSessionQuestions(sessionId);
     const scored = questions.map((q) => ({
@@ -160,23 +189,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
 
     if (existing) {
         if (isResumable(existing.started_at, now)) {
-            const question = await nextPlayableQuestion(existing.id, now);
-
-            if (!question) {
-                const finished = await finishSession(existing.id);
-                res.status(200).json({
-                    resumed: true,
-                    session: summarize(finished, await db.listSessionQuestions(finished.id))
-                });
-                return;
-            }
-
-            res.status(200).json({
-                resumed: true,
-                sessionId: existing.id,
-                scoreSoFar: await scoreSoFar(existing.id),
-                question: await serveQuestion(question)
-            });
+            await respondResumed(res, existing, now);
             return;
         }
 
@@ -203,7 +216,33 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
         return;
     }
 
-    const session = await db.createSessionWithQuestions(userId);
+    let session: db.GameSessionRow;
+
+    try {
+        session = await db.createSessionWithQuestions(userId);
+    } catch (err) {
+        // The check above (findInProgressSession) and this insert are not atomic,
+        // so two concurrent requests can both pass the check -- React StrictMode
+        // double-invoking an effect is enough to trigger it. Rather than repeat
+        // the check-then-insert race, let the database arbitrate: whichever
+        // request loses the unique index resumes the winner's session, which is
+        // the correct outcome anyway.
+        if (!isActiveSessionConflict(err)) {
+            throw err;
+        }
+
+        const winner = await db.findInProgressSession(userId);
+
+        if (!winner) {
+            // The winner vanished between the rejection and this read. Nothing
+            // sensible to resume, so surface the original failure.
+            throw err;
+        }
+
+        await respondResumed(res, winner, now);
+        return;
+    }
+
     const question = await nextPlayableQuestion(session.id, now);
 
     res.status(201).json({
