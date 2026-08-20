@@ -1,14 +1,18 @@
 // Pure scoring rules: no database, no Express, no clock. Everything is passed
 // in, which makes this the one part of gameplay that is trivially unit-testable.
 
+import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
+
 export const QUESTION_TIME_LIMIT_MS = 30_000;
 export const SESSION_RESUME_WINDOW_MS = 15 * 60 * 1000;
 export const QUESTIONS_PER_SESSION = 10;
 
 const BASE_POINTS = 100;
 const MAX_SPEED_BONUS = 50;
-const XP_PER_CORRECT = 10;
-const XP_COMPLETION_BONUS = 25;
+// Derived from the platform rule rather than hardcoded, so a perfect game is
+// worth the same XP here as in every other game. Evaluates to 10 and 25.
+const XP_PER_CORRECT = perUnitXp(QUESTIONS_PER_SESSION);
+const XP_COMPLETION_BONUS = COMPLETION_BONUS_XP;
 
 /**
  * Points for a single answer. Speed bonus decays linearly across the answer
