@@ -7,6 +7,7 @@ import { authRouter, meHandler } from "./auth/routes.js";
 import { pool } from "./db.js";
 import { gameRouter } from "./game/routes.js";
 import { sessionMiddleware } from "./session.js";
+import { usersRouter } from "./users/routes.js";
 
 const app = express();
 
@@ -42,6 +43,8 @@ app.get("/api/ready", async (_req, res) => {
 app.use("/api/auth", authRouter);
 
 app.get("/api/users/me", ...meHandler);
+
+app.use("/api/users", usersRouter);
 
 app.use("/api", gameRouter);
 
