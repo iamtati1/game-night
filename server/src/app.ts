@@ -3,16 +3,50 @@ import express, {
     type Request,
     type Response
 } from "express";
+import { authRouter, meHandler } from "./auth/routes.js";
+import { pool } from "./db.js";
+import { gameRouter } from "./game/routes.js";
+import { sessionMiddleware } from "./session.js";
+import { usersRouter } from "./users/routes.js";
 
 const app = express();
 
 app.use(express.json());
 
+// Mounted BEFORE the session middleware on purpose. express-session reads the
+// session store whenever a request carries a session cookie, and liveness must
+// never depend on PostgreSQL.
 app.get("/api/health", (_req, res) => {
     res.json({
         status: "ok"
     });
 });
+
+app.use(sessionMiddleware);
+
+app.get("/api/ready", async (_req, res) => {
+    try {
+        await pool.query("SELECT 1");
+
+        res.status(200).json({
+            status: "ready"
+        });
+    } catch (err) {
+        console.error("Database readiness check failed:", err);
+
+        res.status(503).json({
+            status: "unavailable"
+        });
+    }
+});
+
+app.use("/api/auth", authRouter);
+
+app.get("/api/users/me", ...meHandler);
+
+app.use("/api/users", usersRouter);
+
+app.use("/api", gameRouter);
 
 // Unmatched routes fall through to here. Responding with JSON keeps the API
 // consistent, so clients calling response.json() never hit Express's HTML page.
