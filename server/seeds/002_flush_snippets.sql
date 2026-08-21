@@ -14,7 +14,12 @@
 
 CREATE OR REPLACE FUNCTION seed_flush(
     p_prompt TEXT,
-    p_difficulty SMALLINT,
+    -- INTEGER, not SMALLINT, matching seed_question in 001. A bare SQL literal
+    -- like `1` is typed integer, and PostgreSQL will not implicitly narrow it to
+    -- smallint during function overload resolution -- so a SMALLINT parameter
+    -- makes every call site fail with "function does not exist". The INSERT
+    -- below assignment-casts to the smallint column, which is allowed.
+    p_difficulty INTEGER,
     p_outputs TEXT[],
     p_distractors TEXT[] DEFAULT '{}'
 ) RETURNS VOID LANGUAGE plpgsql AS $$
@@ -95,7 +100,7 @@ SELECT seed_flush(
     E'const pending = new Promise(() => {\n    console.log("executor");\n});\n\npending.then(() => console.log("resolved"));\n\nconsole.log("sync");\nsetTimeout(() => console.log("timer"), 0);',
     5, ARRAY['executor', 'sync', 'timer'], ARRAY['resolved']);
 
-DROP FUNCTION seed_flush(TEXT, SMALLINT, TEXT[], TEXT[]);
+DROP FUNCTION seed_flush(TEXT, INTEGER, TEXT[], TEXT[]);
 
 SELECT s.difficulty,
        COUNT(*) FILTER (WHERE NOT o.is_distractor) AS outputs,
