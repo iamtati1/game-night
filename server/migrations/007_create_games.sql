@@ -1,5 +1,5 @@
 -- The games table, deferred in Phase 2 as speculative generality and now
--- genuinely required: a second game (Tick) needs sessions to record which game
+-- genuinely required: a second game (Flush) needs sessions to record which game
 -- they belong to. This is the migration sketched at the time, unchanged.
 
 CREATE TABLE games (

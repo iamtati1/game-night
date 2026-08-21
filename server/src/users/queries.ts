@@ -21,7 +21,7 @@ import {
  * more clever than clear, for no measurable gain at this size.
  *
  * Cross-game totals carry XP and session counts. bestScore, averageScore and
- * accuracy are per-game only: Code Blitz awards a speed bonus while Tick awards
+ * accuracy are per-game only: Code Blitz awards a speed bonus while Flush awards
  * escalating placements and a completion multiplier, so a best score spanning
  * both would compare two different scales.
  */
@@ -45,7 +45,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
      * counts would be multiplied by the question counts. Separate grains,
      * separate aggregations, joined afterwards on game_id.
      *
-     * When Tick lands, its rounds get a sibling CTE and the two are UNIONed.
+     * When Flush lands, its rounds get a sibling CTE and the two are UNIONed.
      * The output shape does not change.
      */
     const perGame = await pool.query<GameStatsRow>(
@@ -107,8 +107,8 @@ export async function getUserStats(userId: string): Promise<UserStats> {
  * appear on both page 1 and page 2, or on neither.
  *
  * The progress counts come from session_questions, which is Code Blitz's round
- * table. When Tick lands, this LATERAL becomes a game-aware branch reading
- * tick_rounds instead -- the *shape* it produces stays identical, so neither the
+ * table. When Flush lands, this LATERAL becomes a game-aware branch reading
+ * flush_rounds instead -- the *shape* it produces stays identical, so neither the
  * response nor the client changes.
  */
 export async function listUserSessions(

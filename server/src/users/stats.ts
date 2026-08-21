@@ -20,7 +20,7 @@ export { computeAccuracy, toNullableNumber, toNumber };
  * XP is here because it is deliberately uniform across games (10 per correct
  * unit plus 25 for finishing), so summing it is meaningful. bestScore and
  * averageScore are deliberately NOT here: Code Blitz scores a speed bonus while
- * Tick scores escalating placements and a completion multiplier, so a "best
+ * Flush scores escalating placements and a completion multiplier, so a "best
  * score" spanning both compares two different scales. Those live per game.
  */
 export interface StatTotals {

@@ -37,11 +37,11 @@ describe("toHistorySession", () => {
     });
 
     it("attaches the game the session belongs to", () => {
-        // Game-agnostic shape: Code Blitz counts questions, Tick will count
+        // Game-agnostic shape: Code Blitz counts questions, Flush will count
         // rounds, and the response looks identical either way.
-        const session = toHistorySession(row({ game_slug: "tick", game_name: "Tick" }));
+        const session = toHistorySession(row({ game_slug: "flush", game_name: "Flush" }));
 
-        expect(session.game).toEqual({ slug: "tick", name: "Tick" });
+        expect(session.game).toEqual({ slug: "flush", name: "Flush" });
     });
 
     it("serializes timestamps as ISO strings", () => {

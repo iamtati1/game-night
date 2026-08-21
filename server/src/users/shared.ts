@@ -33,7 +33,7 @@ export interface GameRef {
 
 /**
  * How a session or a run of sessions went, in game-agnostic terms. Code Blitz
- * counts questions; Tick will count rounds. Same shape, different source table.
+ * counts questions; Flush will count rounds. Same shape, different source table.
  */
 export interface Progress {
     total: number;

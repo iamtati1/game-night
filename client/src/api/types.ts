@@ -87,7 +87,7 @@ export interface GameRef {
     name: string;
 }
 
-/** Game-agnostic round summary: Code Blitz counts questions, Tick counts rounds. */
+/** Game-agnostic round summary: Code Blitz counts questions, Flush counts rounds. */
 export interface Progress {
     total: number;
     correct: number;

@@ -77,7 +77,7 @@ interesting; (2) needs content; (3) is a small UX change.
 
 ---
 
-## Tick — filled in
+## Flush — filled in
 
 | | |
 |---|---|
@@ -102,9 +102,9 @@ fires is a different skill from ordering the ones that do**, and it is exactly t
 mistake that bites people in real code. It also makes mistakes informative — you
 learn *why* the tile was a trap, not just that you were wrong.
 
-### Where Tick is still unproven
+### Where Flush is still unproven
 
 The mechanic is designed and its scoring is tested, but nobody has played it.
 The open questions are whether one-mistake-ends-the-round feels tense or
 punishing, and whether 5 rounds is the right session length. Both are cheap to
-tune: `TICK_ROUNDS_PER_SESSION` and the multiplier are single constants.
+tune: `FLUSH_ROUNDS_PER_SESSION` and the multiplier are single constants.

@@ -3,7 +3,7 @@
  *
  * XP is the only currency compared across games -- it is what a cross-game
  * leaderboard and the cross-game totals in /api/users/me/stats are built on.
- * Score is not comparable: Code Blitz awards a speed bonus while Tick awards
+ * Score is not comparable: Code Blitz awards a speed bonus while Flush awards
  * escalating placements and a completion multiplier.
  *
  * For that comparison to mean anything, a perfect game must be worth the same
@@ -25,7 +25,7 @@ export const PERFECT_GAME_XP = 125;
  * XP per successful unit, given how many units a perfect game contains.
  *
  *   Code Blitz: 10 questions -> 10 XP each -> 10*10 + 25 = 125
- *   Tick:        5 rounds    -> 20 XP each ->  5*20 + 25 = 125
+ *   Flush:       5 rounds    -> 20 XP each ->  5*20 + 25 = 125
  */
 export function perUnitXp(unitsInPerfectGame: number): number {
     if (unitsInPerfectGame <= 0) {

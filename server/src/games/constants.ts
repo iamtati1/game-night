@@ -4,4 +4,4 @@
  * readable in logs.
  */
 export const CODE_BLITZ = "code-blitz";
-export const TICK = "tick";
+export const FLUSH = "flush";

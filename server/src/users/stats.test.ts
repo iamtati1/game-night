@@ -110,7 +110,7 @@ describe("toStatTotals", () => {
     });
 
     it("carries no bestScore or averageScore", () => {
-        // Deliberate: Code Blitz scores a speed bonus and Tick scores escalating
+        // Deliberate: Code Blitz scores a speed bonus and Flush scores escalating
         // placements, so a best score spanning both compares different scales.
         // Those belong per game. XP is uniform by design, so it is summable.
         const totals = toStatTotals(totalsRow({ total_xp: "500" }));
@@ -123,9 +123,9 @@ describe("toStatTotals", () => {
 
 describe("toGameStats", () => {
     it("attaches the game it belongs to", () => {
-        const stats = toGameStats(gameRow({ game_slug: "tick", game_name: "Tick" }));
+        const stats = toGameStats(gameRow({ game_slug: "flush", game_name: "Flush" }));
 
-        expect(stats.game).toEqual({ slug: "tick", name: "Tick" });
+        expect(stats.game).toEqual({ slug: "flush", name: "Flush" });
     });
 
     it("leaves best and average score null for a game never finished", () => {
@@ -194,18 +194,18 @@ describe("toUserStats", () => {
     it("keeps one entry per game while totals stay cross-game", () => {
         const stats = toUserStats(totalsRow({ games_completed: "7", total_xp: "300" }), [
             gameRow({ game_slug: "code-blitz", game_name: "Code Blitz", games_completed: "5", total_xp: "200" }),
-            gameRow({ game_slug: "tick", game_name: "Tick", games_completed: "2", total_xp: "100" })
+            gameRow({ game_slug: "flush", game_name: "Flush", games_completed: "2", total_xp: "100" })
         ]);
 
         expect(stats.totals.gamesCompleted).toBe(7);
         expect(stats.totals.totalXp).toBe(300);
-        expect(stats.perGame.map((g) => g.game.slug)).toEqual(["code-blitz", "tick"]);
+        expect(stats.perGame.map((g) => g.game.slug)).toEqual(["code-blitz", "flush"]);
         expect(stats.perGame.map((g) => g.totalXp)).toEqual([200, 100]);
     });
 
     it("keeps cross-game XP equal to the sum of per-game XP", () => {
         // The invariant that makes a cross-game leaderboard on XP meaningful.
-        const perGame = [gameRow({ total_xp: "200" }), gameRow({ game_slug: "tick", total_xp: "145" })];
+        const perGame = [gameRow({ total_xp: "200" }), gameRow({ game_slug: "flush", total_xp: "145" })];
         const stats = toUserStats(totalsRow({ total_xp: "345" }), perGame);
 
         expect(stats.totals.totalXp).toBe(stats.perGame.reduce((sum, g) => sum + g.totalXp, 0));

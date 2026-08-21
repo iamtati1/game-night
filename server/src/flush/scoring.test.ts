@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-    TICK_ROUNDS_PER_SESSION,
-    TICK_ROUND_TIME_LIMIT_MS,
+    FLUSH_ROUNDS_PER_SESSION,
+    FLUSH_ROUND_TIME_LIMIT_MS,
     isExpired,
     isPlacementCorrect,
     pointsForPlacements,
@@ -93,7 +93,7 @@ describe("xpForSession", () => {
     });
 
     it("caps a perfect session at 125, matching every other game", () => {
-        const perfect = Array.from({ length: TICK_ROUNDS_PER_SESSION }, () => round(4, "completed"));
+        const perfect = Array.from({ length: FLUSH_ROUNDS_PER_SESSION }, () => round(4, "completed"));
 
         expect(xpForSession(perfect)).toBe(125);
     });
@@ -109,12 +109,12 @@ describe("isExpired", () => {
     it("treats a placement exactly on the limit as still in time", () => {
         const served = new Date(0);
 
-        expect(isExpired(served, new Date(TICK_ROUND_TIME_LIMIT_MS))).toBe(false);
-        expect(isExpired(served, new Date(TICK_ROUND_TIME_LIMIT_MS + 1))).toBe(true);
+        expect(isExpired(served, new Date(FLUSH_ROUND_TIME_LIMIT_MS))).toBe(false);
+        expect(isExpired(served, new Date(FLUSH_ROUND_TIME_LIMIT_MS + 1))).toBe(true);
     });
 
     it("allows twice as long per round as Code Blitz", () => {
-        expect(TICK_ROUND_TIME_LIMIT_MS).toBe(60_000);
+        expect(FLUSH_ROUND_TIME_LIMIT_MS).toBe(60_000);
     });
 });
 

@@ -1,12 +1,12 @@
-// Pure scoring rules for Tick: no database, no Express, no clock reads.
+// Pure scoring rules for Flush: no database, no Express, no clock reads.
 // Everything is passed in, so every rule here is directly unit-testable.
 
 import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 
-/** Longer than Code Blitz's 30s. Tick rewards reasoning, not reflexes. */
-export const TICK_ROUND_TIME_LIMIT_MS = 60_000;
+/** Longer than Code Blitz's 30s. Flush rewards reasoning, not reflexes. */
+export const FLUSH_ROUND_TIME_LIMIT_MS = 60_000;
 
-export const TICK_ROUNDS_PER_SESSION = 5;
+export const FLUSH_ROUNDS_PER_SESSION = 5;
 
 /** First correct placement is worth this; each subsequent one is worth more. */
 const BASE_PER_PLACEMENT = 10;
@@ -14,7 +14,7 @@ const BASE_PER_PLACEMENT = 10;
 /** Completing a full sequence doubles the round. This is the whole risk. */
 const COMPLETION_MULTIPLIER = 2;
 
-const XP_PER_COMPLETED_ROUND = perUnitXp(TICK_ROUNDS_PER_SESSION);
+const XP_PER_COMPLETED_ROUND = perUnitXp(FLUSH_ROUNDS_PER_SESSION);
 
 /**
  * Points banked for n correct placements, escalating: 10, then 20, then 30...
@@ -40,7 +40,7 @@ export function pointsForPlacements(correctPlacements: number): number {
  * never correct is clutter, not a mechanic. The tension is intrinsic instead --
  * every placement past the first risks the 2x.
  *
- * Note there is no speed bonus anywhere. Code Blitz rewards speed; Tick rewards
+ * Note there is no speed bonus anywhere. Code Blitz rewards speed; Flush rewards
  * accuracy. Two games that both reward speed would be one game with two skins.
  */
 export function roundScore(correctPlacements: number, completed: boolean): number {
@@ -66,7 +66,7 @@ export function scoreForSession(rounds: ScoredRound[]): number {
 }
 
 /**
- * XP for a session. Derived from the platform rule, so a perfect Tick game is
+ * XP for a session. Derived from the platform rule, so a perfect Flush game is
  * worth exactly as much as a perfect Code Blitz game -- otherwise the shorter
  * game becomes the optimal way to farm a cross-game leaderboard.
  */
@@ -77,14 +77,14 @@ export function xpForSession(rounds: ScoredRound[]): number {
 }
 
 export function isExpired(servedAt: Date, now: Date): boolean {
-    return now.getTime() - servedAt.getTime() > TICK_ROUND_TIME_LIMIT_MS;
+    return now.getTime() - servedAt.getTime() > FLUSH_ROUND_TIME_LIMIT_MS;
 }
 
 /**
  * Whether a placement is correct: the chosen output must be the one expected at
  * this point in the sequence.
  *
- * `expectedPosition` is 1-based, matching tick_outputs.position. A distractor
+ * `expectedPosition` is 1-based, matching flush_outputs.position. A distractor
  * has no position at all, so passing null can never be correct -- which is
  * exactly the behaviour wanted: placing a tile that never prints is a mistake.
  */

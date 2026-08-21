@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMPLETION_BONUS_XP, PERFECT_GAME_XP, perUnitXp, xpForUnits } from "./xp.js";
 import { QUESTIONS_PER_SESSION, xpForSession as blitzXp } from "../game/scoring.js";
-import { TICK_ROUNDS_PER_SESSION, xpForSession as tickXp } from "../tick/scoring.js";
+import { FLUSH_ROUNDS_PER_SESSION, xpForSession as flushXp } from "../flush/scoring.js";
 
 describe("perUnitXp", () => {
     it("derives Code Blitz's existing rate of 10 per question", () => {
@@ -39,26 +39,26 @@ describe("cross-game XP parity", () => {
      * become the optimal way to climb the rankings and XP would stop measuring
      * skill. Score is deliberately NOT comparable across games; XP is.
      */
-    it("pays the same for a perfect game of Code Blitz and a perfect game of Tick", () => {
+    it("pays the same for a perfect game of Code Blitz and a perfect game of Flush", () => {
         const perfectBlitz = Array.from({ length: QUESTIONS_PER_SESSION }, () => ({
             isCorrect: true,
             servedAt: new Date(0),
             answeredAt: new Date(1000)
         }));
 
-        const perfectTick = Array.from({ length: TICK_ROUNDS_PER_SESSION }, () => ({
+        const perfectFlush = Array.from({ length: FLUSH_ROUNDS_PER_SESSION }, () => ({
             correctPlacements: 4,
             status: "completed"
         }));
 
         expect(blitzXp(perfectBlitz)).toBe(PERFECT_GAME_XP);
-        expect(tickXp(perfectTick)).toBe(PERFECT_GAME_XP);
-        expect(blitzXp(perfectBlitz)).toBe(tickXp(perfectTick));
+        expect(flushXp(perfectFlush)).toBe(PERFECT_GAME_XP);
+        expect(blitzXp(perfectBlitz)).toBe(flushXp(perfectFlush));
     });
 
     it("pays the same for a game where nothing went right", () => {
         expect(blitzXp([{ isCorrect: false, servedAt: null, answeredAt: null }])).toBe(
-            tickXp([{ correctPlacements: 0, status: "failed" }])
+            flushXp([{ correctPlacements: 0, status: "failed" }])
         );
     });
 });
