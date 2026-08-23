@@ -24,6 +24,9 @@ export function LandingPage() {
                     <Link className="button primary" to="/play">
                         Play Code Blitz
                     </Link>
+                    <Link className="button ghost" to="/flush">
+                        Play Flush
+                    </Link>
                     <span className="muted">
                         Signed in as <strong>{user.username}</strong>
                     </span>

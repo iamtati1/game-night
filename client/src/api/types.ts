@@ -116,3 +116,81 @@ export interface HistoryResponse {
         hasMore: boolean;
     };
 }
+
+// ---------------------------------------------------------------- Flush ----
+// Note what is absent from FlushTile: `position`. Position IS the answer, so the
+// server withholds it until a round ends. The client cannot derive it either.
+
+export interface FlushTile {
+    id: string;
+    text: string;
+}
+
+export interface FlushRound {
+    roundId: string;
+    roundNumber: number;
+    totalRounds: number;
+    prompt: string;
+    tiles: FlushTile[];
+    /** Tiles already placed this round, in the order they were placed. */
+    placed: { outputId: string; text: string }[];
+    totalOutputs: number;
+    pointsBanked: number;
+    servedAt: string;
+    deadlineAt: string;
+    msRemaining: number;
+}
+
+export interface FlushRoundResult {
+    roundNumber: number;
+    prompt: string;
+    status: "pending" | "completed" | "failed" | "timed_out";
+    correctPlacements: number;
+    totalOutputs: number;
+    pointsAwarded: number;
+}
+
+export interface FlushSessionSummary {
+    id: string;
+    status: string;
+    score: number;
+    xpEarned: number;
+    startedAt: string;
+    completedAt: string | null;
+    totalRounds: number;
+    completedRounds: number;
+    failedRounds: number;
+    timedOutRounds: number;
+    rounds: FlushRoundResult[];
+}
+
+export interface FlushStartResponse {
+    resumed: boolean;
+    sessionId?: string;
+    scoreSoFar?: number;
+    round?: FlushRound | null;
+    session?: FlushSessionSummary;
+}
+
+export interface FlushCurrentResponse {
+    complete: boolean;
+    sessionId?: string;
+    scoreSoFar?: number;
+    round?: FlushRound;
+    session?: FlushSessionSummary;
+}
+
+export interface FlushPlacementResponse {
+    outcome: "correct" | "wrong" | "round_complete" | "timed_out";
+    roundEnded: boolean;
+    pointsBanked: number;
+    /** What the round is finally worth. null while the round is still live. */
+    roundScore: number | null;
+    scoreSoFar: number;
+    /** Both revealed only once the round has ended. */
+    correctSequence: string[] | null;
+    yourSequence: string[] | null;
+    complete: boolean;
+    round: FlushRound | null;
+    session: FlushSessionSummary | null;
+}

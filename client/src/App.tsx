@@ -1,6 +1,8 @@
 import { Link, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
+import { FlushPage } from "./pages/FlushPage.js";
+import { FlushResultsPage } from "./pages/FlushResultsPage.js";
 import { GamePage } from "./pages/GamePage.js";
 import { HistoryPage } from "./pages/HistoryPage.js";
 import { LandingPage } from "./pages/LandingPage.js";
@@ -45,6 +47,22 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <GamePage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/flush"
+                        element={
+                            <ProtectedRoute>
+                                <FlushPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/flush/results/:id"
+                        element={
+                            <ProtectedRoute>
+                                <FlushResultsPage />
                             </ProtectedRoute>
                         }
                     />

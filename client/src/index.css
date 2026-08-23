@@ -569,3 +569,195 @@ input:focus {
 .game-flush {
     --game-accent: #f0a94a;
 }
+
+/* ---------- Flush ----------
+   Amber, not violet. Code Blitz is a reflex game and reads cool and urgent;
+   Flush is a reasoning game and should read warmer and slower. The accent token
+   swaps, so shared components recolour without knowing which game they are in. */
+
+.game.flush,
+.results.flush {
+    --accent: #f0a94a;
+    --accent-soft: #f0a94a26;
+}
+
+.flush-task {
+    margin: 0 0 0.9rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.flush-task strong {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The decision, stated where the player is looking. Banked sits left and reads
+   settled; the multiplier at risk sits right and reads live. */
+.stake {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 0.88rem;
+}
+
+.stake-safe {
+    color: var(--correct);
+    font-variant-numeric: tabular-nums;
+}
+
+.stake-risk {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Slots are the sequence being built. Empty ones are visibly waiting, which is
+   what communicates "how much further do I have to go". */
+.slots {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
+}
+
+.slot {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px dashed var(--border);
+    border-radius: 9px;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    color: var(--muted);
+    transition: border-color 0.18s, background 0.18s, color 0.18s;
+}
+
+.slot.filled {
+    border-style: solid;
+    border-color: var(--correct);
+    background: #34d39914;
+    color: var(--text);
+}
+
+.slot-index {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    font-size: 0.7rem;
+}
+
+.slot.filled .slot-index {
+    background: var(--correct);
+    color: #07130d;
+}
+
+.tiles {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tile {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.08s;
+}
+
+.tile:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+.tile:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.tile:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.tile.wrong {
+    border-color: var(--incorrect);
+    background: #f8717122;
+}
+
+/* The reveal is the teaching moment, so it gets room rather than a toast. */
+.reveal {
+    margin-top: 0.5rem;
+}
+
+.mult {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.sequences {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.sequences > div > span {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.seq {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    line-height: 1.7;
+}
+
+.seq li.ok {
+    color: var(--correct);
+}
+
+.seq li.bad {
+    color: var(--incorrect);
+    font-weight: 600;
+}
+
+@media (max-width: 560px) {
+    .sequences {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .slot,
+    .tile {
+        transition: none;
+    }
+}
