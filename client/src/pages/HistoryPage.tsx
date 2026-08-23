@@ -15,9 +15,19 @@ function formatWhen(session: HistorySession): string {
 }
 
 /** Completed games open their results; an unfinished game resumes instead,
- *  because /results/:id would show a score of 0 and a list of pending questions. */
+ *  because a results page would show a score of 0 and a list of pending rounds.
+ *
+ *  Each game has its own results view: /api/sessions/:id is Code Blitz's endpoint
+ *  and does not understand flush_rounds, so a Flush session sent there would
+ *  render as a Code Blitz game with zero questions. */
 function targetFor(session: HistorySession): string {
-    return session.status === "in_progress" ? "/play" : `/results/${session.id}`;
+    const flush = session.game.slug === "flush";
+
+    if (session.status === "in_progress") {
+        return flush ? "/flush" : "/play";
+    }
+
+    return flush ? `/flush/results/${session.id}` : `/results/${session.id}`;
 }
 
 function StatusTag({ status }: { status: HistorySession["status"] }) {
