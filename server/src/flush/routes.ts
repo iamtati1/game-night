@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
+import { FLUSH } from "../games/constants.js";
+import { abandonSession, findActiveSession } from "../sessions/queries.js";
 import * as db from "./queries.js";
 import { placementSchema } from "./schemas.js";
 import {
@@ -132,22 +134,22 @@ async function serveRound(round: db.FlushRoundRow) {
 flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
-    const active = await db.findActiveSessionWithGame(userId);
+    const active = await findActiveSession(userId);
 
     if (active) {
         // One in-progress session per user, across all games. Rather than
         // silently destroying a Code Blitz game the player may be nine questions
         // into, say which game is running and let them decide.
-        if (active.game_slug !== "flush") {
+        if (active.gameSlug !== FLUSH) {
             res.status(409).json({
                 error: "Another game is in progress",
                 details: [
                     {
                         field: "game",
-                        message: `You have a ${active.game_slug} game in progress. Finish it before starting Flush.`
+                        message: `You have a ${active.gameName} game in progress. Finish or abandon it before starting Flush.`
                     }
                 ],
-                activeGame: active.game_slug
+                activeGame: { slug: active.gameSlug, name: active.gameName }
             });
             return;
         }
@@ -201,9 +203,9 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
 // GET /api/flush/sessions/current -- the round on screen. Fetching starts its clock.
 flushRouter.get("/sessions/current", requireAuth, async (req: Request, res: Response) => {
     const now = new Date();
-    const active = await db.findActiveSessionWithGame(req.user!.id);
+    const active = await findActiveSession(req.user!.id);
 
-    if (!active || active.game_slug !== "flush") {
+    if (!active || active.gameSlug !== FLUSH) {
         res.status(404).json({ error: "No Flush game in progress" });
         return;
     }

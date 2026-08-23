@@ -194,3 +194,21 @@ export interface FlushPlacementResponse {
     round: FlushRound | null;
     session: FlushSessionSummary | null;
 }
+
+/** The 409 body both games return when another game is already running. */
+export interface ActiveGameConflictBody {
+    activeGame?: { slug: string; name: string };
+}
+
+export interface AbandonResponse {
+    abandoned: boolean;
+    sessionId?: string;
+    game?: { slug: string; name: string };
+}
+
+/** Pulls activeGame out of a 409 body, or null if this was a different error. */
+export function activeGameFrom(body: unknown): { slug: string; name: string } | null {
+    const candidate = (body as ActiveGameConflictBody | null)?.activeGame;
+
+    return candidate && typeof candidate.slug === "string" ? candidate : null;
+}

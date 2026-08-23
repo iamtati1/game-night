@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { countEligibleQuestions } from "../questions/queries.js";
+import { CODE_BLITZ } from "../games/constants.js";
+import { abandonSession, findActiveSession } from "../sessions/queries.js";
 import { isActiveSessionConflict } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
@@ -185,16 +187,38 @@ async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQue
 gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
-    const existing = await db.findInProgressSession(userId);
+    const active = await findActiveSession(userId);
 
-    if (existing) {
-        if (isResumable(existing.started_at, now)) {
-            await respondResumed(res, existing, now);
+    if (active) {
+        // The one-active-session index is scoped to the user, not to
+        // (user, game). Without this check Code Blitz's resume path would adopt
+        // another game's session, find none of its own questions, and "complete"
+        // it with a score of zero.
+        if (active.gameSlug !== CODE_BLITZ) {
+            res.status(409).json({
+                error: "Another game is in progress",
+                details: [
+                    {
+                        field: "game",
+                        message: `You have a ${active.gameName} game in progress. Finish or abandon it before starting Code Blitz.`
+                    }
+                ],
+                activeGame: { slug: active.gameSlug, name: active.gameName }
+            });
             return;
         }
 
+        if (isResumable(active.startedAt, now)) {
+            const existing = await db.findSessionForUser(active.id, userId);
+
+            if (existing) {
+                await respondResumed(res, existing, now);
+                return;
+            }
+        }
+
         // Past the resume window: lazy abandonment, exactly as designed.
-        await db.abandonSession(existing.id);
+        await abandonSession(active.id);
     }
 
     // Optional top-up. Never throws, never contacts the provider when the local
@@ -231,15 +255,24 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
             throw err;
         }
 
-        const winner = await db.findInProgressSession(userId);
+        // Re-read with the game included. The winner of a Code Blitz race is a
+        // Code Blitz session, but checking keeps this path from ever adopting
+        // another game's session the way the block above used to.
+        const winner = await findActiveSession(userId);
 
-        if (!winner) {
-            // The winner vanished between the rejection and this read. Nothing
-            // sensible to resume, so surface the original failure.
+        if (!winner || winner.gameSlug !== CODE_BLITZ) {
+            // The winner vanished, or belongs to another game. Nothing sensible
+            // to resume, so surface the original failure.
             throw err;
         }
 
-        await respondResumed(res, winner, now);
+        const full = await db.findSessionForUser(winner.id, userId);
+
+        if (!full) {
+            throw err;
+        }
+
+        await respondResumed(res, full, now);
         return;
     }
 
@@ -257,16 +290,26 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
 gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
-    const session = await db.findInProgressSession(userId);
+    const active = await findActiveSession(userId);
 
-    if (!session) {
-        res.status(404).json({ error: "No game in progress" });
+    // Same exposure as the start route: without the game check this endpoint
+    // would complete another game's session on its way to reporting "no
+    // questions left".
+    if (!active || active.gameSlug !== CODE_BLITZ) {
+        res.status(404).json({ error: "No Code Blitz game in progress" });
         return;
     }
 
-    if (!isResumable(session.started_at, now)) {
-        await db.abandonSession(session.id);
+    if (!isResumable(active.startedAt, now)) {
+        await abandonSession(active.id);
         res.status(410).json({ error: "Session expired" });
+        return;
+    }
+
+    const session = await db.findSessionForUser(active.id, userId);
+
+    if (!session) {
+        res.status(404).json({ error: "No Code Blitz game in progress" });
         return;
     }
 

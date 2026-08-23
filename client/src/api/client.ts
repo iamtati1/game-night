@@ -6,12 +6,15 @@ export class ApiError extends Error {
     // that a type-stripping runtime could not simply delete.
     readonly status: number;
     readonly details: FieldError[];
+    /** The parsed response body, for endpoints that return more than error+details. */
+    readonly body: unknown;
 
-    constructor(status: number, message: string, details: FieldError[] = []) {
+    constructor(status: number, message: string, details: FieldError[] = [], body: unknown = null) {
         super(message);
         this.name = "ApiError";
         this.status = status;
         this.details = details;
+        this.body = body;
     }
 
     /** Flattens field errors into one readable line for form display. */
@@ -48,7 +51,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         throw new ApiError(
             response.status,
             body?.error ?? `Request failed with status ${response.status}`,
-            body?.details ?? []
+            body?.details ?? [],
+            body
         );
     }
 

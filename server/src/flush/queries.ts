@@ -13,12 +13,6 @@ export interface FlushSessionRow {
     xp_earned: number;
 }
 
-export interface ActiveSessionRow {
-    id: string;
-    game_slug: string;
-    started_at: Date;
-}
-
 export interface FlushRoundRow {
     id: string;
     snippet_id: string;
@@ -64,29 +58,6 @@ export async function countEligibleSnippets(): Promise<number> {
     return Number(result.rows[0]!.count);
 }
 
-/**
- * Any in-progress session for this user, with the game it belongs to.
- *
- * Needed because game_sessions_one_active_per_user_idx is scoped to the user,
- * not to (user, game): starting Flush has to notice a Code Blitz game already
- * running and say which game it is.
- *
- * This is arguably platform-level rather than Flush-specific. Left here until a
- * third game wants it too -- extracting an abstraction for two callers usually
- * guesses wrong about what the third one needs.
- */
-export async function findActiveSessionWithGame(userId: string): Promise<ActiveSessionRow | null> {
-    const result = await pool.query<ActiveSessionRow>(
-        `SELECT gs.id, g.slug AS game_slug, gs.started_at
-         FROM game_sessions gs
-         JOIN games g ON g.id = gs.game_id
-         WHERE gs.user_id = $1 AND gs.status = 'in_progress'`,
-        [userId]
-    );
-
-    return result.rows[0] ?? null;
-}
-
 export async function findFlushSessionForUser(
     sessionId: string,
     userId: string
@@ -101,15 +72,6 @@ export async function findFlushSessionForUser(
     );
 
     return result.rows[0] ?? null;
-}
-
-export async function abandonSession(sessionId: string): Promise<void> {
-    await pool.query(
-        `UPDATE game_sessions
-         SET status = 'abandoned', abandoned_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND status = 'in_progress'`,
-        [sessionId]
-    );
 }
 
 /**

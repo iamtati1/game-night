@@ -8,6 +8,7 @@ import { pool } from "./db.js";
 import { flushRouter } from "./flush/routes.js";
 import { gameRouter } from "./game/routes.js";
 import { sessionMiddleware } from "./session.js";
+import { sessionsRouter } from "./sessions/routes.js";
 import { usersRouter } from "./users/routes.js";
 
 
@@ -47,6 +48,8 @@ app.use("/api/auth", authRouter);
 app.get("/api/users/me", ...meHandler);
 
 app.use("/api/users", usersRouter);
+
+app.use("/api/active-session", sessionsRouter);
 
 app.use("/api/flush", flushRouter);
 

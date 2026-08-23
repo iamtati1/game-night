@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
+import { activeGameFrom } from "../api/types.js";
 import type {
     AnswerResponse,
     CurrentQuestionResponse,
     ServedQuestion,
     StartSessionResponse
 } from "../api/types.js";
+import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 
 const QUESTION_TIME_LIMIT_MS = 30_000;
@@ -25,6 +27,9 @@ export function GamePage() {
     const [question, setQuestion] = useState<ServedQuestion | null>(null);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [runningScore, setRunningScore] = useState(0);
+    const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
+    /** Bumped after abandoning, to re-run the start effect. */
+    const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
@@ -59,15 +64,24 @@ export function GamePage() {
                 setRunningScore(data.scoreSoFar ?? 0);
             })
             .catch((err) => {
-                if (active) {
-                    setError(err instanceof ApiError ? err.detailText : "Could not start a game");
+                if (!active) return;
+
+                // 409 is not a failure: another game holds the single active
+                // session slot, and the player gets to choose what happens.
+                const held = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+                if (held) {
+                    setConflict(held);
+                    return;
                 }
+
+                setError(err instanceof ApiError ? err.detailText : "Could not start a game");
             });
 
         return () => {
             active = false;
         };
-    }, [finish]);
+    }, [finish, attempt]);
 
     const advance = useCallback(
         (next: ServedQuestion | null, complete: boolean, id: string | null) => {
@@ -163,6 +177,19 @@ export function GamePage() {
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     });
+
+    if (conflict) {
+        return (
+            <ActiveGameConflict
+                activeGame={conflict}
+                wantedGame="Code Blitz"
+                onAbandoned={() => {
+                    setConflict(null);
+                    setAttempt((n) => n + 1);
+                }}
+            />
+        );
+    }
 
     if (error) {
         return (

@@ -42,17 +42,6 @@ export async function countActiveQuestions(): Promise<number> {
     return Number(result.rows[0]!.count);
 }
 
-export async function findInProgressSession(userId: string): Promise<GameSessionRow | null> {
-    const result = await pool.query<GameSessionRow>(
-        `SELECT id, status, started_at, completed_at, abandoned_at, score, xp_earned
-         FROM game_sessions
-         WHERE user_id = $1 AND status = 'in_progress'`,
-        [userId]
-    );
-
-    return result.rows[0] ?? null;
-}
-
 export async function findSessionForUser(
     sessionId: string,
     userId: string
@@ -65,15 +54,6 @@ export async function findSessionForUser(
     );
 
     return result.rows[0] ?? null;
-}
-
-export async function abandonSession(sessionId: string): Promise<void> {
-    await pool.query(
-        `UPDATE game_sessions
-         SET status = 'abandoned', abandoned_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND status = 'in_progress'`,
-        [sessionId]
-    );
 }
 
 /**

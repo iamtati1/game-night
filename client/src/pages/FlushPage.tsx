@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
+import { activeGameFrom } from "../api/types.js";
 import type {
     FlushCurrentResponse,
     FlushPlacementResponse,
     FlushRound,
     FlushStartResponse
 } from "../api/types.js";
+import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 
 const ROUND_TIME_LIMIT_MS = 60_000;
@@ -33,6 +35,9 @@ export function FlushPage() {
     const [score, setScore] = useState(0);
     const [reveal, setReveal] = useState<Reveal | null>(null);
     const [lastWrong, setLastWrong] = useState<string | null>(null);
+    const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
+    /** Bumped after abandoning, to re-run the start effect. */
+    const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
@@ -55,15 +60,24 @@ export function FlushPage() {
                 setScore(data.scoreSoFar ?? 0);
             })
             .catch((err) => {
-                if (active) {
-                    setError(err instanceof ApiError ? err.detailText : "Could not start Flush");
+                if (!active) return;
+
+                // 409 is not a failure: another game holds the single active
+                // session slot, and the player gets to choose what happens.
+                const held = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+                if (held) {
+                    setConflict(held);
+                    return;
                 }
+
+                setError(err instanceof ApiError ? err.detailText : "Could not start Flush");
             });
 
         return () => {
             active = false;
         };
-    }, [navigate]);
+    }, [navigate, attempt]);
 
     const showReveal = useCallback(
         (r: Reveal, next: FlushRound | null, complete: boolean, id: string | null) => {
@@ -150,6 +164,19 @@ export function FlushPage() {
             setError(err instanceof ApiError ? err.detailText : "Lost track of the round");
         }
     }, [navigate]);
+
+    if (conflict) {
+        return (
+            <ActiveGameConflict
+                activeGame={conflict}
+                wantedGame="Flush"
+                onAbandoned={() => {
+                    setConflict(null);
+                    setAttempt((n) => n + 1);
+                }}
+            />
+        );
+    }
 
     if (error) {
         return (
