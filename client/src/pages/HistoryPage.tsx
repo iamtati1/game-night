@@ -93,12 +93,12 @@ export function HistoryPage() {
     if (sessions.length === 0 && pagination.total === 0) {
         return (
             <section className="panel narrow center">
-                <h1>No games yet</h1>
+                <h1>No runs yet</h1>
                 <p className="muted">
-                    Code Blitz is ten questions, thirty seconds each. About five minutes.
+                    Your first Jolt is waiting. Most runs take a couple of minutes.
                 </p>
-                <Link className="button primary" to="/play">
-                    Play Code Blitz
+                <Link className="button primary" to="/#games">
+                    Pick a game
                 </Link>
             </section>
         );
@@ -108,7 +108,7 @@ export function HistoryPage() {
         return (
             <section className="panel narrow center">
                 <h1>Nothing on this page</h1>
-                <p className="muted">You have {pagination.total} games in total.</p>
+                <p className="muted">You have {pagination.total} runs in total.</p>
                 <button className="button primary" onClick={() => setParams({})}>
                     Back to the first page
                 </button>
@@ -117,14 +117,21 @@ export function HistoryPage() {
     }
 
     return (
-        <section>
-            <p className="eyebrow">Game history</p>
-            <h1>{pagination.total} games</h1>
+        <section className="runs">
+            <p className="run-eyebrow">Your runs</p>
+            <h1 className="history-title">
+                {pagination.total} {pagination.total === 1 ? "run" : "runs"}
+            </h1>
 
             <ol className="breakdown history">
                 {sessions.map((session) => (
                     <li key={session.id}>
-                        <Link className="history-row" to={targetFor(session)}>
+                        {/* The row carries the game's own accent, so a page of runs
+                            is scannable by colour before it is read. */}
+                        <Link
+                            className={`history-row game-${session.game.slug}`}
+                            to={targetFor(session)}
+                        >
                             <div className="history-main">
                                 <span className={`game-chip game-${session.game.slug}`}>
                                     {session.game.name}

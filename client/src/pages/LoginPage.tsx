@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.js";
+import { JoltLogo } from "../components/JoltLogo.js";
 
 export function LoginPage() {
     const { login } = useAuth();
@@ -18,7 +19,7 @@ export function LoginPage() {
 
         try {
             await login(email, password);
-            navigate("/play");
+            navigate("/");
         } catch (err) {
             // The server returns one generic message on purpose; show it as-is
             // rather than guessing which field was wrong.
@@ -29,10 +30,17 @@ export function LoginPage() {
     }
 
     return (
-        <section className="panel narrow">
-            <h1>Log in</h1>
+        <section className="auth">
+            <div className="auth-brand">
+                <JoltLogo />
+                <p>Think fast. Play again.</p>
+            </div>
 
-            <form onSubmit={onSubmit} noValidate>
+            <div className="panel">
+                <h1>Welcome back.</h1>
+                <p className="auth-sub">Pick up where you left off.</p>
+
+                <form onSubmit={onSubmit} noValidate>
                 <label htmlFor="login-email">Email</label>
                 <input
                     id="login-email"
@@ -64,9 +72,10 @@ export function LoginPage() {
                 </button>
             </form>
 
-            <p className="muted">
-                No account? <Link to="/register">Create one</Link>
-            </p>
+                <p className="muted auth-alt">
+                    No account? <Link to="/register">Create one</Link>
+                </p>
+            </div>
         </section>
     );
 }

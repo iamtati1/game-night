@@ -48,8 +48,11 @@ export function FlushResultsPage() {
 
     return (
         <section className="results flush">
-            <p className="eyebrow">Flush complete</p>
-            <h1>{session.score} points</h1>
+            <p className="run-eyebrow">Flush &middot; Run complete</p>
+            <p className="run-score">
+                <strong>{session.score}</strong>
+                <span>points</span>
+            </p>
 
             {/* A target to beat is what makes a second run tempting. */}
             <p className="lede">
@@ -106,8 +109,8 @@ export function FlushResultsPage() {
                 <Link className="button primary" to="/flush">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/history">
-                    History
+                <Link className="button ghost" to="/#games">
+                    Pick another Jolt
                 </Link>
             </div>
         </section>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { splitPrompt } from "../games/prompt.js";
 import { ApiError, api } from "../api/client.js";
 import type { SessionSummary } from "../api/types.js";
 
@@ -44,8 +45,14 @@ export function ResultsPage() {
 
     return (
         <section className="results">
-            <p className="eyebrow">Game complete</p>
-            <h1>{session.score} points</h1>
+            {/* The score is the headline, at brand scale. This screen is the "see"
+                step of the loop, and the number is the only thing the player came
+                back for. */}
+            <p className="run-eyebrow">Code Blitz &middot; Run complete</p>
+            <p className="run-score">
+                <strong>{session.score}</strong>
+                <span>points</span>
+            </p>
 
             <dl className="stat-row">
                 <div>
@@ -71,7 +78,18 @@ export function ResultsPage() {
             <ol className="breakdown">
                 {session.questions.map((q) => (
                     <li key={q.displayOrder} className={q.isCorrect ? "ok" : "bad"}>
-                        <pre className="prompt small">{q.prompt}</pre>
+                        {/* Same split as the game screen. Without it the review
+                            screen rendered "What does this log?" in monospace, so
+                            prose looked like code in exactly the place a player
+                            goes to understand what they got wrong.
+                            
+                            Deliberately not applied to Flush: its snippets are all
+                            code and use blank lines between statements, so the same
+                            rule would promote the first line to prose. */}
+                        <p className="review-ask">{splitPrompt(q.prompt).question}</p>
+                        {splitPrompt(q.prompt).code && (
+                            <pre className="prompt small">{splitPrompt(q.prompt).code}</pre>
+                        )}
                         <p className="answer-line">
                             {q.status === "timed_out" ? (
                                 <span className="tag timeout">No answer</span>
@@ -95,12 +113,14 @@ export function ResultsPage() {
                 ))}
             </ol>
 
+            {/* Two ways to keep going: the same game again, or a different one.
+                A single "home" link ends the session; this continues it. */}
             <div className="cta-row">
                 <Link className="button primary" to="/play">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/">
-                    Home
+                <Link className="button ghost" to="/#games">
+                    Pick another Jolt
                 </Link>
             </div>
         </section>

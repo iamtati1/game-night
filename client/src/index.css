@@ -201,7 +201,9 @@ a {
 }
 
 .button.primary:hover:not(:disabled) {
-    background: #7c4ef0;
+    /* brightness, not a hardcoded violet: this button is recoloured by --accent in
+       Flush and on the auth pages, and a fixed hex undid the swap on hover. */
+    filter: brightness(1.1);
 }
 
 .button.ghost {
@@ -779,8 +781,15 @@ input:focus {
     white-space: nowrap;
 }
 
+/* Per-game chip accents, keyed by slug. HistoryPage renders `game-<slug>`, so
+   every game in the catalog needs a rule here or its chip silently falls back to
+   grey -- which is what happened to Flush when this block lost its second half. */
 .game-code-blitz {
-    --game-accent: #8b5cf6;
+    --game-accent: var(--blitz);
+}
+
+.game-flush {
+    --game-accent: var(--flush);
 }
 
 /* ---------- Flush ----------
@@ -828,40 +837,6 @@ input:focus {
 
 
 
-
-.tile {
-    width: 100%;
-    padding: 0.8rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-family: var(--mono);
-    font-size: 0.9rem;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, transform 0.08s;
-}
-
-.tile:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: var(--surface-2);
-}
-
-.tile:active:not(:disabled) {
-    transform: translateY(1px);
-}
-
-.tile:disabled {
-    opacity: 0.6;
-    cursor: default;
-}
-
-.tile.wrong {
-    border-color: var(--incorrect);
-    background: #f8717122;
-}
 
 /* The reveal is the teaching moment, so it gets room rather than a toast. */
 .reveal {
@@ -1895,6 +1870,13 @@ a.card-body:hover .card-play svg {
     background: var(--surface-2);
 }
 
+/* Transitions live with the rules they animate, so a hover state and the thing it
+   moves are not declared 400 lines apart. */
+.preview-bar,
+.preview-line {
+    transition: background 220ms ease-out, border-color 220ms ease-out;
+}
+
 .preview-row.is-hit {
     background: #34d39930;
     box-shadow: inset 0 0 0 1px var(--correct);
@@ -1953,10 +1935,11 @@ a.card-body:hover .card-play svg {
 }
 
 .loop-n {
+    display: block;
     color: var(--jolt);
-    font-size: 0.75rem;
+    font-size: 1.5rem;
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
 }
 
@@ -2190,15 +2173,6 @@ a.card-body:hover .card-play svg {
     text-transform: uppercase;
 }
 
-/* ---------- the loop ---------- */
-
-.loop-n {
-    display: block;
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-}
-
 /* Closes the loop: the last tile points back at the first instead of the list
    simply stopping, which is the whole product in one shape. */
 .loop-back {
@@ -2279,18 +2253,10 @@ a.card-body:focus-visible .preview-bar {
     background: linear-gradient(90deg, var(--card-accent) 24%, var(--surface-2) 24%);
 }
 
-.preview-bar {
-    transition: background 220ms ease-out;
-}
-
 a.card-body:hover .preview-line:nth-of-type(2),
 a.card-body:focus-visible .preview-line:nth-of-type(2) {
     border-color: transparent;
     background: #34d39930;
-}
-
-.preview-line {
-    transition: background 220ms ease-out, border-color 220ms ease-out;
 }
 
 @media (max-width: 620px) {
@@ -2313,4 +2279,159 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     .preview-line {
         transition: none;
     }
+}
+
+/* ================= JOLT — auth, results and history ================= */
+
+/* ---------- auth ---------- */
+
+/* Cyan is Jolt's own colour, so signing in reads as joining the platform rather
+   than entering one of its games. The whole surface is recoloured by swapping the
+   token -- the same mechanism Flush uses -- so inputs, focus rings and the primary
+   button follow without a single extra rule. */
+.auth {
+    --accent: var(--jolt);
+    --accent-soft: #22d3ee33;
+
+    max-width: 26rem;
+    margin: 0 auto;
+}
+
+.auth-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.auth-brand .jolt-word {
+    font-size: 1.6rem;
+}
+
+.auth-brand .jolt-bolt {
+    width: 26px;
+    height: 26px;
+}
+
+.auth-brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.auth h1 {
+    margin: 0 0 0.3rem;
+    font-size: 1.5rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.auth-sub {
+    margin: 0 0 1.4rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.auth .button.primary {
+    color: #04222a;
+    font-weight: 700;
+}
+
+.auth-alt {
+    margin: 1.1rem 0 0;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+/* ---------- run results ---------- */
+
+.run-eyebrow {
+    margin: 0 0 0.4rem;
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* Brand scale, because the score is what the player came back to see. Tabular so
+   a four-figure score does not jitter against a three-figure one. */
+.run-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0 0 1.75rem;
+}
+
+.run-score strong {
+    font-size: clamp(3rem, 9vw, 4.75rem);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.run-score span {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+/* The same readout language as the in-game HUD and the landing's Your Jolt block:
+   a caps label over a tabular figure. Previously these were generic dashboard
+   tiles, which is the one thing this product should not look like. */
+.stat-row div {
+    border-left: 3px solid var(--accent);
+}
+
+.stat-row dt {
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+}
+
+.stat-row dd {
+    font-size: 1.5rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- history ---------- */
+
+.history-title {
+    margin: 0 0 1.5rem;
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Scannable by colour before it is read: each run is tagged with the accent of
+   the game it belongs to. */
+.history-row {
+    border-left: 3px solid var(--game-accent, var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth .button.primary {
+        transition: none;
+    }
+}
+
+/* The question in a results breakdown, in reading type. The snippet beneath keeps
+   .prompt small and stays monospace. */
+.review-ask {
+    margin: 0 0 0.5rem;
+    font-size: 0.98rem;
+    font-weight: 650;
+}
+
+/* History is platform chrome, not a game, so its eyebrow takes Jolt's cyan while
+   each row keeps the accent of the game it belongs to. */
+.runs {
+    --accent: var(--jolt);
 }

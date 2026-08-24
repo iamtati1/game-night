@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.js";
+import { JoltLogo } from "../components/JoltLogo.js";
 
 export function RegisterPage() {
     const { register } = useAuth();
@@ -19,7 +20,7 @@ export function RegisterPage() {
 
         try {
             await register(email, username, password);
-            navigate("/play");
+            navigate("/");
         } catch (err) {
             setError(err instanceof ApiError ? err.detailText : "Something went wrong");
         } finally {
@@ -28,10 +29,17 @@ export function RegisterPage() {
     }
 
     return (
-        <section className="panel narrow">
-            <h1>Create an account</h1>
+        <section className="auth">
+            <div className="auth-brand">
+                <JoltLogo />
+                <p>Think fast. Play again.</p>
+            </div>
 
-            <form onSubmit={onSubmit} noValidate>
+            <div className="panel">
+                <h1>Start your first run.</h1>
+                <p className="auth-sub">Takes about ten seconds. Then pick a game.</p>
+
+                <form onSubmit={onSubmit} noValidate>
                 <label htmlFor="reg-email">Email</label>
                 <input
                     id="reg-email"
@@ -75,11 +83,12 @@ export function RegisterPage() {
                 <button className="button primary full" type="submit" disabled={busy}>
                     {busy ? "Creating account…" : "Create account"}
                 </button>
-            </form>
+                </form>
 
-            <p className="muted">
-                Already registered? <Link to="/login">Log in</Link>
-            </p>
+                <p className="muted auth-alt">
+                    Already registered? <Link to="/login">Log in</Link>
+                </p>
+            </div>
         </section>
     );
 }
