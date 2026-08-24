@@ -718,6 +718,8 @@ input:focus {
     padding: 0;
 }
 
+/* The left rule is the game's own accent, so a page of runs is scannable by
+   colour before it is read. */
 .history-row {
     display: flex;
     flex-wrap: wrap;
@@ -725,9 +727,10 @@ input:focus {
     justify-content: space-between;
     gap: 0.6rem;
     padding: 1rem 0.25rem;
+    border-left: 3px solid var(--game-accent, var(--border));
+    border-radius: 8px;
     color: var(--text);
     text-decoration: none;
-    border-radius: 8px;
     transition: background 0.15s;
 }
 
@@ -2410,12 +2413,6 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     font-variant-numeric: tabular-nums;
 }
 
-/* Scannable by colour before it is read: each run is tagged with the accent of
-   the game it belongs to. */
-.history-row {
-    border-left: 3px solid var(--game-accent, var(--border));
-}
-
 @media (prefers-reduced-motion: reduce) {
     .auth .button.primary {
         transition: none;
@@ -2434,4 +2431,112 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
    each row keeps the accent of the game it belongs to. */
 .runs {
     --accent: var(--jolt);
+}
+
+/* ================= JOLT — paused run ================= */
+
+/* A held run, not an error state. The accent comes from the game, so pausing
+   Code Blitz looks like Code Blitz and pausing Flush looks like Flush -- the
+   player should never lose track of what they are in the middle of. */
+.paused {
+    max-width: 30rem;
+    margin: 2rem auto 0;
+    padding: 1.9rem;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 16px;
+    background: var(--surface);
+    text-align: center;
+}
+
+.paused-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.paused-game {
+    margin: 0 0 1.1rem;
+    font-size: clamp(1.9rem, 6vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+/* The evidence behind "your progress is saved": where the run actually stopped,
+   in the game's own units, with the score it had banked. */
+.paused-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin: 0 0 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.paused-progress strong {
+    color: var(--text);
+    font-size: 1.2rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.paused-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.paused-note {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.paused-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.paused-confirm p {
+    margin: 0 0 1rem;
+    color: var(--text);
+    font-size: 0.92rem;
+}
+
+/* Red only at the point of no return. Using it on the first Quit button would
+   make leaving look dangerous when it is merely a choice. */
+.button.danger {
+    border-color: var(--incorrect);
+    background: transparent;
+    color: var(--incorrect);
+    font-weight: 650;
+}
+
+.button.danger:hover:not(:disabled) {
+    background: #f8717118;
+}
+
+@media (max-width: 480px) {
+    .paused {
+        padding: 1.4rem;
+    }
+
+    .paused-actions .button {
+        flex: 1 1 auto;
+    }
 }

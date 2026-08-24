@@ -18,6 +18,11 @@
  * FLUSH_ROUND_TIME_LIMIT_MS. If a rule changes, this line has to change with it.
  */
 
+/** Slugs are the contract between the client, the routes and the API. Naming them
+ *  once here keeps "code-blitz" from being retyped at every call site. */
+export const CODE_BLITZ = "code-blitz";
+export const FLUSH = "flush";
+
 export type GameStatus = "live" | "soon";
 
 /** Which abstract preview the card draws. Each one is a reduction of the real
@@ -47,7 +52,7 @@ export interface GameEntry {
 
 export const GAMES: GameEntry[] = [
     {
-        slug: "code-blitz",
+        slug: CODE_BLITZ,
         name: "Code Blitz",
         hook: "Read the code. Call the output. Beat the clock.",
         category: "Code",
@@ -60,7 +65,7 @@ export const GAMES: GameEntry[] = [
         motif: "blitz"
     },
     {
-        slug: "flush",
+        slug: FLUSH,
         name: "Flush",
         hook: "Predict what prints, in order. One wrong call ends the round.",
         category: "Logic",

@@ -10,6 +10,8 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { PausedRun } from "../components/PausedRun.js";
+import { CODE_BLITZ } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
 
@@ -351,25 +353,21 @@ export function GamePage() {
 
     if (paused) {
         return (
-            <section className="panel narrow">
-                <p className="eyebrow">GAME PAUSED</p>
-
-                <h1>Code Blitz</h1>
-
-                <p className="muted">
-                    Your progress is saved.
-                </p>
-
-                <div className="panel-actions">
-                    <button
-                        className="button primary"
-                        onClick={() => void handleResume()}
-                        disabled={busy}
-                    >
-                        Resume
-                    </button>
-                </div>
-            </section>
+            <PausedRun
+                slug={CODE_BLITZ}
+                progress={
+                    question
+                        ? {
+                              unit: "Question",
+                              current: question.questionNumber,
+                              total: question.totalQuestions
+                          }
+                        : null
+                }
+                score={runningScore}
+                busy={busy}
+                onResume={() => void handleResume()}
+            />
         );
     }
 

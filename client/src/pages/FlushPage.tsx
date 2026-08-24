@@ -10,6 +10,8 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { PausedRun } from "../components/PausedRun.js";
+import { FLUSH } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 
 const ROUND_TIME_LIMIT_MS = 60_000;
@@ -313,23 +315,17 @@ export function FlushPage() {
 
     if (paused) {
         return (
-            <section className="panel narrow">
-                <p className="eyebrow">GAME PAUSED</p>
-
-                <h1>Flush</h1>
-
-                <p className="muted">Your progress is saved.</p>
-
-                <div className="panel-actions">
-                    <button
-                        className="button primary"
-                        onClick={() => void handleResume()}
-                        disabled={busy}
-                    >
-                        Resume
-                    </button>
-                </div>
-            </section>
+            <PausedRun
+                slug={FLUSH}
+                progress={
+                    round
+                        ? { unit: "Round", current: round.roundNumber, total: round.totalRounds }
+                        : null
+                }
+                score={score}
+                busy={busy}
+                onResume={() => void handleResume()}
+            />
         );
     }
 
