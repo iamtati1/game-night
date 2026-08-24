@@ -69,6 +69,17 @@ body {
     }
 }
 
+/* Below this the wordmark goes too, leaving the GN badge. nowrap stops the
+   header breaking onto two lines, but on its own it just converts wrapping into
+   horizontal overflow -- measured at 280px, Log out ran 16px past the viewport.
+   Something has to actually give up space, and the brand is the one element
+   that is decoration rather than navigation. */
+@media (max-width: 420px) {
+    .brand-word {
+        display: none;
+    }
+}
+
 .brand {
     display: inline-flex;
     align-items: center;
@@ -298,15 +309,25 @@ input:focus {
     color: var(--muted);
 }
 
+/* Stacked label over value, so the number reads as a readout rather than a
+   sentence. position: relative is load-bearing -- .score-award is absolutely
+   positioned and would otherwise resolve against a distant ancestor. */
 .score-slot {
     position: relative;
-    display: inline-flex;
-    align-items: baseline;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
 }
 
+/* Deliberately NOT var(--mono): Menlo and SF Mono draw a slashed zero, which at
+   HUD size reads as a damaged glyph rather than a number. tabular-nums gives the
+   fixed-width digits the mono font was wanted for, without the slash. */
 .score {
     font-variant-numeric: tabular-nums;
-    font-weight: 650;
+    font-size: 1.6rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
 }
 
 /* Keyed on the question counter, so remounting restarts the animation. A pure
@@ -418,7 +439,7 @@ input:focus {
 
 .options {
     display: grid;
-    gap: 0.6rem;
+    gap: 0.55rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -429,14 +450,14 @@ input:focus {
     align-items: center;
     gap: 0.85rem;
     width: 100%;
-    padding: 0.9rem 1rem;
+    padding: 1.15rem;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--surface);
     color: var(--text);
     font: inherit;
     font-family: var(--mono);
-    font-size: 0.92rem;
+    font-size: 0.98rem;
     text-align: left;
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
@@ -577,9 +598,13 @@ input:focus {
     }
 }
 
+/* Reserved height, so feedback arriving cannot push the answers down a beat
+   after the player has already clicked one. */
 .feedback {
-    min-height: 2.5rem;
-    margin-top: 1.1rem;
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-top: 0.9rem;
 }
 
 .tag {
@@ -746,10 +771,6 @@ input:focus {
     --game-accent: #8b5cf6;
 }
 
-.game-flush {
-    --game-accent: #f0a94a;
-}
-
 /* ---------- Flush ----------
    Amber, not violet. Code Blitz is a reflex game and reads cool and urgent;
    Flush is a reasoning game and should read warmer and slower. The accent token
@@ -761,16 +782,7 @@ input:focus {
     --accent-soft: #f0a94a26;
 }
 
-.flush-task {
-    margin: 0 0 0.9rem;
-    color: var(--muted);
-    font-size: 0.95rem;
-}
 
-.flush-task strong {
-    color: var(--accent);
-    font-variant-numeric: tabular-nums;
-}
 
 /* The decision, stated where the player is looking. Banked sits left and reads
    settled; the multiplier at risk sits right and reads live. */
@@ -799,59 +811,11 @@ input:focus {
     font-variant-numeric: tabular-nums;
 }
 
-/* Slots are the sequence being built. Empty ones are visibly waiting, which is
-   what communicates "how much further do I have to go". */
-.slots {
-    display: grid;
-    gap: 0.4rem;
-    margin: 0 0 1.25rem;
-    padding: 0;
-    list-style: none;
-}
 
-.slot {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.55rem 0.8rem;
-    border: 1px dashed var(--border);
-    border-radius: 9px;
-    font-family: var(--mono);
-    font-size: 0.88rem;
-    color: var(--muted);
-    transition: border-color 0.18s, background 0.18s, color 0.18s;
-}
 
-.slot.filled {
-    border-style: solid;
-    border-color: var(--correct);
-    background: #34d39914;
-    color: var(--text);
-}
 
-.slot-index {
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    width: 20px;
-    height: 20px;
-    border-radius: 5px;
-    background: var(--surface-2);
-    font-size: 0.7rem;
-}
 
-.slot.filled .slot-index {
-    background: var(--correct);
-    color: #07130d;
-}
 
-.tiles {
-    display: grid;
-    gap: 0.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
 
 .tile {
     width: 100%;
@@ -936,9 +900,10 @@ input:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .slot,
+    .console-line,
     .tile {
         transition: none;
+        animation: none;
     }
 }
 
@@ -951,11 +916,11 @@ input:focus {
 /* The stage carries the whole question so it can move as one object. Only
    opacity and transform animate -- anything affecting box size would reflow the
    answer buttons under the player's cursor mid-click. */
-.question-stage {
+.play-stage {
     animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.question-stage.leaving {
+.play-stage.leaving {
     animation: stage-out 170ms ease-in forwards;
 }
 
@@ -1000,14 +965,14 @@ input:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .question-stage,
-    .question-stage.leaving {
+    .play-stage,
+    .play-stage.leaving {
         animation: none;
     }
 
     /* The exit still has to hide the outgoing question, or it would sit on top of
        the incoming one for a frame. Opacity without motion. */
-    .question-stage.leaving {
+    .play-stage.leaving {
         opacity: 0;
     }
 
@@ -1051,27 +1016,6 @@ input:focus {
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-}
-
-/* Stacked label over value, so the number reads as a readout rather than a
-   sentence. "pts" is gone -- the label says Score, and saying it twice was the
-   kind of redundancy that makes a HUD look like a form. */
-.score-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 1.2;
-}
-
-/* Deliberately NOT var(--mono). Menlo and SF Mono draw a slashed zero, which at
-   HUD size reads as a damaged glyph rather than a number -- "0" looked struck
-   through. tabular-nums gives the fixed-width digits the mono font was wanted
-   for, without the slash. */
-.score {
-    font-variant-numeric: tabular-nums;
-    font-size: 1.6rem;
-    font-weight: 750;
-    letter-spacing: -0.02em;
 }
 
 /* ---------- round progress ---------- */
@@ -1136,26 +1080,8 @@ input:focus {
 
 /* ---------- question and answers ---------- */
 
-.game .prompt {
+.game.blitz .prompt {
     margin-bottom: 1.1rem;
-}
-
-/* Reserved height, so the feedback arriving cannot push the answer buttons down
-   a beat after the player has clicked one. */
-.feedback {
-    display: flex;
-    align-items: center;
-    min-height: 2.75rem;
-    margin-top: 0.9rem;
-}
-
-.options {
-    gap: 0.55rem;
-}
-
-.option {
-    padding: 1.05rem 1.1rem;
-    font-size: 0.98rem;
 }
 
 /* A pressed state, so a click is acknowledged before the network answers. */
@@ -1173,7 +1099,7 @@ input:focus {
         font-size: 1.25rem;
     }
 
-    .game .prompt {
+    .game.blitz .prompt {
         font-size: 0.92rem;
     }
 
@@ -1210,20 +1136,285 @@ input:focus {
 .game {
     display: flex;
     flex-direction: column;
+}
+
+/* Code Blitz only. Its composition is a short centred column -- one snippet and
+   four answers -- which leaves a dead band underneath unless it is centred.
+   
+   Flush is deliberately excluded: its board is tall enough to carry the viewport
+   on its own, it has no .feedback element to balance the auto margin against, and
+   forcing the same rule pushed the board down against the bottom edge. Same
+   system, different composition. */
+.game.blitz {
     min-height: calc(100vh - 11rem);
     min-height: calc(100dvh - 11rem);
 }
 
-.game .question-stage {
+.game.blitz .play-stage {
     margin-top: auto;
 }
 
-.game .feedback {
+.game.blitz .feedback {
     margin-bottom: auto;
 }
 
-/* Answers should read as objects with weight, not rows in a list. */
-.option {
-    padding: 1.15rem 1.15rem;
-    border-radius: 12px;
+/* Flush centres its board in the leftover space instead. Stretching the panels to
+   fill would have added blank console rows, which would read as "more output to
+   place" and lie about the round -- so the board keeps its true height and is
+   simply placed well. margin-block: auto because, unlike Code Blitz, there is no
+   trailing feedback element to balance against. */
+.game.flush {
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+}
+
+.game.flush .play-stage {
+    margin-block: auto;
+}
+
+
+/* ---------- Pass C: the Flush board ----------
+
+   Flush asks one question: what does this code print, and in what order? So the
+   board states it spatially -- the code on one side, the output being assembled
+   on the other -- and the player's whole job is moving tiles from the rack into
+   that output. Code Blitz is a centred column of answers to read; this is a
+   workspace to manipulate, which is the difference the two games need. */
+
+.board {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+}
+
+.board-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.board-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* How many lines are still unplaced. It belongs on the Output label because that
+   is the panel it describes -- as a standalone sentence it was just more text. */
+.board-count {
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.board .prompt {
+    flex: 1;
+    margin: 0;
+}
+
+/* ---------- the output console ---------- */
+
+.console {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    list-style: none;
+}
+
+.console-line {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 2.1rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    transition: background 180ms ease-out, color 180ms ease-out;
+}
+
+/* An empty line is a slot still waiting, not an error. Dashed reads as "goes
+   here"; the gutter number tells the player which position they are choosing. */
+.console-line:not(.printed) {
+    border: 1px dashed var(--border);
+    padding: calc(0.3rem - 1px) calc(0.5rem - 1px);
+}
+
+.console-gutter {
+    flex: 0 0 auto;
+    width: 1.4rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.console-text {
+    min-width: 0;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.console-line.printed {
+    background: #34d39914;
+    color: var(--text);
+}
+
+.console-line.printed .console-gutter {
+    color: var(--correct);
+}
+
+/* The tile landing. Brief, and only on the line that just changed -- the whole
+   console flashing would say "everything happened" instead of "this happened". */
+.console-line.snap {
+    animation: line-snap 380ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes line-snap {
+    0%   { transform: translateX(-6px); background: var(--accent-soft); }
+    60%  { transform: translateX(0);    background: var(--accent-soft); }
+    100% { transform: none;             background: #34d39914; }
+}
+
+/* ---------- the tile rack ---------- */
+
+/* Wrapping chips sized to their content, not a column of full-width rows. This
+   is the change that stops Flush reading as a form: a rack of differently-sized
+   objects invites picking one up, a stack of identical bars invites reading. */
+.rack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tile {
+    /* was width: 100% */
+    width: auto;
+    padding: 0.7rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    /* Comfortably past the 44px tap target once padding and line-height are in. */
+    min-height: 2.75rem;
+    cursor: pointer;
+    transition: transform 120ms ease-out, border-color 140ms, background 140ms,
+        box-shadow 140ms;
+}
+
+.tile:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface);
+    /* Lifting is the affordance: it says "this comes with you". */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px #0006;
+}
+
+.tile:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.tile:active:not(:disabled) {
+    transform: translateY(0) scale(0.97);
+    box-shadow: none;
+}
+
+.tile:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.tile.wrong {
+    border-color: var(--incorrect);
+    background: #f8717122;
+    animation: tile-reject 320ms ease-in-out;
+}
+
+/* Restrained on purpose: a wrong tile already costs the round's multiplier, so
+   the animation only has to say "not that one", not punish. */
+@keyframes tile-reject {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-4px); }
+    50%      { transform: translateX(3px); }
+    75%      { transform: translateX(-2px); }
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 720px) {
+    /* Stacking beats shrinking: two half-width panels of monospace at 394px
+       would wrap the code and make both unreadable. */
+    .board {
+        grid-template-columns: 1fr;
+        gap: 0.7rem;
+    }
+
+    .console-line {
+        font-size: 0.82rem;
+    }
+
+    .tile {
+        font-size: 0.85rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .console-line.snap {
+        animation: none;
+        /* Movement carried "a tile just landed here", so an outline has to. */
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+    }
+
+    .tile.wrong {
+        animation: none;
+    }
+
+    .tile:hover:not(:disabled),
+    .tile:active:not(:disabled) {
+        transform: none;
+    }
+}
+
+/* ---------- Pass C: the question reads as a question ---------- */
+
+/* Prose in the UI face at reading size. Previously the whole prompt went into a
+   monospace code block, so "What does this log?" looked like program output and a
+   pure-prose question about time complexity looked like a snippet with no code in
+   it. The snippet below keeps the mono treatment; the question no longer borrows
+   it. */
+.ask {
+    margin: 0 0 0.85rem;
+    font-size: 1.35rem;
+    font-weight: 650;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+}
+
+@media (max-width: 620px) {
+    .ask {
+        font-size: 1.15rem;
+    }
 }

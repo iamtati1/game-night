@@ -71,6 +71,35 @@ function optionStateFor(
     return "muted";
 }
 
+/**
+ * Splits a prompt into its question and its code snippet.
+ *
+ * The data model does not distinguish them: `questions.prompt` is a single TEXT
+ * column, snapshotted into `session_questions.prompt_text`, and adding a second
+ * column would be a schema change to solve a rendering problem. So this is the
+ * smallest presentation-layer rule that works -- split once, at the first blank
+ * line, which is the convention every seeded question already follows.
+ *
+ * The failure mode is deliberately benign. A prompt with no blank line is treated
+ * as all prose, so a question like "What is the average time complexity of binary
+ * search on a sorted array?" -- which has no code at all, and until now was
+ * rendered inside a monospace code block -- comes out as readable text. An
+ * imported question that ignores the convention renders as prose too: plain, but
+ * never unreadable.
+ */
+export function splitPrompt(prompt: string): { question: string; code: string | null } {
+    const at = prompt.indexOf("\n\n");
+
+    if (at === -1) {
+        return { question: prompt.trim(), code: null };
+    }
+
+    return {
+        question: prompt.slice(0, at).trim(),
+        code: prompt.slice(at + 2).trim() || null
+    };
+}
+
 /** Decorative only -- the banner below carries the same meaning as text. */
 const OPTION_GLYPH: Record<OptionState, string> = {
     "chosen-correct": "\u2713",
@@ -377,7 +406,7 @@ export function GamePage() {
     }
 
     return (
-        <section className="game">
+        <section className="game blitz">
             {/* Names the game, reports the score, offers the exit. Three things,
                 so the player always knows where they are and how to leave. */}
             <header className="hud">
@@ -425,9 +454,21 @@ export function GamePage() {
                 page mid-answer. */}
             <div
                 key={question.sessionQuestionId}
-                className={`question-stage${leaving ? " leaving" : ""}`}
+                className={`play-stage${leaving ? " leaving" : ""}`}
             >
-                <pre className="prompt">{question.prompt}</pre>
+                {(() => {
+                    const { question: ask, code } = splitPrompt(question.prompt);
+
+                    return (
+                        <>
+                            {/* The question is a question. It reads in the UI face,
+                                at reading size -- monospace was making prose look
+                                like output the player had to parse. */}
+                            <h1 className="ask">{ask}</h1>
+                            {code && <pre className="prompt">{code}</pre>}
+                        </>
+                    );
+                })()}
 
                 <ul className={`options${feedback?.outcome === "timed_out" ? " lapsed" : ""}`}>
                     {question.options.map((option, index) => {

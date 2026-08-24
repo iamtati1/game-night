@@ -10,9 +10,25 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { RoundProgress } from "../components/RoundProgress.js";
 
 const ROUND_TIME_LIMIT_MS = 60_000;
 const REVEAL_MS = 2600;
+
+/** Round exit. Matches Code Blitz, so both games settle at the same rhythm. */
+const EXIT_MS = 170;
+
+/**
+ * How long the resolved placement stays on the board before the reveal replaces
+ * the rack.
+ *
+ * Without it the rack unmounted in the same frame the round ended, so the
+ * rejected tile's red state and shake never rendered at all -- the player saw a
+ * click turn instantly into a verdict with no visible cause. This is the beat
+ * where the board answers "which tile was that?" before the reveal answers "and
+ * what should it have been?".
+ */
+const RESOLVE_MS = 520;
 
 /** What the round is worth if you bank n placements, and if you finish.
  *  Mirrors the server's formula purely for display -- the server remains
@@ -41,9 +57,68 @@ export function FlushPage() {
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
+    const [paused, setPaused] = useState(false);
+    /** Bumped per resolved placement, so the score and award animations replay
+     *  even when two placements are worth the same. */
+    const [beat, setBeat] = useState(0);
+    const [award, setAward] = useState(0);
+    const [leaving, setLeaving] = useState(false);
+    /** The slot that just accepted a tile, so only that line animates. */
+    const [snapped, setSnapped] = useState<number | null>(null);
+
     /** Blocks a second click, and the countdown, while a placement is in flight
      *  or a reveal is on screen. Same guard Code Blitz uses. */
     const settling = useRef(false);
+
+    /** Every pending timeout. The reveal timer calls navigate() when a session
+     *  ends, so one surviving an unmount would redirect a player who had already
+     *  left the page. Same fix Code Blitz needed. */
+    const timers = useRef<number[]>([]);
+
+    const later = useCallback((fn: () => void, ms: number) => {
+        timers.current.push(window.setTimeout(fn, ms));
+    }, []);
+
+    useEffect(
+        () => () => {
+            timers.current.forEach(window.clearTimeout);
+            timers.current = [];
+        },
+        []
+    );
+
+    async function handlePause() {
+        if (!sessionId || busy) return;
+
+        setBusy(true);
+
+        try {
+            await api.post("/api/me/sessions/flush/pause");
+            setPaused(true);
+        } catch (err) {
+            setError(err instanceof ApiError ? err.detailText : "Could not pause the game");
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function handleResume() {
+        setBusy(true);
+
+        try {
+            // POST /api/flush/sessions resumes a paused session and serves the
+            // round with its clock restored, so there is no separate resume call.
+            const data = await api.post<FlushStartResponse>("/api/flush/sessions");
+
+            setRound(data.round ?? null);
+            setScore(data.scoreSoFar ?? 0);
+            setPaused(false);
+        } catch (err) {
+            setError(err instanceof ApiError ? err.detailText : "Could not resume the game");
+        } finally {
+            setBusy(false);
+        }
+    }
 
     useEffect(() => {
         let active = true;
@@ -83,20 +158,25 @@ export function FlushPage() {
         (r: Reveal, next: FlushRound | null, complete: boolean, id: string | null) => {
             setReveal(r);
 
-            setTimeout(() => {
-                setReveal(null);
-                setLastWrong(null);
+            later(() => {
+                setLeaving(true);
 
-                if (complete && id) {
-                    navigate(`/flush/results/${id}`, { replace: true });
-                    return;
-                }
+                later(() => {
+                    setLeaving(false);
+                    setReveal(null);
+                    setLastWrong(null);
 
-                setRound(next);
-                settling.current = false;
+                    if (complete && id) {
+                        navigate(`/flush/results/${id}`, { replace: true });
+                        return;
+                    }
+
+                    setRound(next);
+                    settling.current = false;
+                }, EXIT_MS);
             }, REVEAL_MS);
         },
-        [navigate]
+        [navigate, later]
     );
 
     async function place(outputId: string) {
@@ -111,7 +191,17 @@ export function FlushPage() {
                 { roundId: round.roundId, outputId }
             );
 
+            const gained = res.scoreSoFar - score;
+
             setScore(res.scoreSoFar);
+            setBeat((n) => n + 1);
+            setAward(gained);
+
+            if (!res.roundEnded) {
+                // The tile landed. Mark the slot it filled so only that line snaps.
+                setSnapped(res.round ? res.round.placed.length - 1 : null);
+                later(() => setSnapped(null), 420);
+            }
 
             if (!res.roundEnded) {
                 // Banked. Keep going -- the tile moves into its slot and the
@@ -122,19 +212,48 @@ export function FlushPage() {
             }
 
             if (res.outcome === "wrong") {
+                // Left on screen for RESOLVE_MS so the shake and the red border
+                // are actually seen before the rack gives way to the reveal.
                 setLastWrong(outputId);
             }
 
-            showReveal(
-                {
-                    outcome: res.outcome === "correct" ? "wrong" : res.outcome,
-                    roundScore: res.roundScore,
-                    correctSequence: res.correctSequence ?? [],
-                    yourSequence: res.yourSequence ?? []
-                },
-                res.round,
-                res.complete,
-                res.session?.id ?? sessionId
+            if (res.outcome === "round_complete") {
+                // Show the last tile landing. The response's `round` is already
+                // the NEXT round, so the finishing placement would otherwise never
+                // appear in the console -- the most satisfying moment in the game
+                // would be the one moment it did not show.
+                //
+                // This is not an optimistic guess: the server has confirmed the
+                // placement was correct and which position it completed, so the
+                // client is rendering a fact it was told, not predicting one.
+                const placedTile = round.tiles.find((t) => t.id === outputId);
+
+                if (placedTile) {
+                    setRound({
+                        ...round,
+                        placed: [...round.placed, { outputId, text: placedTile.text }],
+                        pointsBanked: res.pointsBanked,
+                        tiles: round.tiles.filter((t) => t.id !== outputId)
+                    });
+                    setSnapped(round.placed.length);
+                    later(() => setSnapped(null), 420);
+                }
+            }
+
+            later(
+                () =>
+                    showReveal(
+                        {
+                            outcome: res.outcome === "correct" ? "wrong" : res.outcome,
+                            roundScore: res.roundScore,
+                            correctSequence: res.correctSequence ?? [],
+                            yourSequence: res.yourSequence ?? []
+                        },
+                        res.round,
+                        res.complete,
+                        res.session?.id ?? sessionId
+                    ),
+                RESOLVE_MS
             );
         } catch (err) {
             settling.current = false;
@@ -192,6 +311,28 @@ export function FlushPage() {
         );
     }
 
+    if (paused) {
+        return (
+            <section className="panel narrow">
+                <p className="eyebrow">GAME PAUSED</p>
+
+                <h1>Flush</h1>
+
+                <p className="muted">Your progress is saved.</p>
+
+                <div className="panel-actions">
+                    <button
+                        className="button primary"
+                        onClick={() => void handleResume()}
+                        disabled={busy}
+                    >
+                        Resume
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
     if (!round) {
         return <p className="muted center">Queueing up…</p>;
     }
@@ -202,14 +343,37 @@ export function FlushPage() {
 
     return (
         <section className="game flush">
-            <header className="game-bar">
-                <span className="progress">
-                    Round {round.roundNumber} of {round.totalRounds}
+            <header className="hud">
+                <span className="hud-title">Flush</span>
+
+                <span className="score-slot">
+                    <span className="hud-label">Score</span>
+                    <span className="score" aria-live="polite">
+                        <span key={`s${beat}`} className="score-value">
+                            {score}
+                        </span>
+                    </span>
+                    {award > 0 && !reveal && (
+                        <span key={`a${beat}`} className="score-award" aria-hidden="true">
+                            +{award}
+                        </span>
+                    )}
                 </span>
-                <span className="score" aria-live="polite">
-                    {score} pts
-                </span>
+
+                <button
+                    className="button ghost small"
+                    onClick={() => void handlePause()}
+                    disabled={busy || reveal !== null}
+                >
+                    Pause
+                </button>
             </header>
+
+            <RoundProgress
+                current={round.roundNumber}
+                total={round.totalRounds}
+                unit="Round"
+            />
 
             <Countdown
                 deadlineAt={round.deadlineAt}
@@ -217,58 +381,87 @@ export function FlushPage() {
                 onExpire={onExpire}
             />
 
-            <p className="flush-task">
-                What prints, in order? <strong>{remaining}</strong> left
-            </p>
+            {/* Keyed on the round, so a new round remounts and animates in rather
+                than appearing in place. Same mechanism as Code Blitz. */}
+            <div key={round.roundId} className={`play-stage${leaving ? " leaving" : ""}`}>
+                {/* The board is the game: the code on one side, the output it
+                    produces on the other. Two panels side by side say "this
+                    produces that" without a sentence of instruction, and it is
+                    deliberately not Code Blitz's single centred column. */}
+                <div className="board">
+                    <div className="board-panel">
+                        <span className="board-label">Code</span>
+                        <pre className="prompt">{round.prompt}</pre>
+                    </div>
 
-            <pre className="prompt">{round.prompt}</pre>
+                    <div className="board-panel">
+                        <span className="board-label">
+                            Output
+                            <span className="board-count">{remaining} left</span>
+                        </span>
 
-            {/* The stake. Banked is safe; the multiplier is what another
-                placement risks. This is the whole decision, stated plainly. */}
-            <div className="stake">
-                <span className="stake-safe">
-                    Banked <strong>{round.pointsBanked}</strong>
-                </span>
-                <span className="stake-risk">
-                    {placedCount === round.totalOutputs - 1 ? (
-                        <>
-                            Next one finishes the round · <strong>×2</strong>
-                        </>
-                    ) : (
-                        <>
-                            Finish for <strong>×2</strong> · {atRisk} at risk
-                        </>
-                    )}
-                </span>
-            </div>
+                        {/* The console being built. Filled lines read as printed
+                            output; empty ones show the slot still waiting, which
+                            is what communicates how much further there is to go. */}
+                        <ol className="console" aria-label="Output so far">
+                            {Array.from({ length: round.totalOutputs }, (_, i) => {
+                                const tile = round.placed[i];
 
-            <ol className="slots" aria-label="Placed so far">
-                {Array.from({ length: round.totalOutputs }, (_, i) => {
-                    const tile = round.placed[i];
-                    return (
-                        <li key={i} className={`slot${tile ? " filled" : ""}`}>
-                            <span className="slot-index">{i + 1}</span>
-                            <span className="slot-text">{tile ? tile.text : "—"}</span>
-                        </li>
-                    );
-                })}
-            </ol>
+                                return (
+                                    <li
+                                        key={i}
+                                        className={`console-line${tile ? " printed" : ""}${
+                                            snapped === i ? " snap" : ""
+                                        }`}
+                                    >
+                                        <span className="console-gutter">{i + 1}</span>
+                                        <span className="console-text">
+                                            {tile ? tile.text : ""}
+                                        </span>
+                                    </li>
+                                );
+                            })}
+                        </ol>
+                    </div>
+                </div>
 
-            {!reveal && (
-                <ul className="tiles">
-                    {round.tiles.map((tile) => (
-                        <li key={tile.id}>
-                            <button
-                                className={`tile${lastWrong === tile.id ? " wrong" : ""}`}
-                                onClick={() => void place(tile.id)}
-                                disabled={busy}
-                            >
-                                {tile.text}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
+                {/* The stake. Banked is safe; the multiplier is what another
+                    placement risks. This is the whole decision, stated plainly. */}
+                <div className="stake">
+                    <span className="stake-safe">
+                        Banked <strong>{round.pointsBanked}</strong>
+                    </span>
+                    <span className="stake-risk">
+                        {placedCount === round.totalOutputs - 1 ? (
+                            <>
+                                Next one finishes the round · <strong>×2</strong>
+                            </>
+                        ) : (
+                            <>
+                                Finish for <strong>×2</strong> · {atRisk} at risk
+                            </>
+                        )}
+                    </span>
+                </div>
+
+                {/* A rack of chips, not a column of buttons. Auto-width tiles that
+                    wrap read as objects to pick up; full-width rows read as a
+                    list to scan, which is the wrong verb for this game. */}
+                {!reveal && (
+                    <ul className="rack" aria-label="Available output">
+                        {round.tiles.map((tile) => (
+                            <li key={tile.id}>
+                                <button
+                                    className={`tile${lastWrong === tile.id ? " wrong" : ""}`}
+                                    onClick={() => void place(tile.id)}
+                                    disabled={busy}
+                                >
+                                    {tile.text}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
 
             {reveal && (
                 <div className="reveal" role="status">
@@ -309,6 +502,7 @@ export function FlushPage() {
                     </div>
                 </div>
             )}
+            </div>
         </section>
     );
 }

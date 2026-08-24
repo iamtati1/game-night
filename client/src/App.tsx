@@ -16,7 +16,8 @@ function Header() {
     return (
         <header className="site-header">
             <Link className="brand" to="/">
-                <span className="brand-mark">GN</span> Game Night
+                <span className="brand-mark">GN</span>
+                <span className="brand-word">Game Night</span>
             </Link>
 
             {user && (
