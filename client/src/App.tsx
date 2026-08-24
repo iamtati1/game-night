@@ -1,4 +1,5 @@
 import { Link, Route, Routes } from "react-router-dom";
+import { JoltLogo } from "./components/JoltLogo.js";
 import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { FlushPage } from "./pages/FlushPage.js";
@@ -16,12 +17,12 @@ function Header() {
     return (
         <header className="site-header">
             <Link className="brand" to="/">
-                <span className="brand-mark">GN</span>
-                <span className="brand-word">Game Night</span>
+                <JoltLogo />
             </Link>
 
             {user && (
                 <nav>
+                    <Link to="/#games">Games</Link>
                     <Link to="/history">History</Link>
                     <span className="muted">{user.username}</span>
                     <button className="button ghost small" onClick={() => void logout()}>

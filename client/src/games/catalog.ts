@@ -1,0 +1,90 @@
+/**
+ * What Jolt knows about its games.
+ *
+ * This is the client's single source of truth for game presentation: names,
+ * hooks, categories, accents and the shape of one run. Nothing in the UI should
+ * hardcode a game name or description -- it comes from here, so adding a game is
+ * one entry rather than a hunt through JSX.
+ *
+ * Why not the database: `games` holds slug, name, tagline and is_active, but
+ * there is no endpoint serving it, and it models none of the presentation
+ * metadata below (category, accent, intensity, the card's visual motif). Adding
+ * columns and an endpoint would be a schema and API change in service of a
+ * branding task. The shape here is deliberately close to what `GET /api/games`
+ * would return, so hydrating it from the server later is a swap, not a rewrite.
+ *
+ * `shape` is not marketing copy -- the numbers are the real rules, read off
+ * QUESTIONS_PER_SESSION / QUESTION_TIME_LIMIT_MS and FLUSH_ROUNDS_PER_SESSION /
+ * FLUSH_ROUND_TIME_LIMIT_MS. If a rule changes, this line has to change with it.
+ */
+
+export type GameStatus = "live" | "soon";
+
+/** Which abstract preview the card draws. Each one is a reduction of the real
+ *  game screen, so the two cards cannot read as the same game recoloured. */
+export type GameMotif = "blitz" | "flush" | "none";
+
+export interface GameEntry {
+    slug: string;
+    name: string;
+    /** One line, in the player's language, about what the game asks of them. */
+    hook: string;
+    category: string;
+    /** Drives --card-accent, so each game keeps the identity it has in play. */
+    accent: string;
+    status: GameStatus;
+    /** Route to start a run. Absent for games that do not exist yet. */
+    path?: string;
+    /** The real shape of one run. */
+    shape?: string;
+    /** 1-3, a reading of pace rather than difficulty. */
+    intensity?: number;
+    motif: GameMotif;
+}
+
+export const GAMES: GameEntry[] = [
+    {
+        slug: "code-blitz",
+        name: "Code Blitz",
+        hook: "Read the code. Call the output. Beat the clock.",
+        category: "Code",
+        accent: "#8b5cf6",
+        status: "live",
+        path: "/play",
+        shape: "10 questions · 30s each",
+        intensity: 3,
+        motif: "blitz"
+    },
+    {
+        slug: "flush",
+        name: "Flush",
+        hook: "Predict what prints, in order. One wrong call ends the round.",
+        category: "Logic",
+        accent: "#f0a94a",
+        status: "live",
+        path: "/flush",
+        shape: "5 rounds · 60s each",
+        intensity: 2,
+        motif: "flush"
+    }
+];
+
+/**
+ * Categories the platform is built to grow into.
+ *
+ * Labelled as not-yet-built everywhere they render. They exist to show that Jolt
+ * is a shape with room in it, and they deliberately carry no fake scores, player
+ * counts or release dates -- a placeholder that pretends to be a product is worse
+ * than an empty slot.
+ */
+export const UPCOMING: GameEntry[] = [
+    { slug: "memory", name: "Memory", hook: "Hold the pattern. Play it back.", category: "Recall", accent: "#a3e635", status: "soon", motif: "none" },
+    { slug: "debug", name: "Debug", hook: "Find the bug before the tests do.", category: "Code", accent: "#22d3ee", status: "soon", motif: "none" },
+    { slug: "reflex", name: "Reflex", hook: "Right answer, wrong instinct.", category: "Reaction", accent: "#f472b6", status: "soon", motif: "none" }
+];
+
+export const LIVE_GAMES = GAMES.filter((g) => g.status === "live");
+
+export function gameBySlug(slug: string): GameEntry | undefined {
+    return [...GAMES, ...UPCOMING].find((g) => g.slug === slug);
+}
