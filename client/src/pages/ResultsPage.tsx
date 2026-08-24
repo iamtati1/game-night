@@ -3,11 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { splitPrompt } from "../games/prompt.js";
 import { ApiError, api } from "../api/client.js";
 import type { SessionSummary } from "../api/types.js";
+import { RunVerdict } from "../components/RunVerdict.js";
+import { useRunContext } from "../games/useRunContext.js";
 
 export function ResultsPage() {
     const { id } = useParams<{ id: string }>();
     const [session, setSession] = useState<SessionSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { previousBest, improvement } = useRunContext("code-blitz", id);
 
     useEffect(() => {
         let active = true;
@@ -48,30 +51,38 @@ export function ResultsPage() {
             {/* The score is the headline, at brand scale. This screen is the "see"
                 step of the loop, and the number is the only thing the player came
                 back for. */}
-            <p className="run-eyebrow">Code Blitz &middot; Run complete</p>
+            <p className="run-eyebrow">Code Blitz</p>
             <p className="run-score">
                 <strong>{session.score}</strong>
                 <span>points</span>
             </p>
 
-            <dl className="stat-row">
-                <div>
-                    <dt>XP earned</dt>
-                    <dd>{session.xpEarned}</dd>
-                </div>
+            <RunVerdict
+                score={session.score}
+                previousBest={previousBest}
+                improvement={improvement}
+            />
+
+            {/* Three figures, not seven. Correct-of-total, how fast, how many in a
+                row -- the things a player can actually try to move next run.
+                Incorrect and timed-out were the same fact stated twice more. */}
+            <dl className="run-figures">
                 <div>
                     <dt>Correct</dt>
                     <dd>
                         {session.correctCount}/{session.totalQuestions}
                     </dd>
                 </div>
+                {session.averageResponseMs !== null &&
+                    session.averageResponseMs !== undefined && (
+                        <div>
+                            <dt>Average</dt>
+                            <dd>{(session.averageResponseMs / 1000).toFixed(1)}s</dd>
+                        </div>
+                    )}
                 <div>
-                    <dt>Incorrect</dt>
-                    <dd>{session.incorrectCount}</dd>
-                </div>
-                <div>
-                    <dt>Timed out</dt>
-                    <dd>{session.timedOutCount}</dd>
+                    <dt>Best streak</dt>
+                    <dd>{session.bestStreak}</dd>
                 </div>
             </dl>
 

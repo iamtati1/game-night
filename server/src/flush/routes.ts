@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
 import { FLUSH } from "../games/constants.js";
+import { longestStreak, type PlayedUnit } from "../games/progress.js";
 import {
     findActiveSession,
     findResumableSession,
@@ -52,7 +53,16 @@ function conflictBody(active: { gameSlug: string; gameName: string }) {
 }
 
 function summarize(session: db.FlushSessionRow, rounds: db.FlushRoundRow[]) {
+    // Only the streak. Flush has no per-unit response time worth reporting: a
+    // round ends the moment a placement is wrong, so a bad run finishes faster
+    // than a good one and "average round time" would reward failing quickly.
+    const units: PlayedUnit[] = rounds.map((r) => ({
+        success: r.status === "completed",
+        durationMs: null
+    }));
+
     return {
+        bestStreak: longestStreak(units),
         id: session.id,
         status: session.status,
         score: session.score,

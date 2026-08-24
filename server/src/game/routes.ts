@@ -3,6 +3,12 @@ import { requireAuth } from "../auth/middleware.js";
 import { countEligibleQuestions } from "../questions/queries.js";
 import { CODE_BLITZ } from "../games/constants.js";
 import {
+    averageDurationMs,
+    longestStreak,
+    successRate,
+    type PlayedUnit
+} from "../games/progress.js";
+import {
     findActiveSession,
     findResumableSession,
     resumePausedSession
@@ -54,7 +60,21 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[]) {
+    // This run's own shape, computed with the same rules the cross-run figures
+    // use, so a result screen and a trend can never disagree about what a streak
+    // is or which answers count as timed.
+    const units: PlayedUnit[] = questions.map((q) => ({
+        success: q.is_correct === true,
+        durationMs:
+            q.served_at && q.answered_at
+                ? q.answered_at.getTime() - q.served_at.getTime()
+                : null
+    }));
+
     return {
+        bestStreak: longestStreak(units),
+        averageResponseMs: averageDurationMs(units),
+        successRate: successRate(units),
         id: session.id,
         status: session.status,
         score: session.score,

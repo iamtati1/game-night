@@ -35,7 +35,17 @@ export interface SessionQuestionResult {
     pointsAwarded: number;
 }
 
-export interface SessionSummary {
+export interface RunMetrics {
+    /** Longest unbroken run of successes within this game. */
+    bestStreak: number;
+    /** Share of units got right, 0-1. Timeouts count against it. */
+    successRate?: number | null;
+    /** Typical time per answered unit. Absent where it would not represent
+     *  performance -- see the Flush summary. */
+    averageResponseMs?: number | null;
+}
+
+export interface SessionSummary extends RunMetrics {
     id: string;
     status: string;
     score: number;
@@ -150,7 +160,7 @@ export interface FlushRoundResult {
     pointsAwarded: number;
 }
 
-export interface FlushSessionSummary {
+export interface FlushSessionSummary extends RunMetrics {
     id: string;
     status: string;
     score: number;
@@ -230,4 +240,30 @@ export interface ResumableSession {
 
 export interface ResumableResponse {
     sessions: ResumableSession[];
+}
+
+/** One metric's recent form against the form before it, from the stats endpoint. */
+export interface MetricTrend {
+    previous: number | null;
+    recent: number | null;
+    changePercent: number | null;
+}
+
+export interface GameImprovement {
+    bestStreak: number;
+    averageMs: number | null;
+    trend: { successRate: MetricTrend; speed: MetricTrend } | null;
+}
+
+export interface GameStatsEntry {
+    game: GameRef;
+    gamesCompleted: number;
+    bestScore: number | null;
+    accuracy: number | null;
+    improvement: GameImprovement | null;
+}
+
+export interface UserStatsResponse {
+    totals: { gamesCompleted: number; totalXp: number; totalScore: number };
+    perGame: GameStatsEntry[];
 }

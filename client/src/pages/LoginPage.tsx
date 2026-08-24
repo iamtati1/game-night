@@ -33,7 +33,7 @@ export function LoginPage() {
         <section className="auth">
             <div className="auth-brand">
                 <JoltLogo />
-                <p>Think fast. Play again.</p>
+                <p>Play. Get better.</p>
             </div>
 
             <div className="panel">

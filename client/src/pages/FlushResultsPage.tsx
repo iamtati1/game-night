@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import type { FlushSessionSummary } from "../api/types.js";
+import { RunVerdict } from "../components/RunVerdict.js";
+import { useRunContext } from "../games/useRunContext.js";
 
 const BEST_POSSIBLE = 5 * 200; // five perfect four-output rounds
 
@@ -9,6 +11,7 @@ export function FlushResultsPage() {
     const { id } = useParams<{ id: string }>();
     const [session, setSession] = useState<FlushSessionSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { previousBest, improvement } = useRunContext("flush", id);
 
     useEffect(() => {
         let active = true;
@@ -48,24 +51,31 @@ export function FlushResultsPage() {
 
     return (
         <section className="results flush">
-            <p className="run-eyebrow">Flush &middot; Run complete</p>
+            <p className="run-eyebrow">Flush</p>
             <p className="run-score">
                 <strong>{session.score}</strong>
                 <span>points</span>
             </p>
 
-            {/* A target to beat is what makes a second run tempting. */}
+            <RunVerdict
+                score={session.score}
+                previousBest={previousBest}
+                improvement={improvement}
+            />
+
+            {/* A target to beat is what makes a second run tempting. The count is
+                left to the FLUSHED figure below rather than said twice. */}
             <p className="lede">
                 {perfect
-                    ? "Every round flushed. That is the maximum multiplier on all five."
-                    : `${session.completedRounds} of ${session.totalRounds} rounds flushed. A perfect run is worth up to ${BEST_POSSIBLE}.`}
+                    ? "Every round flushed — the maximum multiplier on all five."
+                    : `A perfect run is worth ${BEST_POSSIBLE}.`}
             </p>
 
-            <dl className="stat-row">
-                <div>
-                    <dt>XP earned</dt>
-                    <dd>{session.xpEarned}</dd>
-                </div>
+            {/* No average time and no accuracy. A Flush round ends the instant a
+                placement is wrong, so a bad run finishes faster than a good one --
+                reporting speed here would reward failing quickly, and an accuracy
+                figure would exist only to match Code Blitz. */}
+            <dl className="run-figures">
                 <div>
                     <dt>Flushed</dt>
                     <dd>
@@ -73,12 +83,8 @@ export function FlushResultsPage() {
                     </dd>
                 </div>
                 <div>
-                    <dt>Broke</dt>
-                    <dd>{session.failedRounds}</dd>
-                </div>
-                <div>
-                    <dt>Timed out</dt>
-                    <dd>{session.timedOutRounds}</dd>
+                    <dt>Best streak</dt>
+                    <dd>{session.bestStreak}</dd>
                 </div>
             </dl>
 
