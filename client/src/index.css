@@ -274,9 +274,51 @@ input:focus {
     color: var(--muted);
 }
 
+.score-slot {
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+}
+
 .score {
     font-variant-numeric: tabular-nums;
     font-weight: 650;
+}
+
+/* Keyed on the question counter, so remounting restarts the animation. A pure
+   class toggle would need a timer to remove it and would skip when two answers
+   land close together -- which, in a game called Blitz, is the normal case. */
+.score-value {
+    display: inline-block;
+    animation: score-bump 380ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+@keyframes score-bump {
+    0%   { transform: scale(1);    color: var(--text); }
+    28%  { transform: scale(1.28); color: var(--correct); }
+    100% { transform: scale(1);    color: var(--text); }
+}
+
+/* Rises out of the score and fades. Absolutely positioned so it cannot reflow
+   the bar -- a shifting header during feedback would be worse than no animation. */
+.score-award {
+    position: absolute;
+    right: 0;
+    bottom: 100%;
+    color: var(--correct);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: award-float 900ms ease-out forwards;
+}
+
+@keyframes award-float {
+    0%   { opacity: 0; transform: translateY(4px)   scale(0.9); }
+    22%  { opacity: 1; transform: translateY(-2px)  scale(1.06); }
+    70%  { opacity: 1; transform: translateY(-9px)  scale(1); }
+    100% { opacity: 0; transform: translateY(-15px) scale(1); }
 }
 
 .countdown {
@@ -374,6 +416,18 @@ input:focus {
     cursor: default;
 }
 
+.option-text {
+    flex: 1;
+}
+
+/* Decorative tick or cross. The banner under the list carries the same meaning
+   as text, which is why this is aria-hidden. */
+.option-glyph {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
 .option kbd {
     display: grid;
     place-items: center;
@@ -387,14 +441,105 @@ input:focus {
     font-size: 0.74rem;
 }
 
-.option.correct {
+/* Four states, not two. `chosen-correct` and `revealed` are both "this is the
+   right answer", but only one of them is the player's win, and they must not look
+   the same: solid and celebratory versus outlined and instructive. */
+
+.option.chosen-correct {
     border-color: var(--correct);
-    background: #34d39922;
+    background: #34d39926;
+    animation: option-pop 260ms cubic-bezier(0.2, 1.4, 0.35, 1);
 }
 
-.option.incorrect {
+.option.chosen-correct .option-glyph,
+.option.revealed .option-glyph {
+    color: var(--correct);
+}
+
+@keyframes option-pop {
+    0%   { transform: scale(1);     box-shadow: 0 0 0 0 #34d39900; }
+    40%  { transform: scale(1.018); box-shadow: 0 0 0 4px #34d39930; }
+    100% { transform: scale(1);     box-shadow: 0 0 0 0 #34d39900; }
+}
+
+.option.chosen-incorrect {
     border-color: var(--incorrect);
     background: #f8717122;
+    animation: option-shake 300ms ease-in-out;
+}
+
+.option.chosen-incorrect .option-glyph {
+    color: var(--incorrect);
+}
+
+/* Small and horizontal. A large shake reads as an error dialog; this should read
+   as "no, the other one". */
+@keyframes option-shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-5px); }
+    40%      { transform: translateX(4px); }
+    60%      { transform: translateX(-3px); }
+    80%      { transform: translateX(2px); }
+}
+
+/* The answer the player missed: outlined rather than filled, and it arrives a
+   beat later so the eye reads "wrong" before it reads "this one". 120ms is enough
+   to sequence the two without the player waiting on the UI. */
+.option.revealed {
+    border-color: var(--correct);
+    border-style: dashed;
+    background: #34d3990f;
+    animation: reveal-in 220ms ease-out 120ms both;
+}
+
+@keyframes reveal-in {
+    from { opacity: 0.5; transform: translateY(-3px); }
+    to   { opacity: 1;   transform: translateY(0); }
+}
+
+/* Options that took no part. Dimming them is what makes the two that matter
+   legible at a glance. */
+.option.muted {
+    opacity: 0.4;
+    transition: opacity 200ms ease-out;
+}
+
+/* Timeout owns its own state: nothing was chosen and nothing is revealed, so the
+   whole list recedes and the amber banner does the talking. */
+.options.lapsed .option {
+    opacity: 0.35;
+    border-color: var(--border);
+    transition: opacity 240ms ease-out;
+}
+
+.feedback .tag {
+    animation: feedback-in 200ms ease-out both;
+}
+
+@keyframes feedback-in {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Honour the OS setting: keep every colour and state change, drop the motion.
+   The states are load-bearing information, the movement is not. */
+@media (prefers-reduced-motion: reduce) {
+    .score-value,
+    .option.chosen-correct,
+    .option.chosen-incorrect,
+    .option.revealed,
+    .feedback .tag {
+        animation: none;
+    }
+
+    .score-award {
+        animation: award-fade 900ms ease-out forwards;
+    }
+
+    @keyframes award-fade {
+        0%, 70% { opacity: 1; }
+        100%    { opacity: 0; }
+    }
 }
 
 .feedback {

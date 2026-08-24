@@ -21,9 +21,52 @@ interface Feedback {
     selectedOptionId: string | null;
 }
 
+/**
+ * How one option should read once the answer is in.
+ *
+ * The distinction that matters is between `chosen-correct` and `revealed`: before
+ * this, both got the same `.correct` class, so "I knew that" and "that was the
+ * answer I missed" looked identical. A player could not tell their own success
+ * from the game correcting them, which is the single most important thing a
+ * feedback moment has to communicate.
+ */
+type OptionState = "chosen-correct" | "chosen-incorrect" | "revealed" | "muted" | "";
+
+function optionStateFor(
+    feedback: Feedback | null,
+    option: { id: string; text: string }
+): OptionState {
+    if (!feedback) {
+        return "";
+    }
+
+    const chosen = feedback.selectedOptionId === option.id;
+    // correctOption is empty when the countdown lapsed rather than the player
+    // answering: GET /api/sessions/current does not carry the answer to the
+    // question that just expired. Guarding on it keeps an empty string from
+    // matching an option and revealing the wrong row.
+    const isAnswer = feedback.correctOption !== "" && feedback.correctOption === option.text;
+
+    if (chosen && isAnswer) return "chosen-correct";
+    if (chosen) return "chosen-incorrect";
+    if (isAnswer) return "revealed";
+
+    return "muted";
+}
+
+/** Decorative only -- the banner below carries the same meaning as text. */
+const OPTION_GLYPH: Record<OptionState, string> = {
+    "chosen-correct": "\u2713",
+    "chosen-incorrect": "\u2715",
+    revealed: "\u2713",
+    muted: "",
+    "": ""
+};
+
 export function GamePage() {
     const navigate = useNavigate();
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [paused, setPaused] = useState(false);
     const [question, setQuestion] = useState<ServedQuestion | null>(null);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [runningScore, setRunningScore] = useState(0);
@@ -32,6 +75,10 @@ export function GamePage() {
     const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    /** Bumped once per adjudicated question. Used purely as a React key so the
+     *  award and score animations replay on a repeat of the same value -- two
+     *  correct answers worth +130 in a row must animate twice, not once. */
+    const [beat, setBeat] = useState(0);
 
     // Guards against the countdown firing while an answer is already in flight
     // or feedback is on screen.
@@ -43,6 +90,47 @@ export function GamePage() {
         },
         [navigate]
     );
+
+    async function handlePause() {
+        if (!sessionId || busy) return;
+
+        setBusy(true);
+
+        try {
+            await api.post("/api/me/sessions/code-blitz/pause");
+            setPaused(true);
+        } catch (err) {
+            setError(
+                err instanceof ApiError
+                    ? err.detailText
+                    : "Could not pause the game"
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function handleResume() {
+        setError(null);
+        setBusy(true);
+
+        try {
+            const data = await api.post<StartSessionResponse>("/api/sessions");
+
+            setSessionId(data.sessionId ?? null);
+            setQuestion(data.question ?? null);
+            setRunningScore(data.scoreSoFar ?? 0);
+            setPaused(false);
+        } catch (err) {
+            setError(
+                err instanceof ApiError
+                    ? err.detailText
+                    : "Could not resume the game"
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
 
     // Start (or resume) a game on mount.
     useEffect(() => {
@@ -109,6 +197,7 @@ export function GamePage() {
             });
 
             setRunningScore(result.scoreSoFar);
+            setBeat((n) => n + 1);
             setFeedback({
                 outcome: result.outcome,
                 correctOption: result.correctOption,
@@ -144,6 +233,7 @@ export function GamePage() {
             }
 
             setRunningScore(data.scoreSoFar ?? 0);
+            setBeat((n) => n + 1);
             setFeedback({
                 outcome: "timed_out",
                 correctOption: "",
@@ -205,6 +295,30 @@ export function GamePage() {
         );
     }
 
+    if (paused) {
+        return (
+            <section className="panel narrow">
+                <p className="eyebrow">GAME PAUSED</p>
+
+                <h1>Code Blitz</h1>
+
+                <p className="muted">
+                    Your progress is saved.
+                </p>
+
+                <div className="panel-actions">
+                    <button
+                        className="button primary"
+                        onClick={() => void handleResume()}
+                        disabled={busy}
+                    >
+                        Resume
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
     if (!question) {
         return <p className="muted center">Dealing your questions…</p>;
     }
@@ -215,9 +329,29 @@ export function GamePage() {
                 <span className="progress">
                     Question {question.questionNumber} of {question.totalQuestions}
                 </span>
-                <span className="score" aria-live="polite">
-                    {runningScore} pts
+                {/* The award floats out of the score rather than sitting beside it,
+                    so the number the player watches is the one that moves. */}
+                <span className="score-slot">
+                    <span className="score" aria-live="polite">
+                        <span key={`s${beat}`} className="score-value">
+                            {runningScore}
+                        </span>{" "}
+                        pts
+                    </span>
+                    {feedback?.outcome === "correct" && feedback.pointsAwarded > 0 && (
+                        <span key={`a${beat}`} className="score-award" aria-hidden="true">
+                            +{feedback.pointsAwarded}
+                        </span>
+                    )}
                 </span>
+
+                <button
+                    className="button"
+                    onClick={() => void handlePause()}
+                    disabled={busy || feedback !== null}
+                >
+                    Pause
+                </button>
             </header>
 
             <Countdown
@@ -228,27 +362,25 @@ export function GamePage() {
 
             <pre className="prompt">{question.prompt}</pre>
 
-            <ul className="options">
+            <ul className={`options${feedback?.outcome === "timed_out" ? " lapsed" : ""}`}>
                 {question.options.map((option, index) => {
-                    const chosen = feedback?.selectedOptionId === option.id;
-                    const isAnswer =
-                        feedback !== null && feedback.correctOption === option.text;
-
-                    let state = "";
-                    if (feedback) {
-                        if (isAnswer) state = " correct";
-                        else if (chosen) state = " incorrect";
-                    }
+                    const state = optionStateFor(feedback, option);
+                    const glyph = OPTION_GLYPH[state];
 
                     return (
                         <li key={option.id}>
                             <button
-                                className={`option${state}`}
+                                className={`option${state ? ` ${state}` : ""}`}
                                 onClick={() => void submit(option.id)}
                                 disabled={busy || feedback !== null}
                             >
                                 <kbd>{index + 1}</kbd>
-                                <span>{option.text}</span>
+                                <span className="option-text">{option.text}</span>
+                                {glyph && (
+                                    <span className="option-glyph" aria-hidden="true">
+                                        {glyph}
+                                    </span>
+                                )}
                             </button>
                         </li>
                     );
@@ -262,7 +394,12 @@ export function GamePage() {
                 {feedback?.outcome === "incorrect" && (
                     <p className="tag incorrect">Not quite — {feedback.correctOption}</p>
                 )}
-                {feedback?.outcome === "timed_out" && <p className="tag timeout">Out of time</p>}
+                {/* No answer is named here on purpose: the timeout path learns of the
+                    lapse from GET /api/sessions/current, whose response does not carry
+                    the expired question's answer. Naming one would mean inventing it. */}
+                {feedback?.outcome === "timed_out" && (
+                    <p className="tag timeout">Out of time</p>
+                )}
             </div>
         </section>
     );
