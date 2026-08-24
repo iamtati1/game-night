@@ -12,7 +12,8 @@ import type {
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { CODE_BLITZ } from "../games/catalog.js";
+import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
 
@@ -88,6 +89,9 @@ export function GamePage() {
     const navigate = useNavigate();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [paused, setPaused] = useState(false);
+    /** Counting in after Resume. The session is only resumed once the count
+     *  finishes, so nothing is ticking while the numbers run. */
+    const [resuming, setResuming] = useState(false);
     /** Where a paused run stopped. Set either from live state when the player
      *  pauses, or from the server when they arrive back on a paused run. */
     const [pausedInfo, setPausedInfo] = useState<{
@@ -154,7 +158,7 @@ export function GamePage() {
 
             if (question) {
                 setPausedInfo({
-                    unit: "Question",
+                    unit: gameBySlug(CODE_BLITZ)?.unit ?? "Question",
                     current: question.questionNumber,
                     total: question.totalQuestions,
                     score: runningScore
@@ -185,7 +189,11 @@ export function GamePage() {
             setRunningScore(data.scoreSoFar ?? 0);
             setPausedInfo(null);
             setPaused(false);
+            setResuming(false);
         } catch (err) {
+            // Drop out of the countdown, or the player is stranded watching "Go"
+            // with no way back to the paused screen.
+            setResuming(false);
             setError(
                 err instanceof ApiError
                     ? err.detailText
@@ -214,7 +222,7 @@ export function GamePage() {
 
                 if (heldRun) {
                     setPausedInfo({
-                        unit: "Question",
+                        unit: gameBySlug(CODE_BLITZ)?.unit ?? "Question",
                         current: Math.min(heldRun.unitsDone + 1, heldRun.unitsTotal),
                         total: heldRun.unitsTotal,
                         score: heldRun.score
@@ -404,6 +412,10 @@ export function GamePage() {
         );
     }
 
+    if (resuming) {
+        return <ResumeCountdown onDone={() => void handleResume()} />;
+    }
+
     if (paused) {
         return (
             <PausedRun
@@ -411,7 +423,7 @@ export function GamePage() {
                 progress={pausedInfo}
                 score={pausedInfo?.score ?? runningScore}
                 busy={busy}
-                onResume={() => void handleResume()}
+                onResume={() => setResuming(true)}
             />
         );
     }

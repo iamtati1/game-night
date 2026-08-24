@@ -15,10 +15,19 @@ import {
  * counts as a streak or a fair comparison happens here.
  */
 
-/** How many runs form each side of a comparison. Six completed runs are needed
- *  before a trend appears at all -- three is enough to damp a single lucky game
- *  without needing a long history. */
-export const TREND_WINDOW = 3;
+/**
+ * How many runs form each side of a comparison.
+ *
+ * Two a side, so a trend appears after four completed runs rather than six. Six
+ * was more history than most players reached before the product had shown them
+ * anything, which made the whole improvement idea invisible in practice.
+ *
+ * Two is the smallest window that still compares two genuinely distinct sets of
+ * runs. It is noisier than three, which is why splitWindows refuses to compare at
+ * all until both sides are full and percentChange refuses to divide by zero --
+ * the guard against a meaningless comparison is those rules, not the window size.
+ */
+export const TREND_WINDOW = 2;
 
 export interface UnitRow {
     game_slug: string;

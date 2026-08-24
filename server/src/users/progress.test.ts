@@ -57,11 +57,28 @@ describe("toGameProgress", () => {
         expect(toGameProgress(rows)["code-blitz"]!.trend).toBeNull();
     });
 
+    it("appears on the fourth completed run, not the sixth", () => {
+        // The threshold is a product decision, so it is pinned: six runs was more
+        // history than players reached before the improvement idea had shown them
+        // anything.
+        expect(TREND_WINDOW).toBe(2);
+
+        const four = [0, 1, 2, 3].map((i) => run("code-blitz", `s${i}`, [[true, 1000]])).flat();
+        const three = [0, 1, 2].map((i) => run("code-blitz", `s${i}`, [[true, 1000]])).flat();
+
+        expect(toGameProgress(three)["code-blitz"]!.trend).toBeNull();
+        expect(toGameProgress(four)["code-blitz"]!.trend).not.toBeNull();
+    });
+
     it("compares recent form against the form before it", () => {
-        // Three recent runs at 1000ms and fully correct, three older at 2000ms and
-        // half correct: faster and more successful.
-        const recent = [0, 1, 2].map((i) => run("code-blitz", `r${i}`, [[true, 1000], [true, 1000]]));
-        const older = [0, 1, 2].map((i) => run("code-blitz", `o${i}`, [[true, 2000], [false, 2000]]));
+        // Sized from TREND_WINDOW rather than a literal, so changing the threshold
+        // cannot silently leave a fixture straddling both windows -- which is what
+        // happened when it moved from three a side to two.
+        const group = (prefix: string, results: [boolean, number | null][]) =>
+            Array.from({ length: TREND_WINDOW }, (_, i) => run("code-blitz", `${prefix}${i}`, results));
+
+        const recent = group("r", [[true, 1000], [true, 1000]]);
+        const older = group("o", [[true, 2000], [false, 2000]]);
         const progress = toGameProgress([...recent.flat(), ...older.flat()]);
         const trend = progress["code-blitz"]!.trend!;
 
@@ -75,9 +92,12 @@ describe("toGameProgress", () => {
     });
 
     it("ignores runs older than both windows", () => {
-        const recent = [0, 1, 2].map((i) => run("code-blitz", `r${i}`, [[true, 1000]]));
-        const older = [0, 1, 2].map((i) => run("code-blitz", `o${i}`, [[true, 2000]]));
-        const ancient = [0, 1, 2].map((i) => run("code-blitz", `a${i}`, [[true, 9999]]));
+        const group = (prefix: string, ms: number) =>
+            Array.from({ length: TREND_WINDOW }, (_, i) => run("code-blitz", `${prefix}${i}`, [[true, ms]]));
+
+        const recent = group("r", 1000);
+        const older = group("o", 2000);
+        const ancient = group("a", 9999);
         const trend = toGameProgress([...recent.flat(), ...older.flat(), ...ancient.flat()])[
             "code-blitz"
         ]!.trend!;

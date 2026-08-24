@@ -12,7 +12,8 @@ import type {
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { FLUSH } from "../games/catalog.js";
+import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { FLUSH, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 
 const ROUND_TIME_LIMIT_MS = 60_000;
@@ -61,6 +62,9 @@ export function FlushPage() {
     const [busy, setBusy] = useState(false);
 
     const [paused, setPaused] = useState(false);
+    /** Counting in after Resume. The session is only resumed once the count
+     *  finishes, so nothing is ticking while the numbers run. */
+    const [resuming, setResuming] = useState(false);
     /** Where a paused run stopped. Set from live state when the player pauses, or
      *  from the server when they arrive back on a run they had paused. */
     const [pausedInfo, setPausedInfo] = useState<{
@@ -108,7 +112,7 @@ export function FlushPage() {
 
             if (round) {
                 setPausedInfo({
-                    unit: "Round",
+                    unit: gameBySlug(FLUSH)?.unit ?? "Round",
                     current: round.roundNumber,
                     total: round.totalRounds,
                     score
@@ -135,7 +139,9 @@ export function FlushPage() {
             setScore(data.scoreSoFar ?? 0);
             setPausedInfo(null);
             setPaused(false);
+            setResuming(false);
         } catch (err) {
+            setResuming(false);
             setError(err instanceof ApiError ? err.detailText : "Could not resume the game");
         } finally {
             setBusy(false);
@@ -159,7 +165,7 @@ export function FlushPage() {
 
                 if (heldRun) {
                     setPausedInfo({
-                        unit: "Round",
+                        unit: gameBySlug(FLUSH)?.unit ?? "Round",
                         current: Math.min(heldRun.unitsDone + 1, heldRun.unitsTotal),
                         total: heldRun.unitsTotal,
                         score: heldRun.score
@@ -363,6 +369,10 @@ export function FlushPage() {
         );
     }
 
+    if (resuming) {
+        return <ResumeCountdown onDone={() => void handleResume()} />;
+    }
+
     if (paused) {
         return (
             <PausedRun
@@ -370,7 +380,7 @@ export function FlushPage() {
                 progress={pausedInfo}
                 score={pausedInfo?.score ?? score}
                 busy={busy}
-                onResume={() => void handleResume()}
+                onResume={() => setResuming(true)}
             />
         );
     }

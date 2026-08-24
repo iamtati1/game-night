@@ -50,17 +50,11 @@ export function GameCard({ game, resumable }: GameCardProps) {
         <>
             <div className="card-top">
                 <span className="card-category">{game.category}</span>
-                {game.status === "soon" ? (
-                    <span className="card-flag">Coming soon</span>
-                ) : (
-                    game.intensity && (
-                        <span className="card-intensity" aria-label={`Intensity ${game.intensity} of 3`}>
-                            {[1, 2, 3].map((n) => (
-                                <i key={n} className={n <= game.intensity! ? "on" : ""} />
-                            ))}
-                        </span>
-                    )
-                )}
+                <span className="card-intensity" aria-label={`Intensity ${game.intensity} of 3`}>
+                    {[1, 2, 3].map((n) => (
+                        <i key={n} className={n <= game.intensity ? "on" : ""} />
+                    ))}
+                </span>
             </div>
 
             <Preview motif={game.motif} />
@@ -69,21 +63,20 @@ export function GameCard({ game, resumable }: GameCardProps) {
             <p className="card-hook">{game.hook}</p>
 
             <div className="card-foot">
-                {game.shape && <span className="card-shape">{game.shape}</span>}
-                {game.status === "live" && (
-                    <span className="card-play">
-                        {resumable ? "Continue" : "Play"}
-                        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
-                            <path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </span>
-                )}
+                <span className="card-shape">{game.shape}</span>
+                <span className="card-play">
+                    {resumable ? "Continue" : "Play"}
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                        <path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </span>
             </div>
 
             {/* Real progress from the player's live session -- never a placeholder. */}
             {resumable && (
                 <p className="card-resume">
-                    Round {Math.min(resumable.unitsDone + 1, resumable.unitsTotal)} of{" "}
+                    {game.unit}{" "}
+                    {Math.min(resumable.unitsDone + 1, resumable.unitsTotal)} of{" "}
                     {resumable.unitsTotal} · {resumable.score} pts
                 </p>
             )}
@@ -93,14 +86,6 @@ export function GameCard({ game, resumable }: GameCardProps) {
     // The whole card is one link rather than a card containing a button: a single
     // focus stop, one tab target, and no nested interactive elements to trip a
     // screen reader over.
-    if (game.status !== "live" || !game.path) {
-        return (
-            <li className="game-card is-soon" style={{ ["--card-accent" as string]: game.accent }}>
-                <div className="card-body">{inner}</div>
-            </li>
-        );
-    }
-
     return (
         <li className="game-card" style={{ ["--card-accent" as string]: game.accent }}>
             <Link className="card-body" to={game.path} aria-label={`Play ${game.name}`}>

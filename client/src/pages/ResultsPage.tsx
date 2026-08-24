@@ -62,6 +62,13 @@ export function ResultsPage() {
                 <span>points</span>
             </p>
 
+            {/* The reward, where it is earned. XP was accruing invisibly: it
+                appeared only in a history row and a landing total, so the moment
+                it was actually won showed nothing. */}
+            <p className="xp-earned">
+                XP <strong>+{session.xpEarned}</strong>
+            </p>
+
             <RunVerdict
                 score={session.score}
                 previousBest={previousBest}

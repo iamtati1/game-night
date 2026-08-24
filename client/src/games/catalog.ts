@@ -23,11 +23,11 @@
 export const CODE_BLITZ = "code-blitz";
 export const FLUSH = "flush";
 
-export type GameStatus = "live" | "soon";
+export type GameStatus = "live";
 
 /** Which abstract preview the card draws. Each one is a reduction of the real
  *  game screen, so the two cards cannot read as the same game recoloured. */
-export type GameMotif = "blitz" | "flush" | "none";
+export type GameMotif = "blitz" | "flush";
 
 export interface GameEntry {
     slug: string;
@@ -38,12 +38,15 @@ export interface GameEntry {
     /** Drives --card-accent, so each game keeps the identity it has in play. */
     accent: string;
     status: GameStatus;
-    /** Route to start a run. Absent for games that do not exist yet. */
-    path?: string;
+    path: string;
     /** The real shape of one run. */
-    shape?: string;
+    shape: string;
     /** 1-3, a reading of pace rather than difficulty. */
-    intensity?: number;
+    intensity: number;
+    /** What one scoring unit is called. Code Blitz counts questions, Flush counts
+     *  rounds -- and both the game card and the pause screen need the word, so it
+     *  belongs here rather than hardcoded at each site. */
+    unit: string;
     /** The instinct this game actually tests. Read off the mechanic, not invented:
      *  it is what the player is being asked to be good at. */
     instinct: string;
@@ -62,6 +65,7 @@ export const GAMES: GameEntry[] = [
         shape: "10 questions · 30s each",
         intensity: 3,
         instinct: "Technical recall, fast",
+        unit: "Question",
         motif: "blitz"
     },
     {
@@ -75,26 +79,13 @@ export const GAMES: GameEntry[] = [
         shape: "5 rounds · 60s each",
         intensity: 2,
         instinct: "Prediction and sequencing",
+        unit: "Round",
         motif: "flush"
     }
-];
-
-/**
- * Categories the platform is built to grow into.
- *
- * Labelled as not-yet-built everywhere they render. They exist to show that Jolt
- * is a shape with room in it, and they deliberately carry no fake scores, player
- * counts or release dates -- a placeholder that pretends to be a product is worse
- * than an empty slot.
- */
-export const UPCOMING: GameEntry[] = [
-    { slug: "memory", name: "Memory", hook: "Hold the pattern. Play it back.", category: "Recall", accent: "#a3e635", status: "soon", motif: "none", instinct: "Short-term recall" },
-    { slug: "debug", name: "Debug", hook: "Find the bug before the tests do.", category: "Code", accent: "#22d3ee", status: "soon", motif: "none", instinct: "Fault-finding" },
-    { slug: "reflex", name: "Reflex", hook: "Right answer, wrong instinct.", category: "Reaction", accent: "#f472b6", status: "soon", motif: "none", instinct: "Reaction under noise" }
 ];
 
 export const LIVE_GAMES = GAMES.filter((g) => g.status === "live");
 
 export function gameBySlug(slug: string): GameEntry | undefined {
-    return [...GAMES, ...UPCOMING].find((g) => g.slug === slug);
+    return GAMES.find((g) => g.slug === slug);
 }

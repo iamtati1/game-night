@@ -68,3 +68,33 @@ describe("migration 007 keeps game attribution loud", () => {
         );
     });
 });
+
+describe("question selection resists memorisation", () => {
+    const insert = QUERIES.slice(
+        QUERIES.indexOf("export async function createSessionWithQuestions"),
+        QUERIES.indexOf("export async function listSessionQuestions")
+    );
+
+    it("prefers questions the player has not just seen", () => {
+        expect(insert).toMatch(/WITH recent AS/);
+        expect(insert).toMatch(/ORDER BY \(q\.id IN \(SELECT question_id FROM recent\)\) ASC, RANDOM\(\)/);
+    });
+
+    it("prefers rather than filters, so the pool can never starve", () => {
+        // A NOT IN would make a player who has exhausted the bank unable to start
+        // a game at all. Ordering degrades instead: unseen first, seen after.
+        expect(insert).not.toMatch(/NOT IN \(SELECT question_id FROM recent\)/);
+        expect(insert).toMatch(/LIMIT \$2/);
+    });
+
+    it("scopes the lookback to this player and this game", () => {
+        expect(insert).toMatch(/gs\.user_id = \$3/);
+        expect(insert).toMatch(/gs\.game_id = \(SELECT id FROM games WHERE slug = \$4\)/);
+    });
+
+    it("excludes the session being created from its own lookback", () => {
+        // It is inserted before its questions are, so without this it would take
+        // one of the three lookback slots and shorten the window.
+        expect(insert).toMatch(/gs\.id <> \$1/);
+    });
+});

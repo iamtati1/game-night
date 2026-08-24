@@ -4,6 +4,16 @@ import { CODE_BLITZ } from "../games/constants.js";
 import { ELIGIBLE_QUESTION_PREDICATE } from "../questions/queries.js";
 import { QUESTIONS_PER_SESSION, scoreForSession } from "./scoring.js";
 
+/**
+ * How many of the player's previous runs are checked for questions to avoid.
+ *
+ * Three runs is thirty questions, so against the current bank a player has to get
+ * through most of it before anything repeats. Raising it further would start
+ * forcing the rarest questions to the front every game, which is its own kind of
+ * predictability.
+ */
+export const RECENT_SESSIONS_AVOIDED = 3;
+
 export interface GameSessionRow {
     id: string;
     status: string;
@@ -103,8 +113,30 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
 
         // ORDER BY RANDOM() is a full scan plus sort. Correct and fast enough
         // for an MVP question bank; revisit past ~100k questions.
+        // Questions the player met in their last few runs of this game. Dealing
+        // ten at random from a bank they have just seen is how a game becomes a
+        // memory test: the concept stops mattering because the exact instance is
+        // already known.
+        //
+        // The ordering PREFERS unseen questions rather than filtering seen ones
+        // out. `ORDER BY (id IN recent) ASC` puts unseen first and seen last, so
+        // a player who has exhausted the bank still gets a full game instead of a
+        // 503 -- there is no pool size at which this can starve.
         await client.query(
-            `INSERT INTO session_questions
+            `WITH recent AS (
+                 SELECT sq.question_id
+                 FROM session_questions sq
+                 WHERE sq.game_session_id IN (
+                     SELECT gs.id
+                     FROM game_sessions gs
+                     WHERE gs.user_id = $3
+                       AND gs.game_id = (SELECT id FROM games WHERE slug = $4)
+                       AND gs.id <> $1
+                     ORDER BY gs.started_at DESC
+                     LIMIT ${RECENT_SESSIONS_AVOIDED}
+                 )
+             )
+             INSERT INTO session_questions
                  (game_session_id, question_id, display_order, prompt_text, status)
              SELECT $1,
                     q.id,
@@ -115,10 +147,10 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
                  SELECT q.id, q.prompt
                  FROM questions q
                  WHERE ${ELIGIBLE_QUESTION_PREDICATE}
-                 ORDER BY RANDOM()
+                 ORDER BY (q.id IN (SELECT question_id FROM recent)) ASC, RANDOM()
                  LIMIT $2
              ) AS q`,
-            [sessionId, QUESTIONS_PER_SESSION]
+            [sessionId, QUESTIONS_PER_SESSION, userId, CODE_BLITZ]
         );
 
         await client.query("COMMIT");
