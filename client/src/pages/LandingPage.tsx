@@ -64,14 +64,21 @@ export function LandingPage() {
             {/* ---------------------------------------------------------- hero -- */}
             <section className="hero">
                 <div className="hero-copy">
-                    <p className="hero-eyebrow">
-                        <JoltLogo markOnly /> Quick-fire challenges
-                    </p>
+                    {/* The wordmark is the anchor, not a caption. It is the largest
+                        thing on the page and the tagline steps down under it, so the
+                        first thing read is the product's name rather than a slogan
+                        that could belong to anything. */}
+                    <h1 className="hero-brand">
+                        <span className="hero-spark" aria-hidden="true">
+                            <JoltLogo markOnly />
+                        </span>
+                        JOLT
+                    </h1>
 
-                    <h1 className="hero-title">
+                    <p className="hero-title">
                         <span className="line">Think fast.</span>
                         <span className="line accentuate">Play again.</span>
-                    </h1>
+                    </p>
 
                     <p className="hero-lede">
                         Jolt is a collection of short challenges built to test how you think,
@@ -94,13 +101,30 @@ export function LandingPage() {
                         )}
                     </div>
 
-                    {/* Real totals, only once there is something true to say. */}
-                    {stats && played > 0 && (
-                        <p className="hero-stats">
-                            <strong>{played}</strong> {played === 1 ? "run" : "runs"} finished
-                            <span className="dot" />
-                            <strong>{stats.totals.totalXp}</strong> XP
-                        </p>
+                    {/* Real totals only. A player with nothing yet gets an invitation
+                        rather than a row of zeroes -- an empty dashboard on first visit
+                        reads as "you have failed to start", which is the opposite of
+                        what this page is for. */}
+                    {stats && (
+                        <div className={`your-jolt${played === 0 ? " is-empty" : ""}`}>
+                            <span className="your-jolt-label">
+                                {played === 0 ? "No runs yet" : "Your Jolt"}
+                            </span>
+
+                            {played === 0 ? (
+                                <p className="your-jolt-invite">Your first run is waiting.</p>
+                            ) : (
+                                <p className="your-jolt-figures">
+                                    <span>
+                                        <strong>{played}</strong>
+                                        {played === 1 ? "run" : "runs"}
+                                    </span>
+                                    <span>
+                                        <strong>{stats.totals.totalXp}</strong>XP
+                                    </span>
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
 
@@ -137,7 +161,7 @@ export function LandingPage() {
             {/* --------------------------------------------------------- games -- */}
             <section className="section" id="games">
                 <header className="section-head">
-                    <h2>Pick your challenge.</h2>
+                    <h2>Pick your Jolt.</h2>
                     <p>Two live now. Each one is a different way to be wrong.</p>
                 </header>
 
@@ -148,14 +172,40 @@ export function LandingPage() {
                 </ul>
             </section>
 
-            {/* ------------------------------------------------ what is jolt -- */}
+            {/* ---------------------------------------- different instincts -- */}
+            <section className="section">
+                <header className="section-head">
+                    <h2>Different games. Same goal.</h2>
+                    <p>
+                        Think faster. Notice more. Solve better. Each game goes after a
+                        different instinct, so getting good at one will not carry you
+                        through the next.
+                    </p>
+                </header>
+
+                {/* A list, not another row of cards. Three card grids in a row would
+                    make the page read as one repeating module. */}
+                <dl className="instincts">
+                    {[...LIVE_GAMES, ...UPCOMING].map((game) => (
+                        <div key={game.slug} style={{ ["--row-accent" as string]: game.accent }}>
+                            <dt>
+                                {game.name}
+                                {game.status === "soon" && <span className="soon-tag">Soon</span>}
+                            </dt>
+                            <dd>{game.instinct}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </section>
+
+            {/* ------------------------------------------------------ the loop -- */}
             <section className="section">
                 <header className="section-head">
                     <h2>Not a course. Not a quiz.</h2>
                     <p>
-                        There is no syllabus and nothing to complete. A run takes a couple of
-                        minutes, tells you exactly where you went wrong, and hands you the
-                        chance to go again.
+                        No syllabus, nothing to complete. A run takes a couple of minutes,
+                        shows you exactly where you went wrong, and hands you the chance to
+                        go again.
                     </p>
                 </header>
 
@@ -167,28 +217,43 @@ export function LandingPage() {
                             <p>{item.copy}</p>
                         </li>
                     ))}
+                    {/* Closes the loop visually: the fourth step points back at the first. */}
+                    <li className="loop-back" aria-hidden="true">
+                        <span>Go again</span>
+                    </li>
                 </ol>
             </section>
 
             {/* -------------------------------------------------------- coming -- */}
-            <section className="section">
+            {/* Deliberately chips rather than cards. Full cards gave unbuilt games the
+                same visual weight as the two you can actually play, which is the one
+                thing a roadmap section must never do. */}
+            <section className="section soon-section">
                 <header className="section-head">
-                    <h2>The lineup is growing.</h2>
+                    <h2>More Jolts.</h2>
                     <p>Not built yet — here so you know where this is going.</p>
                 </header>
 
-                <ul className="game-grid soon-grid">
+                <ul className="soon-list">
                     {UPCOMING.map((game) => (
-                        <GameCard key={game.slug} game={game} />
+                        <li
+                            key={game.slug}
+                            className="soon-chip"
+                            style={{ ["--chip-accent" as string]: game.accent }}
+                        >
+                            <span className="soon-chip-name">{game.name}</span>
+                            <span className="soon-chip-instinct">{game.instinct}</span>
+                        </li>
                     ))}
                 </ul>
             </section>
 
             {/* ----------------------------------------------------------- cta -- */}
             <section className="closer">
-                <h2>One round. See what you&rsquo;ve got.</h2>
+                <p className="closer-kicker">One more?</p>
+                <h2>Pick a challenge and see what you&rsquo;ve got.</h2>
                 <a className="button primary big" href="#games">
-                    Pick a game
+                    Play Jolt
                 </a>
             </section>
         </div>

@@ -1488,11 +1488,11 @@ input:focus {
 /* Oversized and tight. The tagline is the loudest thing on the page because it
    is the one line that explains the product. */
 .hero-title {
-    margin: 0 0 1.2rem;
-    font-size: clamp(2.6rem, 7vw, 4.6rem);
-    font-weight: 800;
-    line-height: 0.98;
-    letter-spacing: -0.035em;
+    margin: 0 0 1.1rem;
+    font-size: clamp(1.55rem, 3.6vw, 2.35rem);
+    font-weight: 750;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
 }
 
 .hero-title .line {
@@ -2051,5 +2051,266 @@ a.card-body:hover .card-play svg {
 
     .game-grid:not(.soon-grid) .card-name {
         font-size: 1.6rem;
+    }
+}
+
+/* ================= JOLT — pass 2: personality ================= */
+
+/* ---------- the wordmark leads ---------- */
+
+/* Dramatically larger than everything else on the page. The name has to be the
+   thing you remember, and at the previous size the tagline was winning -- which
+   made the page memorable as "think fast" rather than as Jolt. */
+.hero-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.12em;
+    margin: 0 0 0.35rem;
+    font-size: clamp(3.6rem, 11vw, 7rem);
+    font-weight: 800;
+    line-height: 0.86;
+    letter-spacing: -0.055em;
+}
+
+/* The bolt is cap-height and sits inside the word's rhythm rather than beside it
+   as an icon, so the mark and the name read as one object. */
+.hero-spark {
+    display: inline-flex;
+    color: var(--jolt);
+    transform: translateY(-0.04em);
+}
+
+.hero-spark .jolt-bolt {
+    width: 0.62em;
+    height: 0.62em;
+}
+
+/* ---------- your jolt ---------- */
+
+/* Reads as a readout, not a dashboard tile: a label in caps over tabular figures,
+   the same language the in-game score HUD uses. */
+.your-jolt {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 1.75rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--jolt);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.your-jolt-label {
+    color: var(--muted);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.your-jolt-figures {
+    display: flex;
+    gap: 1.1rem;
+    margin: 0;
+}
+
+.your-jolt-figures span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.your-jolt-figures strong {
+    color: var(--text);
+    font-size: 1.4rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.your-jolt.is-empty {
+    border-left-color: var(--border);
+}
+
+.your-jolt-invite {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+/* ---------- instincts ---------- */
+
+/* A list with an accent rule per game, not a third grid of cards. Three card
+   grids stacked would make the page read as one module repeating. */
+.instincts {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--border);
+}
+
+.instincts > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 0.95rem 0 0.95rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    border-left: 2px solid var(--row-accent);
+}
+
+.instincts dt {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.instincts dd {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    text-align: right;
+}
+
+.soon-tag {
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* ---------- the loop ---------- */
+
+.loop-n {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* Closes the loop: the last tile points back at the first instead of the list
+   simply stopping, which is the whole product in one shape. */
+.loop-back {
+    display: grid;
+    place-items: center;
+    border-style: dashed !important;
+    background: transparent !important;
+}
+
+.loop-back span {
+    color: var(--jolt);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.loop-back::before {
+    content: "\21BA";
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--jolt);
+    font-size: 1.4rem;
+    text-align: center;
+}
+
+/* ---------- coming soon ---------- */
+
+.soon-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Chips, not cards -- roughly a fifth of a real game card's visual weight, so a
+   roadmap item can never be mistaken for something you can play. */
+.soon-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.65rem 0.95rem;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    border-left: 2px solid var(--chip-accent);
+    opacity: 0.75;
+}
+
+.soon-chip-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.soon-chip-instinct {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+/* ---------- closer ---------- */
+
+.closer-kicker {
+    margin: 0 0 0.5rem;
+    color: var(--jolt);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+/* ---------- card hover: the preview reacts ---------- */
+
+/* The clock ticks down and a line prints. Small, fast, and specific to each game:
+   the card previews what playing feels like rather than just lifting. */
+a.card-body:hover .preview-bar,
+a.card-body:focus-visible .preview-bar {
+    background: linear-gradient(90deg, var(--card-accent) 24%, var(--surface-2) 24%);
+}
+
+.preview-bar {
+    transition: background 220ms ease-out;
+}
+
+a.card-body:hover .preview-line:nth-of-type(2),
+a.card-body:focus-visible .preview-line:nth-of-type(2) {
+    border-color: transparent;
+    background: #34d39930;
+}
+
+.preview-line {
+    transition: background 220ms ease-out, border-color 220ms ease-out;
+}
+
+@media (max-width: 620px) {
+    .instincts > div {
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .instincts dd {
+        text-align: left;
+    }
+
+    .your-jolt {
+        align-self: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .preview-bar,
+    .preview-line {
+        transition: none;
     }
 }

@@ -39,6 +39,9 @@ export interface GameEntry {
     shape?: string;
     /** 1-3, a reading of pace rather than difficulty. */
     intensity?: number;
+    /** The instinct this game actually tests. Read off the mechanic, not invented:
+     *  it is what the player is being asked to be good at. */
+    instinct: string;
     motif: GameMotif;
 }
 
@@ -53,6 +56,7 @@ export const GAMES: GameEntry[] = [
         path: "/play",
         shape: "10 questions · 30s each",
         intensity: 3,
+        instinct: "Technical recall, fast",
         motif: "blitz"
     },
     {
@@ -65,6 +69,7 @@ export const GAMES: GameEntry[] = [
         path: "/flush",
         shape: "5 rounds · 60s each",
         intensity: 2,
+        instinct: "Prediction and sequencing",
         motif: "flush"
     }
 ];
@@ -78,9 +83,9 @@ export const GAMES: GameEntry[] = [
  * than an empty slot.
  */
 export const UPCOMING: GameEntry[] = [
-    { slug: "memory", name: "Memory", hook: "Hold the pattern. Play it back.", category: "Recall", accent: "#a3e635", status: "soon", motif: "none" },
-    { slug: "debug", name: "Debug", hook: "Find the bug before the tests do.", category: "Code", accent: "#22d3ee", status: "soon", motif: "none" },
-    { slug: "reflex", name: "Reflex", hook: "Right answer, wrong instinct.", category: "Reaction", accent: "#f472b6", status: "soon", motif: "none" }
+    { slug: "memory", name: "Memory", hook: "Hold the pattern. Play it back.", category: "Recall", accent: "#a3e635", status: "soon", motif: "none", instinct: "Short-term recall" },
+    { slug: "debug", name: "Debug", hook: "Find the bug before the tests do.", category: "Code", accent: "#22d3ee", status: "soon", motif: "none", instinct: "Fault-finding" },
+    { slug: "reflex", name: "Reflex", hook: "Right answer, wrong instinct.", category: "Reaction", accent: "#f472b6", status: "soon", motif: "none", instinct: "Reaction under noise" }
 ];
 
 export const LIVE_GAMES = GAMES.filter((g) => g.status === "live");
