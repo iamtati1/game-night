@@ -6,7 +6,8 @@ import type {
     FlushCurrentResponse,
     FlushPlacementResponse,
     FlushRound,
-    FlushStartResponse
+    FlushStartResponse,
+    ResumableResponse
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
@@ -60,6 +61,14 @@ export function FlushPage() {
     const [busy, setBusy] = useState(false);
 
     const [paused, setPaused] = useState(false);
+    /** Where a paused run stopped. Set from live state when the player pauses, or
+     *  from the server when they arrive back on a run they had paused. */
+    const [pausedInfo, setPausedInfo] = useState<{
+        unit: string;
+        current: number;
+        total: number;
+        score: number;
+    } | null>(null);
     /** Bumped per resolved placement, so the score and award animations replay
      *  even when two placements are worth the same. */
     const [beat, setBeat] = useState(0);
@@ -96,6 +105,16 @@ export function FlushPage() {
 
         try {
             await api.post("/api/me/sessions/flush/pause");
+
+            if (round) {
+                setPausedInfo({
+                    unit: "Round",
+                    current: round.roundNumber,
+                    total: round.totalRounds,
+                    score
+                });
+            }
+
             setPaused(true);
         } catch (err) {
             setError(err instanceof ApiError ? err.detailText : "Could not pause the game");
@@ -114,6 +133,7 @@ export function FlushPage() {
 
             setRound(data.round ?? null);
             setScore(data.scoreSoFar ?? 0);
+            setPausedInfo(null);
             setPaused(false);
         } catch (err) {
             setError(err instanceof ApiError ? err.detailText : "Could not resume the game");
@@ -125,31 +145,61 @@ export function FlushPage() {
     useEffect(() => {
         let active = true;
 
-        api.post<FlushStartResponse>("/api/flush/sessions")
-            .then((data) => {
-                if (!active) return;
-                if (data.session) {
-                    navigate(`/flush/results/${data.session.id}`, { replace: true });
-                    return;
-                }
-                setSessionId(data.sessionId ?? null);
-                setRound(data.round ?? null);
-                setScore(data.scoreSoFar ?? 0);
-            })
-            .catch((err) => {
+        void (async () => {
+            // POST /api/flush/sessions means "start or resume", so arriving on a
+            // paused run silently un-paused it and restarted the clock. A pause is
+            // a decision; only the player gets to undo it.
+            try {
+                const open = await api.get<ResumableResponse>("/api/me/sessions/resumable");
+                const heldRun = open.sessions.find(
+                    (s) => s.game.slug === FLUSH && s.status === "paused"
+                );
+
                 if (!active) return;
 
-                // 409 is not a failure: another game holds the single active
-                // session slot, and the player gets to choose what happens.
-                const held = err instanceof ApiError ? activeGameFrom(err.body) : null;
-
-                if (held) {
-                    setConflict(held);
+                if (heldRun) {
+                    setPausedInfo({
+                        unit: "Round",
+                        current: Math.min(heldRun.unitsDone + 1, heldRun.unitsTotal),
+                        total: heldRun.unitsTotal,
+                        score: heldRun.score
+                    });
+                    setPaused(true);
                     return;
                 }
+            } catch {
+                // A failed probe must never stop someone playing.
+            }
 
-                setError(err instanceof ApiError ? err.detailText : "Could not start Flush");
-            });
+            if (!active) return;
+
+            await api
+                .post<FlushStartResponse>("/api/flush/sessions")
+                .then((data) => {
+                    if (!active) return;
+                    if (data.session) {
+                        navigate(`/flush/results/${data.session.id}`, { replace: true });
+                        return;
+                    }
+                    setSessionId(data.sessionId ?? null);
+                    setRound(data.round ?? null);
+                    setScore(data.scoreSoFar ?? 0);
+                })
+                .catch((err) => {
+                    if (!active) return;
+
+                    // 409 is not a failure: another game holds the single active
+                    // session slot, and the player gets to choose what happens.
+                    const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+                    if (conflicting) {
+                        setConflict(conflicting);
+                        return;
+                    }
+
+                    setError(err instanceof ApiError ? err.detailText : "Could not start Flush");
+                });
+        })();
 
         return () => {
             active = false;
@@ -317,12 +367,8 @@ export function FlushPage() {
         return (
             <PausedRun
                 slug={FLUSH}
-                progress={
-                    round
-                        ? { unit: "Round", current: round.roundNumber, total: round.totalRounds }
-                        : null
-                }
-                score={score}
+                progress={pausedInfo}
+                score={pausedInfo?.score ?? score}
                 busy={busy}
                 onResume={() => void handleResume()}
             />

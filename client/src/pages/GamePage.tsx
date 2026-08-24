@@ -5,6 +5,7 @@ import { activeGameFrom } from "../api/types.js";
 import type {
     AnswerResponse,
     CurrentQuestionResponse,
+    ResumableResponse,
     ServedQuestion,
     StartSessionResponse
 } from "../api/types.js";
@@ -87,6 +88,14 @@ export function GamePage() {
     const navigate = useNavigate();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [paused, setPaused] = useState(false);
+    /** Where a paused run stopped. Set either from live state when the player
+     *  pauses, or from the server when they arrive back on a paused run. */
+    const [pausedInfo, setPausedInfo] = useState<{
+        unit: string;
+        current: number;
+        total: number;
+        score: number;
+    } | null>(null);
     const [question, setQuestion] = useState<ServedQuestion | null>(null);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [runningScore, setRunningScore] = useState(0);
@@ -142,6 +151,16 @@ export function GamePage() {
 
         try {
             await api.post("/api/me/sessions/code-blitz/pause");
+
+            if (question) {
+                setPausedInfo({
+                    unit: "Question",
+                    current: question.questionNumber,
+                    total: question.totalQuestions,
+                    score: runningScore
+                });
+            }
+
             setPaused(true);
         } catch (err) {
             setError(
@@ -164,6 +183,7 @@ export function GamePage() {
             setSessionId(data.sessionId ?? null);
             setQuestion(data.question ?? null);
             setRunningScore(data.scoreSoFar ?? 0);
+            setPausedInfo(null);
             setPaused(false);
         } catch (err) {
             setError(
@@ -176,39 +196,72 @@ export function GamePage() {
         }
     }
 
-    // Start (or resume) a game on mount.
+    // Start, resume, or -- if the player paused this run -- stop and ask.
     useEffect(() => {
         let active = true;
 
-        api.post<StartSessionResponse>("/api/sessions")
-            .then((data) => {
+        void (async () => {
+            // POST /api/sessions means "start or resume", so arriving on a paused
+            // run silently un-paused it and restarted the clock. A pause is a
+            // decision; only the player gets to undo it.
+            try {
+                const open = await api.get<ResumableResponse>("/api/me/sessions/resumable");
+                const heldRun = open.sessions.find(
+                    (s) => s.game.slug === CODE_BLITZ && s.status === "paused"
+                );
+
                 if (!active) return;
 
-                if (data.session) {
-                    finish(data.session.id);
+                if (heldRun) {
+                    setPausedInfo({
+                        unit: "Question",
+                        current: Math.min(heldRun.unitsDone + 1, heldRun.unitsTotal),
+                        total: heldRun.unitsTotal,
+                        score: heldRun.score
+                    });
+                    setPaused(true);
                     return;
                 }
+            } catch {
+                // A failed probe must never stop someone playing: fall through and
+                // start the run the way this page always did.
+            }
 
-                setSessionId(data.sessionId ?? null);
-                setQuestion(data.question ?? null);
-                // Resuming mid-game restores the real banked score rather than
-                // restarting a local tally at zero.
-                setRunningScore(data.scoreSoFar ?? 0);
-            })
-            .catch((err) => {
-                if (!active) return;
+            if (!active) return;
 
-                // 409 is not a failure: another game holds the single active
-                // session slot, and the player gets to choose what happens.
-                const held = err instanceof ApiError ? activeGameFrom(err.body) : null;
+            await api
+                .post<StartSessionResponse>("/api/sessions")
+                .then((data) => {
+                    if (!active) return;
 
-                if (held) {
-                    setConflict(held);
-                    return;
-                }
+                    if (data.session) {
+                        finish(data.session.id);
+                        return;
+                    }
 
-                setError(err instanceof ApiError ? err.detailText : "Could not start a game");
-            });
+                    setSessionId(data.sessionId ?? null);
+                    setQuestion(data.question ?? null);
+                    // Resuming mid-game restores the real banked score rather than
+                    // restarting a local tally at zero.
+                    setRunningScore(data.scoreSoFar ?? 0);
+                })
+                .catch((err) => {
+                    if (!active) return;
+
+                    // 409 is not a failure: another game holds the single active
+                    // session slot, and the player gets to choose what happens.
+                    const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+                    if (conflicting) {
+                        setConflict(conflicting);
+                        return;
+                    }
+
+                    setError(
+                        err instanceof ApiError ? err.detailText : "Could not start a game"
+                    );
+                });
+        })();
 
         return () => {
             active = false;
@@ -355,16 +408,8 @@ export function GamePage() {
         return (
             <PausedRun
                 slug={CODE_BLITZ}
-                progress={
-                    question
-                        ? {
-                              unit: "Question",
-                              current: question.questionNumber,
-                              total: question.totalQuestions
-                          }
-                        : null
-                }
-                score={runningScore}
+                progress={pausedInfo}
+                score={pausedInfo?.score ?? runningScore}
                 busy={busy}
                 onResume={() => void handleResume()}
             />

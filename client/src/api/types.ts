@@ -214,3 +214,20 @@ export function activeGameFrom(body: unknown): { slug: string; name: string } | 
 
     return candidate && typeof candidate.slug === "string" ? candidate : null;
 }
+
+/** One unfinished run, from GET /api/me/sessions/resumable. */
+export interface ResumableSession {
+    id: string;
+    game: GameRef;
+    status: "in_progress" | "paused";
+    score: number;
+    unitsDone: number;
+    unitsTotal: number;
+    pauseCount: number;
+    startedAt: string;
+    pausedAt: string | null;
+}
+
+export interface ResumableResponse {
+    sessions: ResumableSession[];
+}
