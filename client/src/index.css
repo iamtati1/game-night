@@ -910,3 +910,73 @@ input:focus {
 .cta-row.center-row {
     justify-content: center;
 }
+
+/* ---------- Pass A: question transitions and timer urgency ---------- */
+
+/* The stage carries the whole question so it can move as one object. Only
+   opacity and transform animate -- anything affecting box size would reflow the
+   answer buttons under the player's cursor mid-click. */
+.question-stage {
+    animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.question-stage.leaving {
+    animation: stage-out 170ms ease-in forwards;
+}
+
+@keyframes stage-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes stage-out {
+    from { opacity: 1; transform: none; }
+    to   { opacity: 0; transform: translateY(-8px); }
+}
+
+/* Timer tiers. `calm` is deliberately unstyled beyond the base: the clock should
+   be quiet until it has something to say. */
+.countdown-fill.warn {
+    background: var(--warn);
+}
+
+.countdown-value.warn {
+    color: var(--warn);
+}
+
+.countdown.urgent .countdown-track {
+    animation: timer-pulse 1s ease-in-out infinite;
+}
+
+/* Opacity only, and a shallow range. A scale or colour flash at 1Hz across a
+   full-width bar is exactly the effect photosensitivity guidance warns about. */
+@keyframes timer-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.72; }
+}
+
+/* Time ran out: the tag earns more weight than the inline pill it shares a class
+   with, because nothing else on screen explains why the question vanished. */
+.lapsed-tag {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .question-stage,
+    .question-stage.leaving {
+        animation: none;
+    }
+
+    /* The exit still has to hide the outgoing question, or it would sit on top of
+       the incoming one for a frame. Opacity without motion. */
+    .question-stage.leaving {
+        opacity: 0;
+    }
+
+    .countdown.urgent .countdown-track {
+        animation: none;
+    }
+}

@@ -12,7 +12,23 @@ import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 
 const QUESTION_TIME_LIMIT_MS = 30_000;
-const FEEDBACK_MS = 1400;
+/**
+ * How long the result stays on screen before the next question arrives.
+ *
+ * Deliberately not one number. Dwell should scale with how much there is to
+ * read: a correct answer carries no new information beyond "yes", so holding the
+ * player there is dead time in a game called Blitz. A wrong answer names the
+ * answer they missed, and that is the whole teaching moment -- cutting it short
+ * to hit a uniform budget would throw away the reason the reveal exists.
+ */
+const DWELL_MS: Record<Feedback["outcome"], number> = {
+    correct: 900,
+    incorrect: 1600,
+    timed_out: 1400
+};
+
+/** Exit animation. Short enough to read as one motion with the entrance. */
+const EXIT_MS = 170;
 
 interface Feedback {
     outcome: "correct" | "incorrect" | "timed_out";
@@ -83,6 +99,30 @@ export function GamePage() {
     // Guards against the countdown firing while an answer is already in flight
     // or feedback is on screen.
     const settling = useRef(false);
+
+    /** True while the current question is animating out. */
+    const [leaving, setLeaving] = useState(false);
+
+    /**
+     * Every pending timeout, so unmounting cannot leave one running.
+     *
+     * This matters more than tidiness: the sequencing timers call navigate() when
+     * a game ends, so one surviving an unmount would redirect a player who had
+     * already left the page.
+     */
+    const timers = useRef<number[]>([]);
+
+    const later = useCallback((fn: () => void, ms: number) => {
+        timers.current.push(window.setTimeout(fn, ms));
+    }, []);
+
+    useEffect(
+        () => () => {
+            timers.current.forEach(window.clearTimeout);
+            timers.current = [];
+        },
+        []
+    );
 
     const finish = useCallback(
         (id: string) => {
@@ -205,10 +245,17 @@ export function GamePage() {
                 selectedOptionId: optionId
             });
 
-            setTimeout(() => {
-                setFeedback(null);
-                advance(result.question, result.complete, result.session?.id ?? sessionId);
-            }, FEEDBACK_MS);
+            // Hold the result, animate the question out, then swap. Three beats
+            // rather than one abrupt replacement.
+            later(() => {
+                setLeaving(true);
+
+                later(() => {
+                    setLeaving(false);
+                    setFeedback(null);
+                    advance(result.question, result.complete, result.session?.id ?? sessionId);
+                }, EXIT_MS);
+            }, DWELL_MS[result.outcome]);
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Could not submit your answer");
@@ -241,11 +288,16 @@ export function GamePage() {
                 selectedOptionId: null
             });
 
-            setTimeout(() => {
-                setFeedback(null);
-                setQuestion(data.question ?? null);
-                settling.current = false;
-            }, FEEDBACK_MS);
+            later(() => {
+                setLeaving(true);
+
+                later(() => {
+                    setLeaving(false);
+                    setFeedback(null);
+                    setQuestion(data.question ?? null);
+                    settling.current = false;
+                }, EXIT_MS);
+            }, DWELL_MS.timed_out);
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
@@ -360,32 +412,41 @@ export function GamePage() {
                 onExpire={onExpire}
             />
 
-            <pre className="prompt">{question.prompt}</pre>
+            {/* Keyed on the question, so React remounts it and the entrance
+                animation replays without any state to reset. `leaving` drives the
+                exit. Only opacity and transform move, so neither can reflow the
+                page mid-answer. */}
+            <div
+                key={question.sessionQuestionId}
+                className={`question-stage${leaving ? " leaving" : ""}`}
+            >
+                <pre className="prompt">{question.prompt}</pre>
 
-            <ul className={`options${feedback?.outcome === "timed_out" ? " lapsed" : ""}`}>
-                {question.options.map((option, index) => {
-                    const state = optionStateFor(feedback, option);
-                    const glyph = OPTION_GLYPH[state];
+                <ul className={`options${feedback?.outcome === "timed_out" ? " lapsed" : ""}`}>
+                    {question.options.map((option, index) => {
+                        const state = optionStateFor(feedback, option);
+                        const glyph = OPTION_GLYPH[state];
 
-                    return (
-                        <li key={option.id}>
-                            <button
-                                className={`option${state ? ` ${state}` : ""}`}
-                                onClick={() => void submit(option.id)}
-                                disabled={busy || feedback !== null}
-                            >
-                                <kbd>{index + 1}</kbd>
-                                <span className="option-text">{option.text}</span>
-                                {glyph && (
-                                    <span className="option-glyph" aria-hidden="true">
-                                        {glyph}
-                                    </span>
-                                )}
-                            </button>
-                        </li>
-                    );
-                })}
-            </ul>
+                        return (
+                            <li key={option.id}>
+                                <button
+                                    className={`option${state ? ` ${state}` : ""}`}
+                                    onClick={() => void submit(option.id)}
+                                    disabled={busy || feedback !== null}
+                                >
+                                    <kbd>{index + 1}</kbd>
+                                    <span className="option-text">{option.text}</span>
+                                    {glyph && (
+                                        <span className="option-glyph" aria-hidden="true">
+                                            {glyph}
+                                        </span>
+                                    )}
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
 
             <div className="feedback" role="status">
                 {feedback?.outcome === "correct" && (
@@ -398,7 +459,7 @@ export function GamePage() {
                     lapse from GET /api/sessions/current, whose response does not carry
                     the expired question's answer. Naming one would mean inventing it. */}
                 {feedback?.outcome === "timed_out" && (
-                    <p className="tag timeout">Out of time</p>
+                    <p className="tag timeout lapsed-tag">Time&rsquo;s up</p>
                 )}
             </div>
         </section>

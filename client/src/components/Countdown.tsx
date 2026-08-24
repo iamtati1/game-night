@@ -30,17 +30,27 @@ export function Countdown({ deadlineAt, totalMs, onExpire }: CountdownProps) {
 
     const seconds = Math.ceil(remaining / 1000);
     const pct = Math.max(0, Math.min(100, (remaining / totalMs) * 100));
-    const urgent = remaining <= 5000;
+
+    /**
+     * Three tiers rather than two. One threshold means the clock reads the same
+     * for 25 of its 30 seconds and then snaps -- so it carries no information
+     * until the moment it panics. `warn` gives the player a reason to look up
+     * before it is already too late to matter.
+     */
+    const tier = remaining <= 5000 ? "urgent" : remaining <= 10000 ? "warn" : "calm";
 
     return (
-        <div className="countdown">
+        <div
+            className={`countdown ${tier}`}
+            role="timer"
+            aria-label={`${seconds} seconds remaining`}
+        >
             <div className="countdown-track">
-                <div
-                    className={`countdown-fill${urgent ? " urgent" : ""}`}
-                    style={{ width: `${pct}%` }}
-                />
+                <div className={`countdown-fill ${tier}`} style={{ width: `${pct}%` }} />
             </div>
-            <span className={`countdown-value${urgent ? " urgent" : ""}`} aria-hidden="true">
+            {/* aria-hidden because the label above already carries the value: a
+                node updating ten times a second would flood a screen reader. */}
+            <span className={`countdown-value ${tier}`} aria-hidden="true">
                 {seconds}s
             </span>
         </div>
