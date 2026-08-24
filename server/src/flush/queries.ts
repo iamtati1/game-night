@@ -1,7 +1,7 @@
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { FLUSH } from "../games/constants.js";
-import { FLUSH_ROUNDS_PER_SESSION } from "./scoring.js";
+import { FLUSH_ROUNDS_PER_SESSION, scoreForSession } from "./scoring.js";
 
 export interface FlushSessionRow {
     id: string;
@@ -90,6 +90,21 @@ export async function createSessionWithRounds(userId: string): Promise<FlushSess
 
     try {
         await client.query("BEGIN");
+
+        // Same reason as Code Blitz: one resumable session per game is enforced by
+        // game_sessions_one_resumable_per_game_idx, so any unfinished Flush game must end
+        // or live Flush game must end before a new one is dealt. Inside the transaction,
+        // cannot half-happen. The route decides; this only carries it out.
+        await client.query(
+            `UPDATE game_sessions
+             SET status = 'abandoned',
+                 abandoned_at = CURRENT_TIMESTAMP,
+                 paused_at = NULL
+             WHERE user_id = $1
+               AND status IN ('in_progress', 'paused')
+               AND game_id = (SELECT id FROM games WHERE slug = $2)`,
+            [userId, FLUSH]
+        );
 
         const session = await client.query<FlushSessionRow>(
             `INSERT INTO game_sessions (user_id, game_id)
@@ -351,4 +366,42 @@ export async function completeSession(
     );
 
     return result.rows[0]!;
+}
+
+/**
+ * Points banked in this session so far, recomputed from the stored rounds.
+ *
+ * Like Code Blitz, nothing accumulates a running total, so pausing and resuming
+ * cannot desynchronise the score from what the database actually holds.
+ */
+export async function scoreSoFar(sessionId: string): Promise<number> {
+    const rounds = await listRounds(sessionId);
+
+    return scoreForSession(
+        rounds.map((r) => ({ correctPlacements: r.correct_placements, status: r.status }))
+    );
+}
+
+/**
+ * Pushes the live round's clock forward by the paused interval. See
+ * shiftQuestionClock in game/queries.ts for the full reasoning -- the mechanism
+ * is identical, only the table differs, which is the whole point of keeping one
+ * timing column per game rather than a shared polymorphic one.
+ *
+ * Flush needs this even though it has no speed bonus: served_at still drives the
+ * deadline and the expiry check, so an unshifted round would time out the instant
+ * the player came back.
+ */
+export async function shiftRoundClock(client: PoolClient, sessionId: string): Promise<void> {
+    await client.query(
+        `UPDATE flush_rounds fr
+         SET served_at = fr.served_at + (CURRENT_TIMESTAMP - gs.paused_at)
+         FROM game_sessions gs
+         WHERE gs.id = fr.game_session_id
+           AND fr.game_session_id = $1
+           AND gs.paused_at IS NOT NULL
+           AND fr.status = 'pending'
+           AND fr.served_at IS NOT NULL`,
+        [sessionId]
+    );
 }

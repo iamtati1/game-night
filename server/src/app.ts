@@ -49,7 +49,10 @@ app.get("/api/users/me", ...meHandler);
 
 app.use("/api/users", usersRouter);
 
-app.use("/api/active-session", sessionsRouter);
+// Before the broad /api mount below, so gameRouter never sees these paths. The
+// prefix is distinct from /api/sessions (Code Blitz's own resource), so the two
+// cannot shadow each other.
+app.use("/api/me/sessions", sessionsRouter);
 
 app.use("/api/flush", flushRouter);
 

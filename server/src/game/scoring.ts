@@ -4,7 +4,6 @@
 import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 
 export const QUESTION_TIME_LIMIT_MS = 30_000;
-export const SESSION_RESUME_WINDOW_MS = 15 * 60 * 1000;
 export const QUESTIONS_PER_SESSION = 10;
 
 const BASE_POINTS = 100;
@@ -61,6 +60,13 @@ export function isExpired(servedAt: Date, now: Date): boolean {
     return now.getTime() - servedAt.getTime() > QUESTION_TIME_LIMIT_MS;
 }
 
-export function isResumable(startedAt: Date, now: Date): boolean {
-    return now.getTime() - startedAt.getTime() <= SESSION_RESUME_WINDOW_MS;
-}
+// isResumable and SESSION_RESUME_WINDOW_MS were deleted when pause/resume landed.
+// They implemented lazy abandonment: a session untouched for 15 minutes was
+// abandoned on the next request. That directly contradicted "closing the tab must
+// not destroy the game", it was measured from started_at (meaningless once a
+// session can span a pause), and Flush never had an equivalent -- so the two games
+// disagreed about whether a session survived.
+//
+// Nothing replaces it. A session now lives until the player resumes, pauses or
+// quits it, and the only cost of vanishing is the single unit that was on screen,
+// which the ordinary lazy timeout sweep adjudicates on return.

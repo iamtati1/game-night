@@ -204,6 +204,8 @@ export interface AbandonResponse {
     abandoned: boolean;
     sessionId?: string;
     game?: { slug: string; name: string };
+    /** Which status it was quit from, so the caller can word the outcome. */
+    previousStatus?: "in_progress" | "paused";
 }
 
 /** Pulls activeGame out of a 409 body, or null if this was a different error. */

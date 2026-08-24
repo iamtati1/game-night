@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     QUESTION_TIME_LIMIT_MS,
-    SESSION_RESUME_WINDOW_MS,
     isExpired,
-    isResumable,
     pointsForAnswer,
     scoreForSession,
     xpForSession,
@@ -106,10 +104,5 @@ describe("deadline boundaries", () => {
     it("treats an answer exactly on the limit as still in time", () => {
         expect(isExpired(t(0), t(QUESTION_TIME_LIMIT_MS))).toBe(false);
         expect(isExpired(t(0), t(QUESTION_TIME_LIMIT_MS + 1))).toBe(true);
-    });
-
-    it("treats a resume exactly on the window edge as still resumable", () => {
-        expect(isResumable(t(0), t(SESSION_RESUME_WINDOW_MS))).toBe(true);
-        expect(isResumable(t(0), t(SESSION_RESUME_WINDOW_MS + 1))).toBe(false);
     });
 });

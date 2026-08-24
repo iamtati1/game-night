@@ -2,7 +2,12 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
 import { FLUSH } from "../games/constants.js";
-import { abandonSession, findActiveSession } from "../sessions/queries.js";
+import {
+    findActiveSession,
+    findResumableSession,
+    resumePausedSession
+} from "../sessions/queries.js";
+import { wantsFreshSession } from "../sessions/schemas.js";
 import * as db from "./queries.js";
 import { placementSchema } from "./schemas.js";
 import {
@@ -31,12 +36,19 @@ function shuffle<T>(items: T[]): T[] {
     return copy;
 }
 
-async function sessionScore(sessionId: string): Promise<number> {
-    const rounds = await db.listRounds(sessionId);
-
-    return scoreForSession(
-        rounds.map((r) => ({ correctPlacements: r.correct_placements, status: r.status }))
-    );
+/** The "another game is running" body, shared by the start route's up-front
+ *  check and its post-resume recheck so the two cannot drift apart. */
+function conflictBody(active: { gameSlug: string; gameName: string }) {
+    return {
+        error: "Another game is in progress",
+        details: [
+            {
+                field: "game",
+                message: `You have a ${active.gameName} game in progress. Resume it, pause it, or quit it before starting Flush.`
+            }
+        ],
+        activeGame: { slug: active.gameSlug, name: active.gameName }
+    };
 }
 
 function summarize(session: db.FlushSessionRow, rounds: db.FlushRoundRow[]) {
@@ -130,48 +142,69 @@ async function serveRound(round: db.FlushRoundRow) {
     };
 }
 
-// POST /api/flush/sessions -- start a new game, or resume one in progress.
+/** Serves whatever the player left behind: the next playable round, or the
+ *  finished session if every round is already adjudicated. */
+async function respondResumed(res: Response, sessionId: string, now: Date): Promise<void> {
+    const round = await nextPlayableRound(sessionId, now);
+
+    if (!round) {
+        const finished = await finishSession(sessionId);
+        res.status(200).json({
+            resumed: true,
+            session: summarize(finished, await db.listRounds(finished.id))
+        });
+        return;
+    }
+
+    res.status(200).json({
+        resumed: true,
+        sessionId,
+        scoreSoFar: await db.scoreSoFar(sessionId),
+        round: await serveRound(round)
+    });
+}
+
+// POST /api/flush/sessions -- resume this player's Flush game, or deal a new one.
+//
+// Body: { fresh?: boolean }. Default false, i.e. resume.
 flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
+    const fresh = wantsFreshSession(req.body);
     const active = await findActiveSession(userId);
 
-    if (active) {
-        // One in-progress session per user, across all games. Rather than
-        // silently destroying a Code Blitz game the player may be nine questions
-        // into, say which game is running and let them decide.
-        if (active.gameSlug !== FLUSH) {
-            res.status(409).json({
-                error: "Another game is in progress",
-                details: [
-                    {
-                        field: "game",
-                        message: `You have a ${active.gameName} game in progress. Finish or abandon it before starting Flush.`
-                    }
-                ],
-                activeGame: { slug: active.gameSlug, name: active.gameName }
-            });
-            return;
-        }
-
-        const round = await nextPlayableRound(active.id, now);
-
-        if (!round) {
-            const finished = await finishSession(active.id);
-            res.status(200).json({
-                resumed: true,
-                session: summarize(finished, await db.listRounds(finished.id))
-            });
-            return;
-        }
-
-        res.status(200).json({
-            resumed: true,
-            sessionId: active.id,
-            scoreSoFar: await sessionScore(active.id),
-            round: await serveRound(round)
-        });
+    // One in-progress session per user across all games. Rather than silently
+    // destroying a Code Blitz game the player may be nine questions into, say
+    // which game is running and let them decide. `fresh` deliberately does not
+    // override this -- it means "discard my unfinished Flush game", never
+    // "discard whatever else is running".
+    if (active && active.gameSlug !== FLUSH) {
+        res.status(409).json(conflictBody(active));
         return;
+    }
+
+    const existing = fresh ? null : await findResumableSession(userId, FLUSH);
+
+    if (existing) {
+        if (existing.status === "paused") {
+            const resumed = await resumePausedSession(userId, FLUSH);
+
+            if (resumed.outcome === "blocked") {
+                const holder = await findActiveSession(userId);
+
+                res.status(409).json(
+                    holder ? conflictBody(holder) : { error: "Another game is in progress" }
+                );
+                return;
+            }
+        }
+
+        const full = await db.findFlushSessionForUser(existing.id, userId);
+
+        if (full && full.status === "in_progress") {
+            await respondResumed(res, existing.id, now);
+            return;
+        }
     }
 
     const available = await db.countEligibleSnippets();
@@ -224,7 +257,7 @@ flushRouter.get("/sessions/current", requireAuth, async (req: Request, res: Resp
     res.status(200).json({
         complete: false,
         sessionId: active.id,
-        scoreSoFar: await sessionScore(active.id),
+        scoreSoFar: await db.scoreSoFar(active.id),
         round: await serveRound(round)
     });
 });
@@ -283,7 +316,7 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
             outcome: "timed_out",
             roundEnded: true,
             pointsBanked: pointsForPlacements(round.correct_placements),
-            scoreSoFar: await sessionScore(sessionId),
+            scoreSoFar: await db.scoreSoFar(sessionId),
             // Teaching moment: show the order they were reaching for.
             correctSequence: await db.correctSequence(round.snippet_id),
             yourSequence: (await db.listPlacements(round.id)).map((p) => p.output_text),
@@ -331,7 +364,7 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
         roundScore: roundEnded
             ? roundScore(correct ? placementIndex : round.correct_placements, completesRound)
             : null,
-        scoreSoFar: await sessionScore(sessionId),
+        scoreSoFar: await db.scoreSoFar(sessionId),
         // Revealed only once the round is over -- never while it is still in play.
         correctSequence: roundEnded ? await db.correctSequence(round.snippet_id) : null,
         yourSequence: roundEnded

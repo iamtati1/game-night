@@ -2,7 +2,12 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { countEligibleQuestions } from "../questions/queries.js";
 import { CODE_BLITZ } from "../games/constants.js";
-import { abandonSession, findActiveSession } from "../sessions/queries.js";
+import {
+    findActiveSession,
+    findResumableSession,
+    resumePausedSession
+} from "../sessions/queries.js";
+import { wantsFreshSession } from "../sessions/schemas.js";
 import { isActiveSessionConflict } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
@@ -11,7 +16,6 @@ import {
     QUESTIONS_PER_SESSION,
     QUESTION_TIME_LIMIT_MS,
     isExpired,
-    isResumable,
     pointsForAnswer,
     scoreForSession,
     xpForSession
@@ -83,20 +87,20 @@ function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[
 }
 
 /**
- * Points banked in this session so far, recomputed from stored answers. The
- * client displays this value and never accumulates its own tally, so a reload
- * mid-game cannot desynchronise the score from the server's truth.
+ * The "another game is running" body. Shared by the start route's up-front check
+ * and its post-resume recheck, so the two cannot drift apart.
  */
-async function scoreSoFar(sessionId: string): Promise<number> {
-    const questions = await db.listSessionQuestions(sessionId);
-
-    return scoreForSession(
-        questions.map((q) => ({
-            isCorrect: q.is_correct,
-            servedAt: q.served_at,
-            answeredAt: q.answered_at
-        }))
-    );
+function conflictBody(active: { gameSlug: string; gameName: string }) {
+    return {
+        error: "Another game is in progress",
+        details: [
+            {
+                field: "game",
+                message: `You have a ${active.gameName} game in progress. Resume it, pause it, or quit it before starting Code Blitz.`
+            }
+        ],
+        activeGame: { slug: active.gameSlug, name: active.gameName }
+    };
 }
 
 /**
@@ -122,7 +126,7 @@ async function respondResumed(
     res.status(200).json({
         resumed: true,
         sessionId: session.id,
-        scoreSoFar: await scoreSoFar(session.id),
+        scoreSoFar: await db.scoreSoFar(session.id),
         question: await serveQuestion(question)
     });
 }
@@ -183,42 +187,60 @@ async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQue
     };
 }
 
-// POST /api/sessions -- start a new game, or resume one still inside its window.
+// POST /api/sessions -- resume this player's Code Blitz game, or deal a new one.
+//
+// Body: { fresh?: boolean }. Default false, i.e. resume. "Start New Game" sends
+// fresh: true, which discards the unfinished session inside the same transaction
+// that creates its replacement.
 gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const now = new Date();
+    const fresh = wantsFreshSession(req.body);
     const active = await findActiveSession(userId);
 
-    if (active) {
-        // The one-active-session index is scoped to the user, not to
-        // (user, game). Without this check Code Blitz's resume path would adopt
-        // another game's session, find none of its own questions, and "complete"
-        // it with a score of zero.
-        if (active.gameSlug !== CODE_BLITZ) {
-            res.status(409).json({
-                error: "Another game is in progress",
-                details: [
-                    {
-                        field: "game",
-                        message: `You have a ${active.gameName} game in progress. Finish or abandon it before starting Code Blitz.`
-                    }
-                ],
-                activeGame: { slug: active.gameSlug, name: active.gameName }
-            });
-            return;
-        }
+    // The one-active-session index is scoped to the user, not to (user, game).
+    // Without this check Code Blitz's resume path would adopt another game's
+    // session, find none of its own questions, and "complete" it with a score of
+    // zero.
+    //
+    // Checked before `fresh` is honoured: fresh means "discard MY unfinished Code
+    // Blitz game", never "discard whatever else is running". A Flush game must be
+    // dealt with on its own page, deliberately.
+    if (active && active.gameSlug !== CODE_BLITZ) {
+        res.status(409).json(conflictBody(active));
+        return;
+    }
 
-        if (isResumable(active.startedAt, now)) {
-            const existing = await db.findSessionForUser(active.id, userId);
+    const existing = fresh ? null : await findResumableSession(userId, CODE_BLITZ);
 
-            if (existing) {
-                await respondResumed(res, existing, now);
+    if (existing) {
+        if (existing.status === "paused") {
+            const resumed = await resumePausedSession(userId, CODE_BLITZ);
+
+            if (resumed.outcome === "blocked") {
+                // Another game went live between the check above and the status
+                // flip. The one-active index caught it; report the same choice
+                // rather than a 500.
+                const holder = await findActiveSession(userId);
+
+                res.status(409).json(
+                    holder
+                        ? conflictBody(holder)
+                        : { error: "Another game is in progress" }
+                );
                 return;
             }
+
+            // "none" means it stopped being paused underneath us. Fall through --
+            // the status check below decides whether it is still playable.
         }
 
-        // Past the resume window: lazy abandonment, exactly as designed.
-        await abandonSession(active.id);
+        const full = await db.findSessionForUser(existing.id, userId);
+
+        if (full && full.status === "in_progress") {
+            await respondResumed(res, full, now);
+            return;
+        }
     }
 
     // Optional top-up. Never throws, never contacts the provider when the local
@@ -300,12 +322,6 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
         return;
     }
 
-    if (!isResumable(active.startedAt, now)) {
-        await abandonSession(active.id);
-        res.status(410).json({ error: "Session expired" });
-        return;
-    }
-
     const session = await db.findSessionForUser(active.id, userId);
 
     if (!session) {
@@ -327,7 +343,7 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
     res.status(200).json({
         complete: false,
         sessionId: session.id,
-        scoreSoFar: await scoreSoFar(session.id),
+        scoreSoFar: await db.scoreSoFar(session.id),
         question: await serveQuestion(question)
     });
 });
@@ -388,7 +404,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         res.status(200).json({
             outcome: "timed_out",
             pointsAwarded: 0,
-            scoreSoFar: await scoreSoFar(session.id),
+            scoreSoFar: await db.scoreSoFar(session.id),
             correctOption: correctOptionText,
             complete: !remaining,
             question: remaining ? await serveQuestion(remaining) : null,
@@ -423,7 +439,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
     res.status(200).json({
         outcome: option.isCorrect ? "correct" : "incorrect",
         pointsAwarded,
-        scoreSoFar: await scoreSoFar(session.id),
+        scoreSoFar: await db.scoreSoFar(session.id),
         responseTimeMs: elapsedMs,
         correctOption: correctOptionText,
         complete: !remaining,

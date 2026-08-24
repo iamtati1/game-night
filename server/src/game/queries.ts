@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { CODE_BLITZ } from "../games/constants.js";
 import { ELIGIBLE_QUESTION_PREDICATE } from "../questions/queries.js";
-import { QUESTIONS_PER_SESSION } from "./scoring.js";
+import { QUESTIONS_PER_SESSION, scoreForSession } from "./scoring.js";
 
 export interface GameSessionRow {
     id: string;
@@ -67,6 +67,27 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
 
     try {
         await client.query("BEGIN");
+
+        // Clears the way for the INSERT below. game_sessions_one_resumable_per_
+        // game_idx permits only one in_progress-or-paused session per game, so any
+        // paused or live Code Blitz game has to end before a new one can begin.
+        //
+        // Doing it here rather than in a separate request is what makes "Start
+        // New Game" atomic: two statements from the route would leave a window in
+        // which the old session is gone and the new one does not exist yet, and a
+        // crash inside it would lose the game silently. The decision to discard is
+        // the caller's -- this function is only ever reached once the route has
+        // established that nothing is being resumed.
+        await client.query(
+            `UPDATE game_sessions
+             SET status = 'abandoned',
+                 abandoned_at = CURRENT_TIMESTAMP,
+                 paused_at = NULL
+             WHERE user_id = $1
+               AND status IN ('in_progress', 'paused')
+               AND game_id = (SELECT id FROM games WHERE slug = $2)`,
+            [userId, CODE_BLITZ]
+        );
 
         // The game is resolved by slug inside the INSERT rather than passed in,
         // so a caller cannot accidentally attribute a Code Blitz session to
@@ -275,4 +296,59 @@ export async function completeSession(
     );
 
     return result.rows[0]!;
+}
+
+/**
+ * Points banked in this session so far, recomputed from the stored answers.
+ *
+ * There is deliberately no running total anywhere -- not on the session row, not
+ * in the client. That is what makes a reload, a resume, or a pause incapable of
+ * desynchronising the score: there is nothing to drift.
+ */
+export async function scoreSoFar(sessionId: string): Promise<number> {
+    const questions = await listSessionQuestions(sessionId);
+
+    return scoreForSession(
+        questions.map((q) => ({
+            isCorrect: q.is_correct,
+            servedAt: q.served_at,
+            answeredAt: q.answered_at
+        }))
+    );
+}
+
+/**
+ * Pushes the live question's clock forward by however long the session sat
+ * paused, so the player resumes with exactly the time they had.
+ *
+ * Why move served_at rather than store "seconds remaining" somewhere: served_at
+ * is the single input to four derived values -- the deadline, the expiry check,
+ * the response time, and the speed bonus. A sidecar column would have to be
+ * subtracted at all four sites, and missing one would silently zero the speed
+ * bonus on every resumed answer. Moving the one field keeps all four consistent
+ * by construction.
+ *
+ * The arithmetic is done in SQL against gs.paused_at, so no Node or browser clock
+ * enters the path and the server stays authoritative about time.
+ *
+ * A question that was already past its deadline when the player paused stays past
+ * it by exactly the same margin -- the shift is faithful, not forgiving -- and the
+ * ordinary lazy timeout sweep adjudicates it on the next request. That is why
+ * there is no "settle before pausing" step: it would not change the outcome.
+ *
+ * Runs on the caller's client so it lands in the same transaction as the status
+ * flip, while paused_at is still set.
+ */
+export async function shiftQuestionClock(client: PoolClient, sessionId: string): Promise<void> {
+    await client.query(
+        `UPDATE session_questions sq
+         SET served_at = sq.served_at + (CURRENT_TIMESTAMP - gs.paused_at)
+         FROM game_sessions gs
+         WHERE gs.id = sq.game_session_id
+           AND sq.game_session_id = $1
+           AND gs.paused_at IS NOT NULL
+           AND sq.status = 'pending'
+           AND sq.served_at IS NOT NULL`,
+        [sessionId]
+    );
 }

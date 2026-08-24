@@ -33,12 +33,14 @@ export function ActiveGameConflict({
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Addressed by game slug rather than "whatever is active": a panel left open
+    // in a stale tab must not be able to quit a game the player has started since.
     async function abandon() {
         setBusy(true);
         setError(null);
 
         try {
-            await api.post<AbandonResponse>("/api/active-session/abandon");
+            await api.post<AbandonResponse>(`/api/me/sessions/${activeGame.slug}/abandon`);
             onAbandoned();
         } catch (err) {
             setBusy(false);
