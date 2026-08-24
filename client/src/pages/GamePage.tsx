@@ -10,6 +10,7 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { RoundProgress } from "../components/RoundProgress.js";
 
 const QUESTION_TIME_LIMIT_MS = 30_000;
 /**
@@ -377,18 +378,19 @@ export function GamePage() {
 
     return (
         <section className="game">
-            <header className="game-bar">
-                <span className="progress">
-                    Question {question.questionNumber} of {question.totalQuestions}
-                </span>
+            {/* Names the game, reports the score, offers the exit. Three things,
+                so the player always knows where they are and how to leave. */}
+            <header className="hud">
+                <span className="hud-title">Code Blitz</span>
+
                 {/* The award floats out of the score rather than sitting beside it,
                     so the number the player watches is the one that moves. */}
                 <span className="score-slot">
+                    <span className="hud-label">Score</span>
                     <span className="score" aria-live="polite">
                         <span key={`s${beat}`} className="score-value">
                             {runningScore}
-                        </span>{" "}
-                        pts
+                        </span>
                     </span>
                     {feedback?.outcome === "correct" && feedback.pointsAwarded > 0 && (
                         <span key={`a${beat}`} className="score-award" aria-hidden="true">
@@ -398,13 +400,18 @@ export function GamePage() {
                 </span>
 
                 <button
-                    className="button"
+                    className="button ghost small"
                     onClick={() => void handlePause()}
                     disabled={busy || feedback !== null}
                 >
                     Pause
                 </button>
             </header>
+
+            <RoundProgress
+                current={question.questionNumber}
+                total={question.totalQuestions}
+            />
 
             <Countdown
                 deadlineAt={question.deadlineAt}
