@@ -5,6 +5,7 @@ import {
     type HistoryPage,
     type HistorySessionRow
 } from "./history.js";
+import { toGameProgress, type UnitRow } from "./progress.js";
 import {
     toUserStats,
     type GameStatsRow,
@@ -91,7 +92,65 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         [userId]
     );
 
-    return toUserStats(totals.rows[0]!, perGame.rows);
+    return toUserStats(totals.rows[0]!, perGame.rows, await getImprovement(userId));
+}
+
+/**
+ * Every scoring unit of every completed run, newest run first, in play order.
+ *
+ * One UNION rather than one query per game: both round tables have the same
+ * grain -- one row per thing the player got right or wrong -- so the shaping
+ * afterwards does not need to know which game it is looking at. Adding game #3
+ * is a third branch here and nothing else.
+ *
+ * Only completed runs. An abandoned or paused game is a partial sample, and
+ * averaging it in would report someone as slower or less accurate than they are.
+ *
+ * The SQL's only judgement is ordering; what counts as a streak or a fair
+ * comparison is decided in users/progress.ts, where it can be tested.
+ */
+async function getImprovement(userId: string) {
+    const result = await pool.query<UnitRow>(
+        `WITH runs AS (
+             SELECT gs.id, gs.game_id, gs.completed_at
+             FROM game_sessions gs
+             WHERE gs.user_id = $1 AND gs.status = 'completed'
+         ),
+         units AS (
+             SELECT r.game_id,
+                    r.id                        AS session_id,
+                    r.completed_at,
+                    sq.display_order            AS ordinal,
+                    (sq.is_correct IS TRUE)     AS success,
+                    CASE
+                        WHEN sq.answered_at IS NOT NULL AND sq.served_at IS NOT NULL
+                        THEN EXTRACT(EPOCH FROM (sq.answered_at - sq.served_at)) * 1000
+                    END                         AS duration_ms
+             FROM runs r
+             JOIN session_questions sq ON sq.game_session_id = r.id
+
+             UNION ALL
+
+             SELECT r.game_id,
+                    r.id,
+                    r.completed_at,
+                    fr.display_order,
+                    (fr.status = 'completed'),
+                    CASE
+                        WHEN fr.ended_at IS NOT NULL AND fr.served_at IS NOT NULL
+                        THEN EXTRACT(EPOCH FROM (fr.ended_at - fr.served_at)) * 1000
+                    END
+             FROM runs r
+             JOIN flush_rounds fr ON fr.game_session_id = r.id
+         )
+         SELECT g.slug AS game_slug, u.session_id, u.ordinal, u.success, u.duration_ms
+         FROM units u
+         JOIN games g ON g.id = u.game_id
+         ORDER BY g.slug, u.completed_at DESC, u.session_id DESC, u.ordinal`,
+        [userId]
+    );
+
+    return toGameProgress(result.rows);
 }
 
 /**

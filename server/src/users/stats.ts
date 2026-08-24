@@ -1,3 +1,4 @@
+import type { GameProgress } from "./progress.js";
 import {
     computeAccuracy,
     roundToOneDecimal,
@@ -41,6 +42,9 @@ export interface GameStats {
     averageScore: number | null;
     progress: Progress;
     accuracy: number | null;
+    /** Improvement figures derived from completed runs. Null for a game the
+     *  player has never finished. */
+    improvement: GameProgress | null;
 }
 
 export interface UserStats {
@@ -77,7 +81,7 @@ export function toStatTotals(row: StatTotalsRow): StatTotals {
     };
 }
 
-export function toGameStats(row: GameStatsRow): GameStats {
+export function toGameStats(row: GameStatsRow, improvement: GameProgress | null = null): GameStats {
     const progress = toProgress(row);
 
     return {
@@ -90,13 +94,18 @@ export function toGameStats(row: GameStatsRow): GameStats {
         bestScore: toNullableNumber(row.best_score),
         averageScore: roundToOneDecimal(toNullableNumber(row.average_score)),
         progress,
-        accuracy: computeAccuracy(progress.correct, progress.incorrect)
+        accuracy: computeAccuracy(progress.correct, progress.incorrect),
+        improvement
     };
 }
 
-export function toUserStats(totals: StatTotalsRow, perGame: GameStatsRow[]): UserStats {
+export function toUserStats(
+    totals: StatTotalsRow,
+    perGame: GameStatsRow[],
+    improvement: Record<string, GameProgress> = {}
+): UserStats {
     return {
         totals: toStatTotals(totals),
-        perGame: perGame.map(toGameStats)
+        perGame: perGame.map((row) => toGameStats(row, improvement[row.game_slug] ?? null))
     };
 }
