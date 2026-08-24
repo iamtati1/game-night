@@ -22,7 +22,7 @@ function Header() {
 
             {user && (
                 <nav>
-                    <Link to="/#games">Games</Link>
+                    <Link to="/">Games</Link>
                     <Link to="/history">History</Link>
                     <span className="muted">{user.username}</span>
                     <button className="button ghost small" onClick={() => void logout()}>

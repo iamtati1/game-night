@@ -115,7 +115,7 @@ export function FlushResultsPage() {
                 <Link className="button primary" to="/flush">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/#games">
+                <Link className="button ghost" to="/">
                     Pick another Jolt
                 </Link>
             </div>

@@ -2134,3 +2134,38 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
         font-size: 1.35rem;
     }
 }
+
+/* ---------- results breakdown ---------- */
+
+.review-head {
+    margin: 0 0 0.9rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.review-head .muted {
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+/* A perfect run should read as a reward, not as a missing section. */
+.clean-sweep {
+    margin: 0 0 1rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 10px;
+    border-left: 3px solid var(--correct);
+    background: #34d39914;
+    color: var(--correct);
+    font-weight: 650;
+}
+
+.review-n {
+    margin: 0 0 0.35rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+}

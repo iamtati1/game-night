@@ -46,6 +46,11 @@ export function ResultsPage() {
         return <p className="muted center">Tallying up…</p>;
     }
 
+    // A timed-out question is a miss too: no answer given is not the same as
+    // right, and it is exactly the kind of thing worth reviewing.
+    const misses = session.questions.filter((q) => q.isCorrect !== true);
+    const correctCount = session.questions.length - misses.length;
+
     return (
         <section className="results">
             {/* The score is the headline, at brand scale. This screen is the "see"
@@ -86,9 +91,29 @@ export function ResultsPage() {
                 </div>
             </dl>
 
+            {/* Only what went wrong. Ten full questions buried the score under a
+                transcript of things the player already knows they got right; the
+                reason to look down here is to find out what beat you. */}
+            {misses.length === 0 ? (
+                <p className="clean-sweep">Every answer correct.</p>
+            ) : (
+                <p className="review-head">
+                    {misses.length === 1 ? "The one you missed" : `The ${misses.length} you missed`}
+                    {correctCount > 0 && (
+                        <span className="muted">
+                            {" "}
+                            · {correctCount} correct not shown
+                        </span>
+                    )}
+                </p>
+            )}
+
             <ol className="breakdown">
-                {session.questions.map((q) => (
-                    <li key={q.displayOrder} className={q.isCorrect ? "ok" : "bad"}>
+                {misses.map((q) => (
+                    <li key={q.displayOrder} className="bad">
+                        {/* The number, because this is a subset now: without it the
+                            player cannot tell which question they are looking at. */}
+                        <p className="review-n">Q{q.displayOrder}</p>
                         {/* Same split as the game screen. Without it the review
                             screen rendered "What does this log?" in monospace, so
                             prose looked like code in exactly the place a player
@@ -105,11 +130,9 @@ export function ResultsPage() {
                             {q.status === "timed_out" ? (
                                 <span className="tag timeout">No answer</span>
                             ) : (
-                                <span className={`tag ${q.isCorrect ? "correct" : "incorrect"}`}>
-                                    {q.selectedOption}
-                                </span>
+                                <span className="tag incorrect">{q.selectedOption}</span>
                             )}
-                            {!q.isCorrect && q.correctOption && (
+                            {q.correctOption && (
                                 <span className="muted"> · answer: {q.correctOption}</span>
                             )}
                             {q.responseTimeMs !== null && (
@@ -118,7 +141,6 @@ export function ResultsPage() {
                                     · {(q.responseTimeMs / 1000).toFixed(1)}s
                                 </span>
                             )}
-                            <span className="points">+{q.pointsAwarded}</span>
                         </p>
                     </li>
                 ))}
@@ -130,7 +152,7 @@ export function ResultsPage() {
                 <Link className="button primary" to="/play">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/#games">
+                <Link className="button ghost" to="/">
                     Pick another Jolt
                 </Link>
             </div>

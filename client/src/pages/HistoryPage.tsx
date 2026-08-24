@@ -97,7 +97,7 @@ export function HistoryPage() {
                 <p className="muted">
                     Your first Jolt is waiting. Most runs take a couple of minutes.
                 </p>
-                <Link className="button primary" to="/#games">
+                <Link className="button primary" to="/">
                     Pick a game
                 </Link>
             </section>
