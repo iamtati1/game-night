@@ -59,8 +59,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
     }, []);
 
+    /**
+     * Clears local auth state only after the server confirms the session is gone.
+     *
+     * The server is authoritative here, so the order is deliberate: awaiting the
+     * request before setUser(null) means the logged-out UI is a report of what
+     * happened, not a prediction. Clearing first would show the logged-out header
+     * whether or not the session actually ended -- which is indistinguishable, to
+     * the player, from a logout that worked.
+     *
+     * A 401 is the one failure that still means success: the session was already
+     * gone, which is the state we were trying to reach. Every other failure
+     * rethrows with the user left signed in, because the server still holds a
+     * live session and the header should keep saying so.
+     */
     const logout = useCallback(async () => {
-        await api.post("/api/auth/logout");
+        try {
+            await api.post("/api/auth/logout");
+        } catch (err) {
+            if (!(err instanceof ApiError && err.status === 401)) {
+                throw err;
+            }
+        }
+
         setUser(null);
     }, []);
 

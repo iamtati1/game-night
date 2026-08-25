@@ -66,6 +66,14 @@ body {
     white-space: nowrap;
 }
 
+/* Inline rather than a banner: logout failing is a small, recoverable problem,
+   and the nav it sits in is the evidence that the player is still signed in. */
+.logout-error {
+    color: #fca5a5;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
 .site-header nav {
     display: flex;
     align-items: center;

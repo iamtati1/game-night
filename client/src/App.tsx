@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { JoltLogo } from "./components/JoltLogo.js";
 import { useAuth } from "./auth/AuthContext.js";
@@ -17,6 +18,29 @@ import { ResultsPage } from "./pages/ResultsPage.js";
 
 function Header() {
     const { user, logout } = useAuth();
+    const [loggingOut, setLoggingOut] = useState(false);
+    const [failed, setFailed] = useState(false);
+
+    /**
+     * The rejection from logout() has to be caught somewhere. Left as
+     * `void logout()` it became an unhandled promise rejection: the request
+     * failed, the session stayed live on the server, and the player got no
+     * indication either way -- the one outcome worse than a failed logout is a
+     * silent one.
+     */
+    async function handleLogout() {
+        setLoggingOut(true);
+        setFailed(false);
+
+        try {
+            await logout();
+        } catch {
+            // Still signed in, so the nav stays and says why.
+            setFailed(true);
+        } finally {
+            setLoggingOut(false);
+        }
+    }
 
     return (
         <header className="site-header">
@@ -29,8 +53,17 @@ function Header() {
                     <Link to="/">Games</Link>
                     <Link to="/history">History</Link>
                     <span className="muted">{user.username}</span>
-                    <button className="button ghost small" onClick={() => void logout()}>
-                        Log out
+                    {failed && (
+                        <span className="logout-error" role="alert">
+                            Could not log out — still signed in.
+                        </span>
+                    )}
+                    <button
+                        className="button ghost small"
+                        disabled={loggingOut}
+                        onClick={() => void handleLogout()}
+                    >
+                        {loggingOut ? "Logging out…" : "Log out"}
                     </button>
                 </nav>
             )}
