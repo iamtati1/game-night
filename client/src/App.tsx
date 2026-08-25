@@ -5,6 +5,10 @@ import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { FlushPage } from "./pages/FlushPage.js";
 import { FlushResultsPage } from "./pages/FlushResultsPage.js";
 import { GamePage } from "./pages/GamePage.js";
+import { MemoryPage } from "./pages/MemoryPage.js";
+import { MemoryResultsPage } from "./pages/MemoryResultsPage.js";
+import { ReactionPage } from "./pages/ReactionPage.js";
+import { ReactionResultsPage } from "./pages/ReactionResultsPage.js";
 import { HistoryPage } from "./pages/HistoryPage.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -65,6 +69,38 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <FlushResultsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/reaction"
+                        element={
+                            <ProtectedRoute>
+                                <ReactionPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/reaction/results/:id"
+                        element={
+                            <ProtectedRoute>
+                                <ReactionResultsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/memory"
+                        element={
+                            <ProtectedRoute>
+                                <MemoryPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/memory/results/:id"
+                        element={
+                            <ProtectedRoute>
+                                <MemoryResultsPage />
                             </ProtectedRoute>
                         }
                     />

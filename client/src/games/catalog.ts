@@ -22,12 +22,14 @@
  *  once here keeps "code-blitz" from being retyped at every call site. */
 export const CODE_BLITZ = "code-blitz";
 export const FLUSH = "flush";
+export const REACTION = "reaction";
+export const MEMORY = "memory";
 
 export type GameStatus = "live";
 
 /** Which abstract preview the card draws. Each one is a reduction of the real
  *  game screen, so the two cards cannot read as the same game recoloured. */
-export type GameMotif = "blitz" | "flush";
+export type GameMotif = "blitz" | "flush" | "reaction" | "memory";
 
 export interface GameEntry {
     slug: string;
@@ -81,6 +83,38 @@ export const GAMES: GameEntry[] = [
         instinct: "Prediction and sequencing",
         unit: "Round",
         motif: "flush"
+    },
+    {
+        slug: REACTION,
+        name: "Reaction",
+        hook: "Wait for the signal. Beat your own reflexes.",
+        category: "Reflexes",
+        // Electric cyan is Jolt's own colour, and Reaction is the game the brand
+        // is named after -- a jolt is exactly what the signal is.
+        accent: "#22d3ee",
+        status: "live",
+        path: "/reaction",
+        shape: "5 rounds · milliseconds count",
+        intensity: 1,
+        instinct: "Reaction speed and impulse control",
+        unit: "Round",
+        motif: "reaction"
+    },
+    {
+        slug: MEMORY,
+        name: "Memory",
+        hook: "Watch the sequence. Hold it. Play it back.",
+        category: "Recall",
+        // Soft violet: the one game that asks you to slow down and hold something,
+        // so it reads calmer than Reaction's electric cyan.
+        accent: "#a78bfa",
+        status: "live",
+        path: "/memory",
+        shape: "5 rounds · 4 to 8 symbols",
+        intensity: 2,
+        instinct: "Working memory and recall",
+        unit: "Round",
+        motif: "memory"
     }
 ];
 

@@ -36,6 +36,26 @@ function Preview({ motif }: { motif: GameEntry["motif"] }) {
         );
     }
 
+    if (motif === "reaction") {
+        return (
+            <div className="preview preview-reaction" aria-hidden="true">
+                <span className="preview-ring" />
+                <span className="preview-dot" />
+            </div>
+        );
+    }
+
+    if (motif === "memory") {
+        return (
+            <div className="preview preview-memory" aria-hidden="true">
+                <span className="preview-chip" />
+                <span className="preview-chip is-fading" />
+                <span className="preview-chip is-gone" />
+                <span className="preview-chip is-gone" />
+            </div>
+        );
+    }
+
     return null;
 }
 

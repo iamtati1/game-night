@@ -2235,3 +2235,729 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
         animation: none;
     }
 }
+
+/* ================= REACTION ================= */
+
+/* Cyan, and the only game that shares the brand's own colour: a jolt is exactly
+   what the signal is. */
+.game.reaction,
+.results.reaction {
+    --accent: var(--jolt);
+    --accent-soft: #22d3ee2b;
+}
+
+/* ---------- intro ---------- */
+
+.rx-intro {
+    align-items: center;
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+    justify-content: center;
+    text-align: center;
+}
+
+.rx-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.rx-title {
+    margin: 0 0 0.9rem;
+    font-size: clamp(2rem, 7vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1;
+}
+
+.rx-lede {
+    max-width: 34ch;
+    margin: 0 0 2rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* Concentric rings, breathing slowly. It is the only decoration on this screen
+   and it earns its place by showing what the player is about to watch for. */
+.rx-orb {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    margin: 0 0 2rem;
+}
+
+.rx-orb span {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--accent);
+    border-radius: 999px;
+    opacity: 0;
+    animation: rx-breathe 3.2s ease-out infinite;
+}
+
+.rx-orb span:nth-child(2) { animation-delay: 1.05s; }
+.rx-orb span:nth-child(3) { animation-delay: 2.1s; }
+
+@keyframes rx-breathe {
+    0%   { transform: scale(0.45); opacity: 0; }
+    40%  { opacity: 0.55; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+.rx-shape {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* ---------- arena ---------- */
+
+/* The arena IS the button: the whole area is the tap target, so a phone needs no
+   aiming and a desktop click never misses. */
+.rx-arena {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: min(58vh, 26rem);
+    padding: 2rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    transition: background 140ms ease-out, border-color 140ms ease-out;
+}
+
+.rx-arena:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.rx-state {
+    font-size: clamp(2.2rem, 9vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+
+.rx-hint {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+/* Waiting: calm. Deliberately not a red alert state -- anticipation, not threat. */
+.rx-arena.is-waiting {
+    background: var(--surface);
+}
+
+.rx-arena.is-waiting .rx-state {
+    color: var(--muted);
+    animation: rx-pulse 1.9s ease-in-out infinite;
+}
+
+@keyframes rx-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+}
+
+/*
+   The signal. Three things change at once and only one of them is colour:
+   the word, the size, and the ring. A player who cannot distinguish cyan from
+   grey still sees "Wait" become "Go" at double the size.
+*/
+.rx-arena.is-signal {
+    border-color: var(--accent);
+    background: #22d3ee1f;
+    animation: rx-snap 180ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+.rx-go {
+    color: var(--accent);
+    font-size: clamp(3.6rem, 16vw, 6.5rem);
+    text-transform: uppercase;
+}
+
+@keyframes rx-snap {
+    from { transform: scale(0.985); }
+    to   { transform: none; }
+}
+
+/* ---------- round result ---------- */
+
+.rx-ms {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    font-size: clamp(3rem, 13vw, 5rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    animation: rx-land 300ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.rx-ms i {
+    font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+@keyframes rx-land {
+    from { opacity: 0; transform: scale(0.82); }
+    to   { opacity: 1; transform: none; }
+}
+
+.rx-tier,
+.rx-verdict {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.rx-verdict {
+    margin: -0.5rem 0 1.5rem;
+}
+
+/* Tier colours run cool-to-warm, but every tier also has its own word, so the
+   scale never depends on colour alone. */
+.tier-lightning  { color: #22d3ee; }
+.tier-incredible { color: #34d399; }
+.tier-fast       { color: #a3e635; }
+.tier-solid      { color: #fbbf24; }
+.tier-sharp      { color: var(--muted); }
+
+.rx-points {
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A false start is amber and apologetic, not red and accusing. */
+.rx-arena.is-falseStart {
+    border-color: var(--warn);
+    background: #fbbf2414;
+}
+
+.rx-early {
+    color: var(--warn);
+    font-size: clamp(2rem, 8vw, 3rem);
+}
+
+/* ---------- results strip ---------- */
+
+.rx-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 2rem;
+    padding: 0;
+    list-style: none;
+}
+
+.rx-strip li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    min-width: 4.25rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.rx-strip-n {
+    color: var(--muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+}
+
+.rx-strip-v {
+    font-size: 1.15rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+.rx-strip li.early {
+    border-color: var(--warn);
+}
+
+.rx-strip li.early .rx-strip-v {
+    color: var(--warn);
+    font-size: 0.85rem;
+}
+
+.rx-strip li.unplayed {
+    opacity: 0.45;
+}
+
+.run-figures .unit {
+    margin-left: 0.15rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---------- card preview ---------- */
+
+.preview-reaction {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-ring {
+    position: absolute;
+    width: 54px;
+    height: 54px;
+    border: 2px solid var(--card-accent);
+    border-radius: 999px;
+    opacity: 0.4;
+    transition: transform 260ms ease-out, opacity 260ms ease-out;
+}
+
+.preview-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--card-accent);
+    transition: transform 220ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+/* Hovering the card fires the signal in miniature. */
+a.card-body:hover .preview-ring,
+a.card-body:focus-visible .preview-ring {
+    transform: scale(1.35);
+    opacity: 0.85;
+}
+
+a.card-body:hover .preview-dot,
+a.card-body:focus-visible .preview-dot {
+    transform: scale(1.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rx-orb span,
+    .rx-arena.is-waiting .rx-state,
+    .rx-arena.is-signal,
+    .rx-ms,
+    .preview-ring,
+    .preview-dot {
+        animation: none;
+        transition: none;
+    }
+
+    /* The signal must still be unmistakable without the snap: a thicker ring
+       carries what the movement did. */
+    .rx-arena.is-signal {
+        box-shadow: inset 0 0 0 3px var(--accent);
+    }
+}
+
+/* ================= MEMORY ================= */
+
+/* Soft violet. The one game that asks you to slow down and hold something, so it
+   reads calmer than Reaction's electric cyan. */
+.game.memory,
+.results.memory {
+    --accent: #a78bfa;
+    --accent-soft: #a78bfa2b;
+}
+
+/* Each symbol keeps its own hue, set inline by SymbolGlyph. Shape carries the
+   identity; colour only reinforces it. */
+.glyph {
+    width: 100%;
+    height: 100%;
+    fill: var(--glyph, var(--text));
+}
+
+/* ---------- intro ---------- */
+
+.mem-intro {
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+    text-align: center;
+}
+
+.mem-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.mem-title {
+    margin: 0 0 0.9rem;
+    font-size: clamp(2rem, 7vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1;
+}
+
+.mem-lede {
+    max-width: 36ch;
+    margin: 0 0 2rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* The mechanic in miniature: three symbols caught mid-fade. */
+.mem-trace {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.mem-trace .glyph {
+    width: 48px;
+    height: 48px;
+    animation: mem-fade 3.4s ease-in-out infinite;
+}
+
+.mem-trace .glyph:nth-child(2) { animation-delay: 0.45s; }
+.mem-trace .glyph:nth-child(3) { animation-delay: 0.9s; }
+
+@keyframes mem-fade {
+    0%, 20%  { opacity: 1; transform: none; }
+    60%      { opacity: 0.12; transform: translateY(-6px); }
+    100%     { opacity: 1; transform: none; }
+}
+
+.mem-shape {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* ---------- stage ---------- */
+
+.mem-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: min(46vh, 20rem);
+    padding: 1.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+}
+
+.mem-state {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.mem-recall-cue {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: var(--accent);
+}
+
+.mem-count {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+}
+
+/* ---------- the sequence ---------- */
+
+.mem-sequence,
+.mem-slots,
+.mem-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mem-sequence li {
+    display: grid;
+    place-items: center;
+    width: clamp(48px, 13vw, 68px);
+    height: clamp(48px, 13vw, 68px);
+    padding: 0.55rem;
+    border-radius: 14px;
+    background: var(--bg);
+}
+
+/* Each symbol lands rather than appears -- a sequence with rhythm is a sequence
+   you can actually hold. */
+.mem-shown {
+    animation: mem-land 260ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+@keyframes mem-land {
+    from { opacity: 0; transform: scale(0.6); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ---------- recall slots ---------- */
+
+.mem-slot {
+    display: grid;
+    place-items: center;
+    width: clamp(44px, 12vw, 60px);
+    height: clamp(44px, 12vw, 60px);
+    padding: 0.5rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    transition: border-color 160ms, background 160ms;
+}
+
+.mem-slot.filled {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    animation: mem-land 220ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+.mem-slot-n {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- symbol bank ---------- */
+
+.mem-controls {
+    margin-top: 1.25rem;
+}
+
+.mem-bank {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.55rem;
+    margin: 0 0 1.1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.mem-key {
+    display: grid;
+    place-items: center;
+    /* Comfortably past a 44px tap target at every size. */
+    width: clamp(52px, 14vw, 66px);
+    height: clamp(52px, 14vw, 66px);
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: transform 120ms ease-out, border-color 140ms, background 140ms;
+}
+
+.mem-key:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface);
+    transform: translateY(-2px);
+}
+
+.mem-key:active:not(:disabled) {
+    transform: translateY(0) scale(0.94);
+}
+
+.mem-key:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* A used symbol dims rather than vanishing: the bank keeps its shape, so the
+   player's spatial memory of where a symbol sits stays usable. */
+.mem-key.used,
+.mem-key:disabled {
+    opacity: 0.28;
+    cursor: default;
+    transform: none;
+}
+
+.mem-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+/* ---------- feedback ---------- */
+
+.mem-feedback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    animation: mem-reveal 260ms ease-out;
+}
+
+@keyframes mem-reveal {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.mem-verdict {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+.mem-verdict.is-perfect {
+    color: var(--correct);
+}
+
+.mem-compare {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: center;
+}
+
+.mem-compare-label {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.mem-row li {
+    display: grid;
+    place-items: center;
+    width: clamp(36px, 9vw, 46px);
+    height: clamp(36px, 9vw, 46px);
+    padding: 0.4rem;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--bg);
+}
+
+/* Right position, wrong position, and nothing played each read differently
+   without depending on colour: the border style changes too. */
+.mem-row li.hit {
+    border-color: var(--correct);
+    background: #34d39918;
+}
+
+.mem-row li.miss {
+    border-style: dashed;
+    border-color: var(--incorrect);
+    background: #f8717114;
+}
+
+.mem-row li.missing {
+    border-style: dotted;
+    border-color: var(--border);
+    color: var(--muted);
+}
+
+.mem-row.is-answer li {
+    border-color: var(--border);
+}
+
+.mem-points {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- results review ---------- */
+
+.mem-review {
+    display: grid;
+    gap: 1.25rem;
+    margin: 0 0 2rem;
+    padding: 0;
+    list-style: none;
+}
+
+.mem-review > li {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- card preview ---------- */
+
+.preview-memory {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.preview-chip {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: var(--card-accent);
+    transition: opacity 260ms ease-out;
+}
+
+.preview-chip.is-fading { opacity: 0.45; }
+.preview-chip.is-gone   { opacity: 0.14; }
+
+/* Hovering restores the faded ones: the card previews remembering. */
+a.card-body:hover .preview-chip,
+a.card-body:focus-visible .preview-chip {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mem-trace .glyph,
+    .mem-shown,
+    .mem-slot.filled,
+    .mem-feedback {
+        animation: none;
+    }
+
+    .mem-key:hover:not(:disabled),
+    .mem-key:active:not(:disabled) {
+        transform: none;
+    }
+
+    .preview-chip {
+        transition: none;
+    }
+}
+
+/* The settling beat before a wait begins. Deliberately quiet -- it is the
+   moment the player collects themselves, not a state that demands anything. */
+.rx-arena.is-ready .rx-state {
+    color: var(--muted);
+    opacity: 0.75;
+}

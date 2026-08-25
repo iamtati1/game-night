@@ -108,7 +108,10 @@ export interface Progress {
 export interface HistorySession {
     id: string;
     game: GameRef;
-    status: "completed" | "abandoned" | "in_progress";
+    /** "paused" has been possible since the pause lifecycle landed; it was
+     *  missing here, so a paused row fell through to the in-progress branch by
+     *  luck rather than by intent. */
+    status: "completed" | "abandoned" | "in_progress" | "paused";
     /** Stored value. 0 for abandoned/in-progress games, which the UI shows as "—". */
     score: number;
     xpEarned: number;
@@ -137,6 +140,8 @@ export interface FlushTile {
 }
 
 export interface FlushRound {
+    /** This round's window, which scales with its output count. */
+    limitMs?: number;
     roundId: string;
     roundNumber: number;
     totalRounds: number;
@@ -266,4 +271,121 @@ export interface GameStatsEntry {
 export interface UserStatsResponse {
     totals: { gamesCompleted: number; totalXp: number; totalScore: number };
     perGame: GameStatsEntry[];
+}
+
+/* ---------------------------------------------------------------- reaction -- */
+
+export interface ReactionTier {
+    key: "lightning" | "incredible" | "fast" | "solid" | "sharp";
+    label: string;
+}
+
+export interface ReactionRoundRef {
+    roundId: string;
+    roundNumber: number;
+    totalRounds: number;
+}
+
+export interface ReactionRoundResult {
+    roundNumber: number;
+    status: "pending" | "reacted" | "false_start";
+    reactionMs: number | null;
+    tier: ReactionTier | null;
+    pointsAwarded: number;
+}
+
+export interface ReactionSessionSummary extends RunMetrics {
+    id: string;
+    status: string;
+    score: number;
+    xpEarned: number;
+    startedAt: string;
+    completedAt: string | null;
+    totalRounds: number;
+    reactedRounds: number;
+    falseStarts: number;
+    bestReactionMs: number | null;
+    averageReactionMs: number | null;
+    tier: ReactionTier | null;
+    rounds: ReactionRoundResult[];
+}
+
+export interface ReactionStartResponse {
+    resumed: boolean;
+    sessionId?: string;
+    scoreSoFar?: number;
+    round?: ReactionRoundRef | null;
+    session?: ReactionSessionSummary;
+}
+
+export interface ReactionRoundResponse {
+    outcome: "reacted" | "false_start";
+    reactionMs: number | null;
+    tier: ReactionTier | null;
+    pointsAwarded: number;
+    scoreSoFar: number;
+    complete: boolean;
+    round: ReactionRoundRef | null;
+    session: ReactionSessionSummary | null;
+}
+
+/* ------------------------------------------------------------------ memory -- */
+
+export interface MemoryRoundRef {
+    roundId: string;
+    roundNumber: number;
+    totalRounds: number;
+    /** The sequence to hold. Sent because showing it is the game. */
+    sequence: string[];
+    displayMs: number;
+}
+
+export interface MemoryRoundResult {
+    roundNumber: number;
+    status: "pending" | "answered";
+    length: number;
+    /** Null until the round is answered. */
+    sequence: string[] | null;
+    submitted: string[] | null;
+    correct: number | null;
+    perfect: boolean;
+    pointsAwarded: number;
+}
+
+export interface MemorySessionSummary {
+    id: string;
+    status: string;
+    score: number;
+    xpEarned: number;
+    startedAt: string;
+    completedAt: string | null;
+    totalRounds: number;
+    perfectRounds: number;
+    bestStreak: number;
+    recallAccuracy: number | null;
+    bestSequenceLength: number | null;
+    symbolsRemembered: number;
+    symbolsShown: number;
+    rounds: MemoryRoundResult[];
+}
+
+export interface MemoryStartResponse {
+    resumed: boolean;
+    sessionId?: string;
+    scoreSoFar?: number;
+    round?: MemoryRoundRef | null;
+    session?: MemorySessionSummary;
+}
+
+export interface MemorySubmitResponse {
+    correct: number;
+    perfect: boolean;
+    length: number;
+    sequence: string[];
+    submitted: string[];
+    pointsAwarded: number;
+    scoreSoFar: number;
+    complete: boolean;
+    round: MemoryRoundRef | null;
+    session: MemorySessionSummary | null;
 }

@@ -62,16 +62,71 @@ export async function getUserStats(userId: string): Promise<UserStats> {
              WHERE gs.user_id = $1
              GROUP BY gs.game_id
          ),
-         unit_stats AS (
+         /*
+          * Every game's units, mapped onto one vocabulary so this aggregate does
+          * not need to know which game it is looking at. A win is a right answer,
+          * a flushed round or a landed reaction; a lapse is running out of time,
+          * which Reaction has no equivalent of.
+          *
+          * Adding game #4 is a fourth branch here and nothing else.
+          */
+         units AS (
              SELECT gs.game_id,
-                    COUNT(*)                                        AS total_units,
-                    COUNT(*) FILTER (WHERE sq.is_correct)           AS correct_count,
-                    COUNT(*) FILTER (WHERE sq.is_correct = FALSE)   AS incorrect_count,
-                    COUNT(*) FILTER (WHERE sq.status = 'timed_out') AS timed_out_count
+                    CASE
+                        WHEN sq.is_correct THEN 'win'
+                        WHEN sq.status = 'timed_out' THEN 'lapse'
+                        WHEN sq.status = 'pending' THEN 'pending'
+                        ELSE 'loss'
+                    END AS outcome
              FROM session_questions sq
              JOIN game_sessions gs ON gs.id = sq.game_session_id
              WHERE gs.user_id = $1 AND gs.status = 'completed'
-             GROUP BY gs.game_id
+
+             UNION ALL
+
+             SELECT gs.game_id,
+                    CASE fr.status
+                        WHEN 'completed' THEN 'win'
+                        WHEN 'timed_out' THEN 'lapse'
+                        WHEN 'failed' THEN 'loss'
+                        ELSE 'pending'
+                    END
+             FROM flush_rounds fr
+             JOIN game_sessions gs ON gs.id = fr.game_session_id
+             WHERE gs.user_id = $1 AND gs.status = 'completed'
+
+             UNION ALL
+
+             SELECT gs.game_id,
+                    CASE rr.status
+                        WHEN 'reacted' THEN 'win'
+                        WHEN 'false_start' THEN 'loss'
+                        ELSE 'pending'
+                    END
+             FROM reaction_rounds rr
+             JOIN game_sessions gs ON gs.id = rr.game_session_id
+             WHERE gs.user_id = $1 AND gs.status = 'completed'
+
+             UNION ALL
+
+             SELECT gs.game_id,
+                    CASE
+                        WHEN mr.status <> 'answered' THEN 'pending'
+                        WHEN mr.correct_positions = array_length(mr.sequence, 1) THEN 'win'
+                        ELSE 'loss'
+                    END
+             FROM memory_rounds mr
+             JOIN game_sessions gs ON gs.id = mr.game_session_id
+             WHERE gs.user_id = $1 AND gs.status = 'completed'
+         ),
+         unit_stats AS (
+             SELECT u.game_id,
+                    COUNT(*)                                   AS total_units,
+                    COUNT(*) FILTER (WHERE u.outcome = 'win')   AS correct_count,
+                    COUNT(*) FILTER (WHERE u.outcome = 'loss')  AS incorrect_count,
+                    COUNT(*) FILTER (WHERE u.outcome = 'lapse') AS timed_out_count
+             FROM units u
+             GROUP BY u.game_id
          )
          SELECT g.slug                     AS game_slug,
                 g.name                     AS game_name,
@@ -142,6 +197,35 @@ async function getImprovement(userId: string) {
                     END
              FROM runs r
              JOIN flush_rounds fr ON fr.game_session_id = r.id
+
+             UNION ALL
+
+             -- reaction_ms is already milliseconds, so no interval arithmetic.
+             -- This makes Reaction's average the most literally meaningful of the
+             -- three: it IS the player's reaction time.
+             SELECT r.game_id,
+                    r.id,
+                    r.completed_at,
+                    rr.display_order,
+                    (rr.status = 'reacted'),
+                    rr.reaction_ms
+             FROM runs r
+             JOIN reaction_rounds rr ON rr.game_session_id = r.id
+
+             UNION ALL
+
+             -- Memory has no per-unit duration worth averaging: the display timer
+             -- is fixed by the curve and the player takes as long as they like to
+             -- play back. NULL keeps it out of the speed trend while still
+             -- contributing streaks and success rate.
+             SELECT r.game_id,
+                    r.id,
+                    r.completed_at,
+                    mr.display_order,
+                    (mr.correct_positions = array_length(mr.sequence, 1)),
+                    NULL
+             FROM runs r
+             JOIN memory_rounds mr ON mr.game_session_id = r.id
          )
          SELECT g.slug AS game_slug, u.session_id, u.ordinal, u.success, u.duration_ms
          FROM units u
@@ -205,13 +289,61 @@ export async function listUserSessions(
                 COALESCE(q.timed_out, 0) AS timed_out_count
          FROM page p
          JOIN games g ON g.id = p.game_id
+         /*
+          * One LATERAL over all three round tables. Before this it read
+          * session_questions only, so a Flush row in history reported 0/0 and a
+          * Reaction row would have done the same -- the counts were Code Blitz's
+          * counts wearing a generic label.
+          *
+          * Pending units still count toward the total, so an abandoned run reads
+          * "3/10" rather than "3/3": the ten were dealt, and seven went unplayed.
+          */
          LEFT JOIN LATERAL (
-             SELECT COUNT(*)                                     AS total,
-                    COUNT(*) FILTER (WHERE is_correct)           AS correct,
-                    COUNT(*) FILTER (WHERE is_correct = FALSE)   AS incorrect,
-                    COUNT(*) FILTER (WHERE status = 'timed_out') AS timed_out
-             FROM session_questions
-             WHERE game_session_id = p.id
+             SELECT COUNT(*)                                   AS total,
+                    COUNT(*) FILTER (WHERE u.outcome = 'win')   AS correct,
+                    COUNT(*) FILTER (WHERE u.outcome = 'loss')  AS incorrect,
+                    COUNT(*) FILTER (WHERE u.outcome = 'lapse') AS timed_out
+             FROM (
+                 SELECT CASE
+                            WHEN sq.is_correct THEN 'win'
+                            WHEN sq.status = 'timed_out' THEN 'lapse'
+                            WHEN sq.status = 'pending' THEN 'pending'
+                            ELSE 'loss'
+                        END AS outcome
+                 FROM session_questions sq
+                 WHERE sq.game_session_id = p.id
+
+                 UNION ALL
+
+                 SELECT CASE fr.status
+                            WHEN 'completed' THEN 'win'
+                            WHEN 'timed_out' THEN 'lapse'
+                            WHEN 'failed' THEN 'loss'
+                            ELSE 'pending'
+                        END
+                 FROM flush_rounds fr
+                 WHERE fr.game_session_id = p.id
+
+                 UNION ALL
+
+                 SELECT CASE rr.status
+                            WHEN 'reacted' THEN 'win'
+                            WHEN 'false_start' THEN 'loss'
+                            ELSE 'pending'
+                        END
+                 FROM reaction_rounds rr
+                 WHERE rr.game_session_id = p.id
+
+                 UNION ALL
+
+                 SELECT CASE
+                            WHEN mr.status <> 'answered' THEN 'pending'
+                            WHEN mr.correct_positions = array_length(mr.sequence, 1) THEN 'win'
+                            ELSE 'loss'
+                        END
+                 FROM memory_rounds mr
+                 WHERE mr.game_session_id = p.id
+             ) AS u
          ) q ON TRUE
          ORDER BY p.started_at DESC, p.id DESC`,
         [userId, limit, offset]

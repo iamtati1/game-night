@@ -1,7 +1,9 @@
 import type { PoolClient } from "pg";
-import { CODE_BLITZ, FLUSH } from "../games/constants.js";
+import { CODE_BLITZ, FLUSH, MEMORY, REACTION } from "../games/constants.js";
 import * as codeBlitz from "../game/queries.js";
 import * as flush from "../flush/queries.js";
+import * as memory from "../memory/queries.js";
+import * as reaction from "../reaction/queries.js";
 
 /**
  * The parts of the pause/resume lifecycle that cannot be game-agnostic.
@@ -39,6 +41,18 @@ export const GAME_ADAPTERS: Record<string, GameSessionAdapter> = {
     [FLUSH]: {
         shiftClock: flush.shiftRoundClock,
         scoreSoFar: flush.scoreSoFar
+    },
+    [REACTION]: {
+        // A deliberate no-op: Reaction holds no countdown to shift. See the note
+        // on shiftClock in reaction/queries.ts.
+        shiftClock: reaction.shiftClock,
+        scoreSoFar: reaction.scoreSoFar
+    },
+    [MEMORY]: {
+        // Also a no-op: a paused Memory run is always paused between rounds, never
+        // mid-flash, so no display timer survives the pause.
+        shiftClock: memory.shiftClock,
+        scoreSoFar: memory.scoreSoFar
     }
 };
 

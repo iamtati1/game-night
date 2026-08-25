@@ -20,14 +20,29 @@ function formatWhen(session: HistorySession): string {
  *  Each game has its own results view: /api/sessions/:id is Code Blitz's endpoint
  *  and does not understand flush_rounds, so a Flush session sent there would
  *  render as a Code Blitz game with zero questions. */
-function targetFor(session: HistorySession): string {
-    const flush = session.game.slug === "flush";
+/** Each game owns its own results endpoint, so a session sent to the wrong one
+ *  renders as a game with no rounds. Keyed by slug rather than a boolean, which
+ *  stopped scaling the moment there was a third game. */
+const RESUME_PATH: Record<string, string> = {
+    "code-blitz": "/play",
+    flush: "/flush",
+    reaction: "/reaction",
+    memory: "/memory"
+};
 
-    if (session.status === "in_progress") {
-        return flush ? "/flush" : "/play";
+const RESULTS_PATH: Record<string, (id: string) => string> = {
+    "code-blitz": (id) => `/results/${id}`,
+    flush: (id) => `/flush/results/${id}`,
+    reaction: (id) => `/reaction/results/${id}`,
+    memory: (id) => `/memory/results/${id}`
+};
+
+function targetFor(session: HistorySession): string {
+    if (session.status === "in_progress" || session.status === "paused") {
+        return RESUME_PATH[session.game.slug] ?? "/";
     }
 
-    return flush ? `/flush/results/${session.id}` : `/results/${session.id}`;
+    return RESULTS_PATH[session.game.slug]?.(session.id) ?? "/";
 }
 
 function StatusTag({ status }: { status: HistorySession["status"] }) {
@@ -37,6 +52,10 @@ function StatusTag({ status }: { status: HistorySession["status"] }) {
 
     if (status === "abandoned") {
         return <span className="tag timeout">Abandoned</span>;
+    }
+
+    if (status === "paused") {
+        return <span className="tag in-progress">Paused · Resume</span>;
     }
 
     return <span className="tag in-progress">In progress · Resume</span>;

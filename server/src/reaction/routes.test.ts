@@ -1,0 +1,134 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { GAME_ADAPTERS } from "../sessions/adapters.js";
+import { GAME_SLUGS, REACTION } from "../games/constants.js";
+import { reactionRoundSchema } from "./schemas.js";
+
+const ROUTES = readFileSync(new URL("./routes.ts", import.meta.url), "utf8");
+const QUERIES = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
+const MIGRATION = readFileSync(
+    new URL("../../migrations/012_create_reaction.sql", import.meta.url),
+    "utf8"
+);
+
+/** The migration with its comment lines removed. Structural assertions run
+ *  against this, so a leading comment block does not look like a missing BEGIN
+ *  and prose describing a DROP is never mistaken for one. */
+const MIGRATION_SQL = MIGRATION.split("\n")
+    .filter((line) => !line.trimStart().startsWith("--"))
+    .join("\n")
+    .trim();
+
+describe("Reaction is a first-class Jolt game", () => {
+    it("is in the slug list and has a session adapter", () => {
+        // The registry test in adapters.test.ts asserts completeness; this asserts
+        // Reaction specifically, so removing it would fail loudly rather than just
+        // shrinking a list.
+        expect([...GAME_SLUGS]).toContain(REACTION);
+        expect(GAME_ADAPTERS[REACTION]).toBeDefined();
+    });
+
+    it("registers the game row and its round table together", () => {
+        expect(MIGRATION_SQL).toMatch(/^BEGIN;/);
+        expect(MIGRATION_SQL).toMatch(/INSERT INTO games \(slug, name, tagline\)/);
+        expect(MIGRATION_SQL).toMatch(/CREATE TABLE reaction_rounds/);
+        expect(MIGRATION_SQL).toMatch(/COMMIT;$/);
+    });
+
+    it("does not touch an already-applied migration", () => {
+        expect(MIGRATION_SQL).not.toMatch(/DROP TABLE/i);
+        expect(MIGRATION_SQL).not.toMatch(/ALTER TABLE game_sessions/i);
+    });
+});
+
+describe("the round table refuses impossible states", () => {
+    it("cascades from its session", () => {
+        expect(MIGRATION).toMatch(/REFERENCES game_sessions\(id\) ON DELETE CASCADE/);
+    });
+
+    it("cannot hold two rounds in one slot", () => {
+        expect(MIGRATION).toMatch(/UNIQUE \(game_session_id, display_order\)/);
+    });
+
+    it("bounds the reaction at the database, not only in the route", () => {
+        // The value originates on an untrusted client, so the floor and ceiling
+        // exist in three places: schema validation, isPlausibleReaction, and here.
+        expect(MIGRATION).toMatch(/reaction_ms >= 80 AND reaction_ms <= 5000/);
+    });
+
+    it("forbids a false start that carries a reaction time", () => {
+        // Moving before the signal means there was nothing to react to; a time
+        // stored alongside it would be a contradiction.
+        const clause = MIGRATION.slice(MIGRATION.indexOf("reaction_rounds_false_start_state"));
+
+        expect(clause).toMatch(/reaction_ms IS NULL/);
+    });
+
+    it("forbids a reacted round with no time", () => {
+        const clause = MIGRATION.slice(MIGRATION.indexOf("reaction_rounds_reacted_state"));
+
+        expect(clause).toMatch(/reaction_ms IS NOT NULL/);
+    });
+});
+
+describe("submitting a round", () => {
+    it("accepts a reaction and a false start as distinct shapes", () => {
+        expect(reactionRoundSchema.safeParse({ outcome: "reacted", roundId: "7", reactionMs: 287 }).success).toBe(true);
+        expect(reactionRoundSchema.safeParse({ outcome: "false_start", roundId: "7" }).success).toBe(true);
+    });
+
+    it("refuses a payload claiming both at once", () => {
+        // A discriminated union rather than two optional fields, so "reacted in
+        // 287ms" and "jumped the signal" cannot arrive together.
+        expect(reactionRoundSchema.safeParse({ roundId: "7", reactionMs: 287 }).success).toBe(false);
+        expect(reactionRoundSchema.safeParse({ outcome: "reacted", roundId: "7" }).success).toBe(false);
+    });
+
+    it("refuses malformed ids and times", () => {
+        expect(reactionRoundSchema.safeParse({ outcome: "reacted", roundId: "abc", reactionMs: 200 }).success).toBe(false);
+        expect(reactionRoundSchema.safeParse({ outcome: "reacted", roundId: "7", reactionMs: 1.5 }).success).toBe(false);
+        expect(reactionRoundSchema.safeParse({ outcome: "reacted", roundId: "7", reactionMs: -5 }).success).toBe(false);
+        expect(reactionRoundSchema.safeParse({}).success).toBe(false);
+    });
+
+    it("requires auth on every route", () => {
+        const routes = ROUTES.match(/reactionRouter\.(get|post)\(/g) ?? [];
+
+        expect(routes.length).toBeGreaterThan(0);
+        expect((ROUTES.match(/requireAuth/g) ?? []).length).toBeGreaterThanOrEqual(routes.length);
+    });
+
+    it("scopes the session to its owner and to Reaction", () => {
+        // 404 rather than 403, so another player's session id is not confirmed.
+        expect(QUERIES).toMatch(/WHERE gs\.id = \$1 AND gs\.user_id = \$2 AND g\.slug = \$3/);
+        expect(ROUTES).toMatch(/res\.status\(404\)\.json\(\{ error: "Session not found" \}\)/);
+    });
+
+    it("rejects a round that is not pending, and a duplicate that races", () => {
+        // Two guards: the read-then-check, and the UPDATE's own predicate for the
+        // case where the row stops being pending in between.
+        expect(ROUTES).toMatch(/round\.status !== "pending"/);
+        expect(QUERIES).toMatch(/WHERE id = \$1 AND status = 'pending'/);
+        expect(ROUTES).toMatch(/Round already resolved/);
+    });
+
+    it("validates plausibility before storing", () => {
+        expect(ROUTES).toMatch(/isPlausibleReaction\(parsed\.data\.reactionMs\)/);
+        expect(ROUTES).toMatch(/Implausible reaction time/);
+    });
+
+    it("never takes a score from the client", () => {
+        // The client sends a reaction time and nothing else; points, score and XP
+        // are all computed here from stored rounds.
+        expect(ROUTES).not.toMatch(/parsed\.data\.(score|points|xp)/);
+        expect(ROUTES).toMatch(/scoreForSession/);
+        expect(ROUTES).toMatch(/xpForSession/);
+    });
+
+    it("documents the timing tradeoff where it is made", () => {
+        // This is the one place in Jolt where the server cannot reproduce the
+        // measurement it is storing. That has to be written down next to the code.
+        expect(ROUTES).toMatch(/TIMING INTEGRITY/);
+        expect(ROUTES).toMatch(/performance\.now\(\)/);
+    });
+});
