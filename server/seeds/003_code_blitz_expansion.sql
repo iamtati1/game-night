@@ -238,3 +238,11 @@ SELECT seed_question(
 SELECT seed_question(
     E'What does this log?\n\nconsole.log(10 % 3);',
     '3', '1', '0', '3.33', 2);
+SELECT seed_question(
+    E'What does this print?\n\nconst newWord = (str) => {\n    let result = "";\n\n    for (const char of str) {\n        result += char.repeat(3);\n    }\n\n    return result;\n};\n\nconsole.log(newWord("cat"));',
+    'catcatcat',
+    'cccaaattt',
+    'cccattt',
+    'cat',
+    2
+);

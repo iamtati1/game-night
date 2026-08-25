@@ -3,6 +3,15 @@ import { pool } from "../db.js";
 import { FLUSH } from "../games/constants.js";
 import { FLUSH_ROUNDS_PER_SESSION, scoreForSession } from "./scoring.js";
 
+/**
+ * How many of the player's previous Flush runs are checked for snippets to avoid.
+ *
+ * Three runs is fifteen rounds, so a player works through most of the bank before
+ * anything repeats. Matches RECENT_SESSIONS_AVOIDED in game/queries.ts -- the two
+ * games should not disagree about how long a player's memory is assumed to be.
+ */
+export const RECENT_SESSIONS_AVOIDED = 3;
+
 export interface FlushSessionRow {
     id: string;
     status: string;
@@ -115,8 +124,29 @@ export async function createSessionWithRounds(userId: string): Promise<FlushSess
 
         const sessionId = session.rows[0]!.id;
 
+        // Snippets the player met in their last few Flush runs. Dealing five at
+        // random from a bank they have just played is how a puzzle game turns into
+        // a memory game: knowing the answer to THIS snippet is not the skill.
+        //
+        // Prefers unseen rather than filtering seen out, so a player who has
+        // worked through the bank still gets a full five rounds instead of a 503.
+        // Difficulty still drives the in-session ramp; recency only decides which
+        // snippets are candidates.
         await client.query(
-            `INSERT INTO flush_rounds
+            `WITH recent AS (
+                 SELECT fr.snippet_id
+                 FROM flush_rounds fr
+                 WHERE fr.game_session_id IN (
+                     SELECT gs.id
+                     FROM game_sessions gs
+                     WHERE gs.user_id = $3
+                       AND gs.game_id = (SELECT id FROM games WHERE slug = $4)
+                       AND gs.id <> $1
+                     ORDER BY gs.started_at DESC
+                     LIMIT ${RECENT_SESSIONS_AVOIDED}
+                 )
+             )
+             INSERT INTO flush_rounds
                  (game_session_id, snippet_id, display_order, prompt_text, total_outputs, status)
              SELECT $1,
                     picked.id,
@@ -134,10 +164,10 @@ export async function createSessionWithRounds(userId: string): Promise<FlushSess
                         ) AS total_outputs
                  FROM flush_snippets s
                  WHERE ${ELIGIBLE_SNIPPET_PREDICATE}
-                 ORDER BY RANDOM()
+                 ORDER BY (s.id IN (SELECT snippet_id FROM recent)) ASC, RANDOM()
                  LIMIT $2
              ) AS picked`,
-            [sessionId, FLUSH_ROUNDS_PER_SESSION]
+            [sessionId, FLUSH_ROUNDS_PER_SESSION, userId, FLUSH]
         );
 
         await client.query("COMMIT");

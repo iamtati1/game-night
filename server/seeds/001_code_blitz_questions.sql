@@ -76,6 +76,4 @@ SELECT seed_question(
     E'What does this log?\n\nconst a = { n: 1 };\nconst b = a;\nb.n = 2;\nconsole.log(a.n);',
     '1', '2', 'undefined', 'TypeError', 2);
 
-DROP FUNCTION seed_question(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER);
-
 SELECT COUNT(*) AS active_questions FROM questions WHERE is_active;
