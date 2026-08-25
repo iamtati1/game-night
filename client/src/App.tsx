@@ -17,7 +17,7 @@ import { RegisterPage } from "./pages/RegisterPage.js";
 import { ResultsPage } from "./pages/ResultsPage.js";
 
 function Header() {
-    const { user, logout } = useAuth();
+    const { user, loading, logout } = useAuth();
     const [loggingOut, setLoggingOut] = useState(false);
     const [failed, setFailed] = useState(false);
 
@@ -48,23 +48,47 @@ function Header() {
                 <JoltLogo />
             </Link>
 
-            {user && (
+            {/*
+                Rendered in both states, which is the whole point.
+
+                Gating the entire <nav> on `user` was the logout bug: signing out
+                removed the navigation rather than swapping it. The masthead and
+                the game cards stayed exactly where they were, so the only visible
+                consequence of logging out was the top-right corner going blank --
+                which reads as "nothing happened", not as "you are signed out".
+                It also left no way back in, on any page.
+
+                Held back until `loading` resolves so the first paint does not
+                flash "Log in" at a player who is already signed in.
+            */}
+            {!loading && (
                 <nav>
-                    <Link to="/">Games</Link>
-                    <Link to="/history">History</Link>
-                    <span className="muted">{user.username}</span>
-                    {failed && (
-                        <span className="logout-error" role="alert">
-                            Could not log out — still signed in.
-                        </span>
+                    {user ? (
+                        <>
+                            <Link to="/">Games</Link>
+                            <Link to="/history">History</Link>
+                            <span className="muted">{user.username}</span>
+                            {failed && (
+                                <span className="logout-error" role="alert">
+                                    Could not log out — still signed in.
+                                </span>
+                            )}
+                            <button
+                                className="button ghost small"
+                                disabled={loggingOut}
+                                onClick={() => void handleLogout()}
+                            >
+                                {loggingOut ? "Logging out…" : "Log out"}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <Link to="/login">Log in</Link>
+                            <Link className="button primary small" to="/register">
+                                Create account
+                            </Link>
+                        </>
                     )}
-                    <button
-                        className="button ghost small"
-                        disabled={loggingOut}
-                        onClick={() => void handleLogout()}
-                    >
-                        {loggingOut ? "Logging out…" : "Log out"}
-                    </button>
                 </nav>
             )}
         </header>
