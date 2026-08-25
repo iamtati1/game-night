@@ -17,7 +17,7 @@ import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
 
-const QUESTION_TIME_LIMIT_MS = 30_000;
+const QUESTION_TIME_LIMIT_MS = 35_000;
 /**
  * How long the result stays on screen before the next question arrives.
  *
@@ -276,18 +276,31 @@ export function GamePage() {
         };
     }, [finish, attempt]);
 
-    const advance = useCallback(
-        (next: ServedQuestion | null, complete: boolean, id: string | null) => {
-            if (complete && id) {
-                finish(id);
+    /**
+     * Fetches the next question and starts its clock.
+     *
+     * GET /sessions/current is the endpoint that serves -- and therefore stamps
+     * served_at on -- the next pending question. Calling it at the moment the
+     * client is ready to render means the deadline the player is given is the
+     * deadline they actually get.
+     */
+    const advanceToNext = useCallback(async () => {
+        try {
+            const data = await api.get<CurrentQuestionResponse>("/api/sessions/current");
+
+            if (data.complete && data.session) {
+                finish(data.session.id);
                 return;
             }
 
-            setQuestion(next);
+            setQuestion(data.question ?? null);
+            setRunningScore(data.scoreSoFar ?? 0);
             settling.current = false;
-        },
-        [finish]
-    );
+        } catch (err) {
+            settling.current = false;
+            setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
+        }
+    }, [finish]);
 
     async function submit(optionId: string) {
         if (!sessionId || !question || settling.current) return;
@@ -310,15 +323,25 @@ export function GamePage() {
                 selectedOptionId: optionId
             });
 
-            // Hold the result, animate the question out, then swap. Three beats
-            // rather than one abrupt replacement.
+            // Hold the result, animate the question out, then fetch the next one.
+            //
+            // The next question is requested here rather than read off this
+            // response, because asking for it is what starts its clock. Bundling
+            // it in would hand the player a question whose 35s began while they
+            // were still reading why the last one was wrong.
             later(() => {
                 setLeaving(true);
 
                 later(() => {
                     setLeaving(false);
                     setFeedback(null);
-                    advance(result.question, result.complete, result.session?.id ?? sessionId);
+
+                    if (result.complete) {
+                        finish(result.session?.id ?? sessionId);
+                        return;
+                    }
+
+                    void advanceToNext();
                 }, EXIT_MS);
             }, DWELL_MS[result.outcome]);
         } catch (err) {

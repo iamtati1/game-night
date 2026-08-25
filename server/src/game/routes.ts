@@ -427,7 +427,12 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
             scoreSoFar: await db.scoreSoFar(session.id),
             correctOption: correctOptionText,
             complete: !remaining,
-            question: remaining ? await serveQuestion(remaining) : null,
+            // The next question is deliberately not served here. serveQuestion
+            // stamps served_at, which starts the deadline -- bundling it into this
+            // response started the clock while the client was still showing
+            // feedback, costing a measured 1.77s of a 35s window. The client
+            // fetches it from GET /sessions/current when it is ready to show it.
+            question: null,
             session: finished
                 ? summarize(finished, await db.listSessionQuestions(finished.id))
                 : null
@@ -463,7 +468,8 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         responseTimeMs: elapsedMs,
         correctOption: correctOptionText,
         complete: !remaining,
-        question: remaining ? await serveQuestion(remaining) : null,
+        // Not served here -- see the note in the timeout branch above.
+        question: null,
         session: finished ? summarize(finished, await db.listSessionQuestions(finished.id)) : null
     });
 });

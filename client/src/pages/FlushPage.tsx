@@ -16,7 +16,10 @@ import { ResumeCountdown } from "../components/ResumeCountdown.js";
 import { FLUSH, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 
-const ROUND_TIME_LIMIT_MS = 60_000;
+/** Fallback only. The real limit varies with the round's output count and comes
+ *  from the served round, so the countdown bar is sized by the same number the
+ *  deadline was computed from. */
+const FALLBACK_ROUND_LIMIT_MS = 60_000;
 const REVEAL_MS = 2600;
 
 /** Round exit. Matches Code Blitz, so both games settle at the same rhythm. */
@@ -213,7 +216,7 @@ export function FlushPage() {
     }, [navigate, attempt]);
 
     const showReveal = useCallback(
-        (r: Reveal, next: FlushRound | null, complete: boolean, id: string | null) => {
+        (r: Reveal, _next: FlushRound | null, complete: boolean, id: string | null) => {
             setReveal(r);
 
             later(() => {
@@ -229,8 +232,11 @@ export function FlushPage() {
                         return;
                     }
 
-                    setRound(next);
-                    settling.current = false;
+                    // The next round is fetched here rather than read off the
+                    // placement response, because asking for it is what starts its
+                    // clock. Bundling it in began the round's window during the
+                    // reveal -- 3.29s of it, measured.
+                    void advanceToNext();
                 }, EXIT_MS);
             }, REVEAL_MS);
         },
@@ -321,10 +327,14 @@ export function FlushPage() {
         }
     }
 
-    const onExpire = useCallback(async () => {
-        if (settling.current) return;
-        settling.current = true;
-
+    /**
+     * Fetches the next round and starts its clock.
+     *
+     * GET /sessions/current is the endpoint that serves -- and so stamps
+     * served_at on -- the next pending round, which is why it is called at the
+     * moment the client is ready to render rather than earlier.
+     */
+    const advanceToNext = useCallback(async () => {
         try {
             const data = await api.get<FlushCurrentResponse>("/api/flush/sessions/current");
 
@@ -341,6 +351,13 @@ export function FlushPage() {
             setError(err instanceof ApiError ? err.detailText : "Lost track of the round");
         }
     }, [navigate]);
+
+    const onExpire = useCallback(async () => {
+        if (settling.current) return;
+        settling.current = true;
+
+        await advanceToNext();
+    }, [advanceToNext]);
 
     if (conflict) {
         return (
@@ -429,7 +446,7 @@ export function FlushPage() {
 
             <Countdown
                 deadlineAt={round.deadlineAt}
-                totalMs={ROUND_TIME_LIMIT_MS}
+                totalMs={round.limitMs ?? FALLBACK_ROUND_LIMIT_MS}
                 onExpire={onExpire}
             />
 

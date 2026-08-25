@@ -13,7 +13,7 @@ import * as db from "./queries.js";
 import { placementSchema } from "./schemas.js";
 import {
     FLUSH_ROUNDS_PER_SESSION,
-    FLUSH_ROUND_TIME_LIMIT_MS,
+    roundTimeLimitMs,
     isExpired,
     isPlacementCorrect,
     pointsForPlacements,
@@ -110,7 +110,7 @@ async function nextPlayableRound(
             return null;
         }
 
-        if (round.served_at && isExpired(round.served_at, now)) {
+        if (round.served_at && isExpired(round.served_at, now, round.total_outputs)) {
             await db.markRoundTimedOut(round.id);
             continue;
         }
@@ -132,7 +132,11 @@ async function serveRound(round: db.FlushRoundRow) {
         db.listTiles(round.snippet_id),
         db.listPlacements(round.id)
     ]);
-    const deadline = servedAt.getTime() + FLUSH_ROUND_TIME_LIMIT_MS;
+    // The window depends on how many outputs this round holds, so the client is
+    // told the limit rather than assuming a constant. Without this the countdown
+    // bar would animate against a different number than the deadline it draws.
+    const limitMs = roundTimeLimitMs(round.total_outputs);
+    const deadline = servedAt.getTime() + limitMs;
     const placedIds = new Set(placed.map((p) => p.output_id));
 
     return {
@@ -148,6 +152,7 @@ async function serveRound(round: db.FlushRoundRow) {
         pointsBanked: pointsForPlacements(round.correct_placements),
         servedAt: servedAt.toISOString(),
         deadlineAt: new Date(deadline).toISOString(),
+        limitMs,
         msRemaining: Math.max(0, deadline - Date.now())
     };
 }
@@ -316,7 +321,7 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
 
     // The deadline is enforced against the server's own served_at. A late
     // placement is refused outright, not merely scored zero.
-    if (isExpired(round.served_at, now)) {
+    if (isExpired(round.served_at, now, round.total_outputs)) {
         await db.markRoundTimedOut(round.id);
 
         const remaining = await nextPlayableRound(sessionId, now);
@@ -381,11 +386,18 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
             ? (await db.listPlacements(round.id)).map((p) => p.output_text)
             : null,
         complete: roundEnded && !remaining,
-        round: roundEnded
-            ? remaining
-                ? await serveRound(remaining)
-                : null
-            : await serveRound((await db.findRound(round.id, sessionId))!),
+        // The NEXT round is deliberately not served here.
+        //
+        // serveRound stamps served_at, which starts the deadline. Bundling the
+        // next round into this response started its clock while the client was
+        // still showing the reveal for this one -- measured at 3.29s of a 60s
+        // round, and worst exactly when the reveal is teaching something. The
+        // client fetches the next round from GET /sessions/current once it is
+        // ready to display it.
+        //
+        // A round that has NOT ended is still re-served: it is the same round,
+        // served_at is already set, and markServed leaves it alone.
+        round: roundEnded ? null : await serveRound((await db.findRound(round.id, sessionId))!),
         session: finished ? summarize(finished, await db.listRounds(sessionId)) : null
     });
 });

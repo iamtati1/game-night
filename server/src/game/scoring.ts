@@ -3,7 +3,7 @@
 
 import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 
-export const QUESTION_TIME_LIMIT_MS = 30_000;
+export const QUESTION_TIME_LIMIT_MS = 35_000;
 export const QUESTIONS_PER_SESSION = 10;
 
 const BASE_POINTS = 100;
@@ -14,17 +14,40 @@ const XP_PER_CORRECT = perUnitXp(QUESTIONS_PER_SESSION);
 const XP_COMPLETION_BONUS = COMPLETION_BONUS_XP;
 
 /**
- * Points for a single answer. Speed bonus decays linearly across the answer
- * window, so an instant correct answer scores 150 and one at the buzzer scores
- * just over 100. Incorrect and timed-out answers score nothing.
+ * How long a correct answer keeps the full speed bonus.
+ *
+ * The previous curve decayed from the first millisecond, so reading a five-line
+ * snippet cost points before the player had even understood the question -- the
+ * scoring pressed for speed at exactly the moment the game wants thinking. Eight
+ * seconds is long enough to read and decide; past that, faster is genuinely
+ * better and the bonus starts to slide.
+ */
+export const FULL_SPEED_BONUS_MS = 8_000;
+
+/**
+ * Points for a single answer.
+ *
+ * A flat maximum for the first eight seconds, then a linear decay across the
+ * rest of the window: an answer inside the grace period scores 150, one at the
+ * buzzer scores 100. Incorrect and timed-out answers score nothing.
+ *
+ * The floor is deliberate and unchanged -- a correct answer never scores less
+ * than BASE_POINTS, however long it took.
  */
 export function pointsForAnswer(isCorrect: boolean, elapsedMs: number): number {
     if (!isCorrect) {
         return 0;
     }
 
-    const remaining = Math.max(0, QUESTION_TIME_LIMIT_MS - Math.max(0, elapsedMs));
-    const bonus = Math.round((remaining / QUESTION_TIME_LIMIT_MS) * MAX_SPEED_BONUS);
+    const elapsed = Math.max(0, elapsedMs);
+
+    if (elapsed <= FULL_SPEED_BONUS_MS) {
+        return BASE_POINTS + MAX_SPEED_BONUS;
+    }
+
+    const decayWindow = QUESTION_TIME_LIMIT_MS - FULL_SPEED_BONUS_MS;
+    const remaining = Math.max(0, QUESTION_TIME_LIMIT_MS - elapsed);
+    const bonus = Math.round((remaining / decayWindow) * MAX_SPEED_BONUS);
 
     return BASE_POINTS + bonus;
 }

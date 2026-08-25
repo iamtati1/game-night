@@ -3,8 +3,24 @@
 
 import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 
-/** Longer than Code Blitz's 30s. Flush rewards reasoning, not reflexes. */
-export const FLUSH_ROUND_TIME_LIMIT_MS = 60_000;
+/**
+ * A round's window, scaled to the work it actually contains.
+ *
+ * The flat 60s squeezed exactly the wrong rounds: the clock covers the WHOLE
+ * round rather than each placement, so a six-output snippet at the top of the
+ * difficulty ramp got ten seconds per decision while a three-output one got
+ * twenty -- least time where the reasoning is hardest.
+ *
+ * Base plus per-output keeps the per-decision budget roughly constant, so
+ * difficulty comes from the snippet rather than from arithmetic about how many
+ * lines it prints.
+ */
+export const FLUSH_BASE_TIME_MS = 20_000;
+export const FLUSH_TIME_PER_OUTPUT_MS = 10_000;
+
+export function roundTimeLimitMs(totalOutputs: number): number {
+    return FLUSH_BASE_TIME_MS + FLUSH_TIME_PER_OUTPUT_MS * Math.max(0, totalOutputs);
+}
 
 export const FLUSH_ROUNDS_PER_SESSION = 5;
 
@@ -76,8 +92,10 @@ export function xpForSession(rounds: ScoredRound[]): number {
     return Math.round(completed * XP_PER_COMPLETED_ROUND) + COMPLETION_BONUS_XP;
 }
 
-export function isExpired(servedAt: Date, now: Date): boolean {
-    return now.getTime() - servedAt.getTime() > FLUSH_ROUND_TIME_LIMIT_MS;
+/** Whether a round's window has closed. The limit depends on the round, so the
+ *  output count has to come with it. */
+export function isExpired(servedAt: Date, now: Date, totalOutputs: number): boolean {
+    return now.getTime() - servedAt.getTime() > roundTimeLimitMs(totalOutputs);
 }
 
 /**

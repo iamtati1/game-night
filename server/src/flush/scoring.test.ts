@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
     FLUSH_ROUNDS_PER_SESSION,
-    FLUSH_ROUND_TIME_LIMIT_MS,
+    FLUSH_BASE_TIME_MS,
+    FLUSH_TIME_PER_OUTPUT_MS,
+    roundTimeLimitMs,
     isExpired,
     isPlacementCorrect,
     pointsForPlacements,
@@ -105,16 +107,49 @@ describe("xpForSession", () => {
     });
 });
 
+describe("roundTimeLimitMs", () => {
+    it("scales with the work the round contains", () => {
+        // The clock covers the WHOLE round rather than each placement, so a flat
+        // limit gave the hardest rounds the least time per decision.
+        expect(roundTimeLimitMs(3)).toBe(50_000);
+        expect(roundTimeLimitMs(4)).toBe(60_000);
+        expect(roundTimeLimitMs(6)).toBe(80_000);
+    });
+
+    it("keeps the per-decision budget roughly level", () => {
+        // The point of the change: seconds per output must not collapse as rounds
+        // get longer. Base plus per-output keeps it within a narrow band.
+        const perOutput = [2, 3, 4, 5, 6].map((n) => roundTimeLimitMs(n) / n);
+
+        expect(Math.min(...perOutput)).toBeGreaterThan(13_000);
+        expect(Math.max(...perOutput)).toBeLessThan(21_000);
+    });
+
+    it("is built from its named parts", () => {
+        expect(roundTimeLimitMs(0)).toBe(FLUSH_BASE_TIME_MS);
+        expect(roundTimeLimitMs(1) - roundTimeLimitMs(0)).toBe(FLUSH_TIME_PER_OUTPUT_MS);
+    });
+
+    it("never returns less than the base for a nonsense count", () => {
+        expect(roundTimeLimitMs(-3)).toBe(FLUSH_BASE_TIME_MS);
+    });
+});
+
 describe("isExpired", () => {
     it("treats a placement exactly on the limit as still in time", () => {
         const served = new Date(0);
+        const limit = roundTimeLimitMs(4);
 
-        expect(isExpired(served, new Date(FLUSH_ROUND_TIME_LIMIT_MS))).toBe(false);
-        expect(isExpired(served, new Date(FLUSH_ROUND_TIME_LIMIT_MS + 1))).toBe(true);
+        expect(isExpired(served, new Date(limit), 4)).toBe(false);
+        expect(isExpired(served, new Date(limit + 1), 4)).toBe(true);
     });
 
-    it("allows twice as long per round as Code Blitz", () => {
-        expect(FLUSH_ROUND_TIME_LIMIT_MS).toBe(60_000);
+    it("expires a short round sooner than a long one", () => {
+        const served = new Date(0);
+        const at = new Date(roundTimeLimitMs(3) + 1);
+
+        expect(isExpired(served, at, 3)).toBe(true);
+        expect(isExpired(served, at, 6)).toBe(false);
     });
 });
 
