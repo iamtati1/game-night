@@ -4,11 +4,20 @@ interface CountdownProps {
     deadlineAt: string;
     totalMs: number;
     onExpire: () => void;
+    /**
+     * Optional wording for each tier, rendered above the bar.
+     *
+     * Omitted by every game but Bug Hunt, and when omitted the markup below is
+     * exactly what it was before this prop existed -- so Code Blitz, Flush and
+     * Memory render identically. Bug Hunt passes labels because its clock is
+     * meant to read as the system's chances rather than as a number.
+     */
+    statusLabels?: { calm: string; warn: string; urgent: string };
 }
 
 /** Purely cosmetic. The server enforces the deadline against its own served_at,
  *  so a tampered or frozen clock here changes nothing about scoring. */
-export function Countdown({ deadlineAt, totalMs, onExpire }: CountdownProps) {
+export function Countdown({ deadlineAt, totalMs, onExpire, statusLabels }: CountdownProps) {
     const deadline = new Date(deadlineAt).getTime();
     const [remaining, setRemaining] = useState(() => Math.max(0, deadline - Date.now()));
 
@@ -45,6 +54,14 @@ export function Countdown({ deadlineAt, totalMs, onExpire }: CountdownProps) {
             role="timer"
             aria-label={`${seconds} seconds remaining`}
         >
+            {/* aria-hidden: the timer's own label already carries the state, and
+                a status word changing tier mid-countdown would announce twice. */}
+            {statusLabels && (
+                <p className={`countdown-status ${tier}`} aria-hidden="true">
+                    {statusLabels[tier]}
+                </p>
+            )}
+
             <div className="countdown-track">
                 <div className={`countdown-fill ${tier}`} style={{ width: `${pct}%` }} />
             </div>

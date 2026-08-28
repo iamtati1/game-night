@@ -162,7 +162,13 @@ describe("logging out from the game-card page", () => {
 
         await waitFor(() => expect(signedOutChrome().login).not.toBeNull());
         expect(api.logoutCalls).toBe(1);
-        expect(screen.queryByText(/200/)).toBeNull();
+
+        // Waited for, not asserted immediately. The header swaps as soon as
+        // `user` becomes null, but LandingPage clears its own stats in an effect
+        // that runs after that render commits -- so there is a real tick where
+        // the signed-out nav and the old stats coexist. Asserting on the same
+        // tick was passing by timing, not by behaviour.
+        await waitFor(() => expect(screen.queryByText(/200/)).toBeNull());
     });
 
     it("stays signed out when the page is reloaded", async () => {

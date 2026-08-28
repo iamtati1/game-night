@@ -3,6 +3,8 @@ import { Link, Route, Routes } from "react-router-dom";
 import { JoltLogo } from "./components/JoltLogo.js";
 import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
+import { BugHuntPage } from "./pages/BugHuntPage.js";
+import { BugHuntResultsPage } from "./pages/BugHuntResultsPage.js";
 import { FlushPage } from "./pages/FlushPage.js";
 import { FlushResultsPage } from "./pages/FlushResultsPage.js";
 import { GamePage } from "./pages/GamePage.js";
@@ -158,6 +160,22 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <MemoryResultsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/bug-hunt"
+                        element={
+                            <ProtectedRoute>
+                                <BugHuntPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/bug-hunt/results/:id"
+                        element={
+                            <ProtectedRoute>
+                                <BugHuntResultsPage />
                             </ProtectedRoute>
                         }
                     />

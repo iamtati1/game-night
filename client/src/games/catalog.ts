@@ -24,12 +24,13 @@ export const CODE_BLITZ = "code-blitz";
 export const FLUSH = "flush";
 export const REACTION = "reaction";
 export const MEMORY = "memory";
+export const BUG_HUNT = "bug-hunt";
 
 export type GameStatus = "live";
 
 /** Which abstract preview the card draws. Each one is a reduction of the real
  *  game screen, so the two cards cannot read as the same game recoloured. */
-export type GameMotif = "blitz" | "flush" | "reaction" | "memory";
+export type GameMotif = "blitz" | "flush" | "reaction" | "memory" | "bughunt";
 
 export interface GameEntry {
     slug: string;
@@ -115,6 +116,22 @@ export const GAMES: GameEntry[] = [
         instinct: "Working memory and recall",
         unit: "Round",
         motif: "memory"
+    },
+    {
+        slug: BUG_HUNT,
+        name: "Bug Hunt",
+        hook: "Something is broken. Find it before the system does.",
+        category: "Debugging",
+        // Alert amber: the only game framed as a thing going wrong, and the one
+        // colour on the platform that already means "look here".
+        accent: "#f97316",
+        status: "live",
+        path: "/bug-hunt",
+        shape: "5 incidents · 45s+ each",
+        intensity: 3,
+        instinct: "Reading code under pressure",
+        unit: "Incident",
+        motif: "bughunt"
     }
 ];
 

@@ -56,6 +56,17 @@ function Preview({ motif }: { motif: GameEntry["motif"] }) {
         );
     }
 
+    if (motif === "bughunt") {
+        return (
+            <div className="preview preview-bughunt" aria-hidden="true">
+                <span className="preview-bugline" />
+                <span className="preview-bugline is-flagged" />
+                <span className="preview-bugline" />
+                <span className="preview-bugline" />
+            </div>
+        );
+    }
+
     return null;
 }
 

@@ -27,14 +27,16 @@ const RESUME_PATH: Record<string, string> = {
     "code-blitz": "/play",
     flush: "/flush",
     reaction: "/reaction",
-    memory: "/memory"
+    memory: "/memory",
+    "bug-hunt": "/bug-hunt"
 };
 
 const RESULTS_PATH: Record<string, (id: string) => string> = {
     "code-blitz": (id) => `/results/${id}`,
     flush: (id) => `/flush/results/${id}`,
     reaction: (id) => `/reaction/results/${id}`,
-    memory: (id) => `/memory/results/${id}`
+    memory: (id) => `/memory/results/${id}`,
+    "bug-hunt": (id) => `/bug-hunt/results/${id}`
 };
 
 function targetFor(session: HistorySession): string {

@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
-import { CODE_BLITZ, FLUSH, MEMORY, REACTION } from "../games/constants.js";
+import { BUG_HUNT, CODE_BLITZ, FLUSH, MEMORY, REACTION } from "../games/constants.js";
+import * as bugHunt from "../bugHunt/queries.js";
 import * as codeBlitz from "../game/queries.js";
 import * as flush from "../flush/queries.js";
 import * as memory from "../memory/queries.js";
@@ -53,6 +54,13 @@ export const GAME_ADAPTERS: Record<string, GameSessionAdapter> = {
         // mid-flash, so no display timer survives the pause.
         shiftClock: memory.shiftClock,
         scoreSoFar: memory.scoreSoFar
+    },
+    [BUG_HUNT]: {
+        // A real one, unlike the two above. Bug Hunt holds a genuine per-incident
+        // countdown, so a resumed run whose clock was never shifted would time out
+        // the moment the player came back -- silently, with nothing to error on.
+        shiftClock: bugHunt.shiftClock,
+        scoreSoFar: bugHunt.scoreSoFar
     }
 };
 

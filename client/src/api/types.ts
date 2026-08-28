@@ -389,3 +389,119 @@ export interface MemorySubmitResponse {
     round: MemoryRoundRef | null;
     session: MemorySessionSummary | null;
 }
+
+/* ---------------------------------------------------------------- Bug Hunt */
+
+export interface BugHuntOption {
+    id: string;
+    text: string;
+    /** Set for find_line incidents, null for choose_patch. Which one it is
+     *  decides how the incident is played, so it drives the renderer. */
+    lineNumber: number | null;
+}
+
+export type BugHuntChallengeType = "find_line" | "choose_patch";
+
+export interface BugHuntIncident {
+    roundId: string;
+    incidentNumber: number;
+    totalIncidents: number;
+    isBoss: boolean;
+    title: string;
+    theme: string;
+    bugReport: string;
+    errorLog: string | null;
+    challengeType: string;
+    code: string;
+    codeLanguage: string;
+    difficulty: number;
+    options: BugHuntOption[];
+    /** Null on an untimed opening hunt. */
+    timeLimitMs: number | null;
+    /** What is actually left, from the server's own clock. A refresh or a resume
+     *  picks up here rather than restarting the countdown. */
+    remainingMs: number | null;
+    attemptsRemaining: number;
+    hintsUsed: number;
+    /** A count. The text arrives one rung at a time, from the server. */
+    hintsAvailable: number;
+}
+
+export interface BugHuntLiveResponse {
+    resumed?: boolean;
+    complete: false;
+    sessionId: string;
+    scoreSoFar: number;
+    systemIntegrity: number;
+    /** The streak carried into this hunt, so a refresh does not appear to lose it. */
+    streak: number;
+    incident: BugHuntIncident;
+}
+
+export interface BugHuntCompleteResponse {
+    resumed?: boolean;
+    complete: true;
+    session: BugHuntSessionSummary;
+}
+
+export type BugHuntCurrentResponse = BugHuntLiveResponse | BugHuntCompleteResponse;
+
+export interface BugHuntHintResponse {
+    action: "reveal-hint";
+    hint: { order: number; text: string };
+    hintsUsed: number;
+    hintsRemaining: number;
+    systemIntegrity: number;
+}
+
+export interface BugHuntDiagnosisResponse {
+    action: "diagnose";
+    outcome: "resolved" | "retry" | "failed";
+    correct: boolean;
+    explanation: string;
+    attemptsRemaining: number;
+    pointsAwarded: number;
+    streak: number;
+    scoreSoFar: number;
+    systemIntegrity: number;
+    complete: boolean;
+    session: BugHuntSessionSummary | null;
+}
+
+export interface BugHuntIncidentResult {
+    incidentNumber: number;
+    isBoss: boolean;
+    title: string;
+    theme: string;
+    bugCategory: string;
+    difficulty: number;
+    status: "pending" | "resolved" | "failed";
+    attempts: number;
+    hintsUsed: number;
+    resolutionMs: number | null;
+    code: string;
+    codeLanguage: string;
+    bugReport: string;
+    correctOption: string | null;
+    explanation: string | null;
+    selectedOption: string | null;
+    pointsAwarded: number;
+}
+
+export interface BugHuntSessionSummary {
+    id: string;
+    status: string;
+    score: number;
+    xpEarned: number;
+    startedAt: string;
+    completedAt: string | null;
+    totalIncidents: number;
+    incidentsResolved: number;
+    firstTryFixes: number;
+    hintsUsed: number;
+    bestStreak: number;
+    averageResolutionMs: number | null;
+    systemIntegrity: number;
+    incidents: BugHuntIncidentResult[];
+    byCategory: { category: string; seen: number; resolved: number }[];
+}

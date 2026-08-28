@@ -19,6 +19,9 @@
        without repeating hex values that live in the catalog. */
     --blitz: #8b5cf6;
     --flush: #f0a94a;
+    --reaction: #22d3ee;
+    --memory: #a78bfa;
+    --bughunt: #f97316;
     --correct: #34d399;
     --incorrect: #f87171;
     --warn: #fbbf24;
@@ -801,6 +804,21 @@ input:focus {
 
 .game-flush {
     --game-accent: var(--flush);
+}
+
+/* Reaction, Memory and Bug Hunt were missing here, so their History chips had
+   been rendering grey since each one shipped -- precisely the failure the note
+   above describes. Adding a game means adding a line here. */
+.game-reaction {
+    --game-accent: var(--reaction);
+}
+
+.game-memory {
+    --game-accent: var(--memory);
+}
+
+.game-bug-hunt {
+    --game-accent: var(--bughunt);
 }
 
 /* ---------- Flush ----------
@@ -2524,6 +2542,29 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     text-transform: uppercase;
 }
 
+/* .button.primary.big is the landing page's hero CTA and hardcodes var(--jolt),
+   the brand cyan. That is right on the landing page and wrong inside a game: it
+   made the single button the player is about to press the only element on screen
+   not wearing Bug Hunt's colour. Size kept, colour handed back to the token --
+   the same fix .button.primary:hover needed for the same reason. */
+.bh-briefing .button.primary.big,
+.bh-results .button.primary.big {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #24120a;
+}
+
+/* The primary action spends most of the incident disabled, waiting for a
+   selection. The inherited disabled style put muted grey text on the accent,
+   which read as broken rather than as not-yet-available. Dimmed as a whole
+   instead, so it stays legible and obviously the same button. */
+.bh-incident .button.primary:disabled {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    border-color: transparent;
+    color: #c9cee0;
+    opacity: 1;
+}
+
 /* ---------- card preview ---------- */
 
 .preview-reaction {
@@ -2968,4 +3009,1098 @@ a.card-body:focus-visible .preview-chip {
 .rx-arena.is-ready .rx-state {
     color: var(--muted);
     opacity: 0.75;
+}
+
+/* ---------- Bug Hunt ----------
+   A control room, not a hacker film. The atmosphere is carried by one alert
+   colour, generous spacing and a monospace listing -- because the code is the
+   thing the player has to actually read, and anything that competes with it for
+   attention is working against the game. No scanlines, no rain, no green-on-
+   black: the snippet keeps the same contrast it has everywhere else in Jolt. */
+
+.bh-briefing,
+.bh-incident,
+.bh-results,
+.bh-restored {
+    --accent: var(--bughunt);
+}
+
+/* Used for real radio inputs that are visually replaced by the line or patch
+   they sit on. Not display:none -- that would take them out of the tab order and
+   hide them from screen readers, which is the entire reason they are here. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- briefing ---------- */
+
+.bh-briefing {
+    max-width: 40rem;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.bh-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-alert-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: bh-pulse 2s ease-in-out infinite;
+}
+
+/* Slow and low-contrast on purpose. A fast blink on a landing screen is the
+   difference between "something needs attention" and "something is wrong with
+   your monitor". */
+@keyframes bh-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.bh-title {
+    margin: 0;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    letter-spacing: -0.03em;
+}
+
+.bh-tagline {
+    margin: 0.5rem 0 2rem;
+    color: var(--muted);
+    font-size: 1.05rem;
+}
+
+.bh-brief-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin: 0 0 2rem;
+    flex-wrap: wrap;
+}
+
+.bh-brief-stats div { text-align: center; }
+
+.bh-brief-stats dt {
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.bh-brief-stats dd {
+    margin: 0.3rem 0 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-rules {
+    max-width: 30rem;
+    margin: 0 auto 2rem;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+.bh-rules li {
+    display: flex;
+    gap: 0.7rem;
+    counter-increment: bh-rule;
+}
+
+.bh-rules li::before {
+    content: counter(bh-rule);
+    flex: none;
+    width: 1.4rem;
+    height: 1.4rem;
+    margin-top: 0.15rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.4rem;
+}
+
+.bh-rules { counter-reset: bh-rule; }
+
+/* ---------- incident ---------- */
+
+.bh-incident {
+    max-width: 46rem;
+    margin: 0 auto;
+}
+
+.bh-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.bh-head-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bh-critical {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.bh-score {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+}
+
+.bh-score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-streak {
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* ---------- integrity ---------- */
+
+.bh-integrity { min-width: 8rem; }
+
+.bh-integrity-track {
+    height: 5px;
+    border-radius: 999px;
+    background: #1e2334;
+    overflow: hidden;
+}
+
+.bh-integrity-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #4ade80;
+    transition: width 500ms ease, background 500ms ease;
+}
+
+.bh-integrity.degraded .bh-integrity-fill { background: #fbbf24; }
+.bh-integrity.critical .bh-integrity-fill { background: #f87171; }
+
+.bh-integrity-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0.3rem 0 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bh-integrity-word { color: var(--muted); }
+.bh-integrity.degraded .bh-integrity-word { color: #fbbf24; }
+.bh-integrity.critical .bh-integrity-word { color: #f87171; }
+.bh-integrity-value { font-variant-numeric: tabular-nums; }
+
+/* ---------- the report ---------- */
+
+.bh-report { margin: 1.5rem 0 1.25rem; }
+
+.bh-theme {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.bh-incident-title {
+    margin: 0.35rem 0 0.5rem;
+    font-size: 1.5rem;
+    line-height: 1.25;
+}
+
+.bh-bug-report {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.bh-error-log {
+    margin: 1rem 0 0;
+    padding: 0.75rem 0.9rem;
+    border-left: 3px solid #f87171;
+    border-radius: 0 8px 8px 0;
+    background: #7f1d1d1f;
+    color: #fca5a5;
+    font-size: 0.85rem;
+    overflow-x: auto;
+}
+
+/* ---------- code ---------- */
+
+.bh-code-fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.bh-code {
+    margin: 0;
+    padding: 0.6rem 0;
+    list-style: none;
+    border: 1px solid #232a3d;
+    border-radius: 12px;
+    background: #0f1320;
+    overflow-x: auto;
+}
+
+.bh-code.readonly {
+    padding: 0.9rem 1rem;
+    white-space: pre;
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.bh-line {
+    display: flex;
+    align-items: stretch;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.bh-line-no {
+    flex: none;
+    width: 2.6rem;
+    padding-right: 0.8rem;
+    color: #3f4760;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+}
+
+.bh-line-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex: 1;
+    padding: 0 0.9rem 0 0.5rem;
+    white-space: pre;
+}
+
+/* Only the lines that are actually choosable look choosable. A snippet where
+   every line highlights would be inviting the player to pick the closing brace. */
+/* A resting affordance, not just a hover one. Without it the snippet reads as a
+   listing and nothing says the lines ARE the answer -- the player sees code, not
+   a control. The rail is faint enough to stay out of the way of reading and
+   present enough to say "these are choosable, that closing brace is not". */
+.bh-line.selectable .bh-line-label {
+    cursor: pointer;
+    border-left: 2px solid #2b3348;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.bh-line.selectable:hover .bh-line-label {
+    background: #171d2e;
+    border-left-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.bh-line.selected .bh-line-label {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-left-color: var(--accent);
+}
+
+.bh-line.selected code { color: #fff; }
+
+.bh-line-mark {
+    flex: none;
+    width: 1ch;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* The real radio is visually hidden, so its focus ring has to be borrowed by the
+   row -- otherwise keyboard users get no indication of where they are. */
+.bh-line-label:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.bh-line.inert .bh-line-label { color: #6b7492; }
+
+/* ---------- patches ---------- */
+
+.bh-patches {
+    display: grid;
+    gap: 0.6rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.bh-patches-legend {
+    padding: 0;
+    margin-bottom: 0.6rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-patch {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid #232a3d;
+    border-radius: 10px;
+    background: #0f1320;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+}
+
+.bh-patch code {
+    font-size: 0.87rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.bh-patch:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: #141a29;
+}
+
+.bh-patch.selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.bh-patch:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.bh-patch-mark {
+    flex: none;
+    width: 1ch;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* ---------- hints ---------- */
+
+.bh-hints {
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.bh-hints li {
+    padding: 0.7rem 0.9rem;
+    border-left: 3px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    border-radius: 0 8px 8px 0;
+    background: #141a29;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.bh-hint-tag {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--accent);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* ---------- feedback ---------- */
+
+.bh-feedback {
+    margin: 1.25rem 0 0;
+    padding: 1rem 1.1rem;
+    border-radius: 12px;
+    border: 1px solid #232a3d;
+    background: #0f1320;
+    animation: bh-rise 220ms ease-out;
+}
+
+@keyframes bh-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+.bh-feedback.resolved {
+    border-color: #16653480;
+    background: #052e1633;
+}
+
+.bh-feedback.retry {
+    border-color: #92400e80;
+    background: #45200733;
+}
+
+.bh-feedback.failed {
+    border-color: #7f1d1d80;
+    background: #45090933;
+}
+
+.bh-feedback-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.bh-feedback.resolved .bh-feedback-head { color: #4ade80; }
+.bh-feedback.retry .bh-feedback-head { color: #fbbf24; }
+.bh-feedback.failed .bh-feedback-head { color: #f87171; }
+
+.bh-feedback-mark { font-size: 1.05rem; }
+
+.bh-feedback-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0.5rem 0 0;
+}
+
+.bh-feedback-score strong {
+    font-size: 1.7rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-attempts {
+    margin: 0.5rem 0 0;
+    color: #fbbf24;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.bh-explanation {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.65;
+}
+
+/* ---------- actions ---------- */
+
+.bh-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* ---------- restored ---------- */
+
+.bh-restored {
+    max-width: 30rem;
+    margin: 5rem auto;
+    text-align: center;
+}
+
+.bh-restored-mark {
+    margin: 0;
+    font-size: 3.5rem;
+    color: #4ade80;
+    animation: bh-rise 320ms ease-out;
+}
+
+.bh-restored h1 {
+    margin: 0.5rem 0;
+    font-size: 2rem;
+}
+
+/* ---------- results ---------- */
+
+.bh-results {
+    max-width: 46rem;
+    margin: 0 auto;
+}
+
+.bh-results-head { text-align: center; }
+
+.bh-results-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.bh-results-state.restored { color: #4ade80; }
+.bh-results-state.degraded { color: #fbbf24; }
+
+.bh-results-line {
+    margin: 0.6rem 0 1.5rem;
+    color: var(--muted);
+}
+
+.bh-results-score {
+    margin: 0;
+    font-size: clamp(3rem, 12vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-results-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: 1rem 1.25rem;
+    margin: 2rem 0;
+    padding: 1.25rem;
+    border: 1px solid #232a3d;
+    border-radius: 12px;
+    background: #0f1320;
+}
+
+.bh-results-stats dt {
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.bh-results-stats dd {
+    margin: 0.25rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-results-stats .of {
+    margin-left: 0.2rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+.bh-readout {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.bh-readout-line {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    background: #141a29;
+    font-size: 0.92rem;
+}
+
+.bh-readout-tag {
+    display: block;
+    margin-bottom: 0.15rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-readout-line.strong .bh-readout-tag { color: #4ade80; }
+.bh-readout-line.weak .bh-readout-tag { color: #fbbf24; }
+
+/* ---------- incident log ---------- */
+
+.bh-log {
+    margin: 0 0 2rem;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.bh-log-row {
+    padding: 0.9rem 1rem;
+    border: 1px solid #232a3d;
+    border-left-width: 3px;
+    border-radius: 0 10px 10px 0;
+    background: #0f1320;
+}
+
+.bh-log-row.resolved { border-left-color: #4ade80; }
+.bh-log-row.failed { border-left-color: #f87171; }
+
+.bh-log-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.bh-log-no {
+    color: #3f4760;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-log-title {
+    flex: 1;
+    min-width: 12rem;
+    font-weight: 600;
+}
+
+.bh-log-boss {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.bh-log-status {
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.bh-log-status.resolved { color: #4ade80; }
+.bh-log-status.failed { color: #f87171; }
+
+.bh-log-points {
+    min-width: 3rem;
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-log-meta {
+    margin: 0.4rem 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.bh-log-answer {
+    margin: 0.6rem 0 0;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    background: #141a29;
+    font-size: 0.84rem;
+    overflow-x: auto;
+}
+
+.bh-log-why {
+    margin: 0.45rem 0 0;
+    color: var(--muted);
+    font-size: 0.87rem;
+    line-height: 1.6;
+}
+
+.bh-results-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.bh-replay-note {
+    margin: 1rem 0 0;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+/* ---------- card preview ---------- */
+
+.preview-bughunt {
+    display: grid;
+    gap: 5px;
+    align-content: center;
+    padding: 0 14px;
+}
+
+.preview-bughunt .preview-bugline {
+    height: 6px;
+    border-radius: 3px;
+    background: #2a3145;
+}
+
+.preview-bughunt .preview-bugline.is-flagged {
+    background: color-mix(in srgb, var(--bughunt) 65%, transparent);
+    box-shadow: -10px 0 0 -3px var(--bughunt);
+}
+
+/* Motion is the last thing added and the first thing removed. Every animation
+   here is decorative -- the state is always carried by text and a mark too. */
+@media (prefers-reduced-motion: reduce) {
+    .bh-alert-dot,
+    .bh-feedback,
+    .bh-restored-mark {
+        animation: none;
+    }
+
+    .bh-integrity-fill,
+    .bh-line.selectable .bh-line-label,
+    .bh-patch {
+        transition: none;
+    }
+}
+
+/* ---------- Bug Hunt: alert beat, voice, severity ---------- */
+
+.bh-alert-beat {
+    --accent: var(--bughunt);
+    max-width: 34rem;
+    margin: 6rem auto;
+    text-align: center;
+}
+
+.bh-alert-siren {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 1.5rem;
+}
+
+.bh-alert-ring {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    animation: bh-siren 1.4s ease-out infinite;
+}
+
+/* One expanding ring, not a strobe. It reads as a beacon rather than as an
+   error the browser is having, and it stops the moment the incident lands. */
+@keyframes bh-siren {
+    0% { transform: scale(0.7); opacity: 1; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+
+.bh-alert-kicker {
+    margin: 0 0 0.9rem;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.bh-alert-beat.is-boss .bh-alert-kicker {
+    font-size: 1.1rem;
+}
+
+.bh-alert-beat.is-boss .bh-alert-ring {
+    border-color: #f87171;
+    animation-duration: 0.9s;
+}
+
+.bh-alert-voice,
+.bh-feedback-voice {
+    margin: 0;
+    color: #c9cee0;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.bh-feedback-voice {
+    margin: 0.5rem 0 0;
+}
+
+/* The system speaking, marked as such. Without the tag it reads as UI copy;
+   with it, it reads as somebody in the incident channel. */
+.bh-voice-tag {
+    display: inline-block;
+    margin-right: 0.6rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    vertical-align: 0.15em;
+}
+
+.bh-recoverable {
+    margin: 0.7rem 0 0;
+    color: #86efac;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Severity, which the client used to drop on the floor. */
+.bh-severity {
+    margin-left: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: #1e2334;
+    color: #9aa3bd;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.bh-severity.sev-4 { background: #45200733; color: #fbbf24; }
+.bh-severity.sev-5 { background: #45090933; color: #f87171; }
+
+.bh-legend-sub {
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+/* The clock, in words. Sits above the bar and shares its tier, so the wording
+   and the colour can never disagree. */
+.countdown-status {
+    margin: 0 0 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.countdown-status.warn { color: #fbbf24; }
+.countdown-status.urgent { color: #f87171; }
+
+@media (prefers-reduced-motion: reduce) {
+    .bh-alert-ring { animation: none; opacity: 0.9; }
+}
+
+/* ---------- Bug Hunt: targeting + diagnostic run ---------- */
+
+.bh-targeted {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.9rem 0 0;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-targeted-mark { font-size: 0.9rem; }
+
+.bh-diagnostic {
+    margin: 1.25rem 0 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid #232a3d;
+    border-radius: 12px;
+    background: #0f1320;
+}
+
+.bh-diagnostic-head {
+    margin: 0 0 0.7rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-checks {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.4rem;
+}
+
+.bh-check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #6b7492;
+    font-size: 0.9rem;
+    transition: color 160ms ease;
+}
+
+.bh-check.done { color: #c9cee0; }
+.bh-check.done .bh-check-mark { color: #4ade80; }
+.bh-check.failed { color: #fca5a5; }
+.bh-check.failed .bh-check-mark { color: #f87171; }
+
+.bh-check-mark {
+    width: 1ch;
+    font-weight: 700;
+    color: #3f4760;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bh-check { transition: none; }
+}
+
+/* ---------- Bug Hunt: service panel + integrity legend ---------- */
+
+.bh-services {
+    display: flex;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-wrap: wrap;
+}
+
+.bh-service {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #4b5470;
+}
+
+.bh-service-dot { font-size: 0.7rem; }
+
+.bh-service.restored { color: #86efac; }
+.bh-service.critical { color: var(--accent); font-weight: 700; }
+.bh-service.down { color: #f87171; }
+
+/* Services still to come are named but muted -- present enough to show the shape
+   of the run, quiet enough not to compete with the one that is on fire. */
+.bh-service.pending .bh-service-name { opacity: 0.55; }
+
+.bh-integrity-costs {
+    display: flex;
+    gap: 0.75rem;
+    margin: 0.4rem 0 0;
+    flex-wrap: wrap;
+}
+
+.bh-integrity-costs div {
+    display: flex;
+    gap: 0.25rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    color: #4b5470;
+}
+
+.bh-integrity-costs dt { text-transform: uppercase; }
+.bh-integrity-costs dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+/* ---------- Bug Hunt: debrief sign-off ---------- */
+
+.bh-signoff {
+    max-width: 34rem;
+    margin: 0 auto 1.5rem;
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+    background: #141a29;
+    text-align: left;
+    color: #c9cee0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* One thin strip carrying both system readouts, so neither competes with the
+   snippet for vertical space. */
+.bh-systembar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #1b2132;
+    border-radius: 8px;
+    background: #0d111c;
+}
+
+.bh-systembar .bh-integrity-costs { margin: 0; }
+
+@media (max-width: 620px) {
+    /* The costs are reference material; the failing service is not. On a narrow
+       screen the reference goes rather than wrapping the strip to three rows. */
+    .bh-systembar .bh-integrity-costs { display: none; }
+}
+
+/* ---------- Bug Hunt: streak + run phase ---------- */
+
+/* The streak is the emotional mechanic, so it gets weight. It was a small
+   suffix that only appeared above one -- which is precisely when a player has
+   nothing invested in it yet. */
+.bh-streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #9aa3bd;
+    transition: color 200ms ease, transform 200ms ease;
+}
+
+.bh-streak-badge.hot {
+    color: var(--accent);
+    transform: scale(1.08);
+}
+
+.bh-streak-n { letter-spacing: -0.02em; }
+
+.bh-phase {
+    margin: 0 0 0.2rem;
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bh-streak-badge { transition: none; transform: none; }
 }

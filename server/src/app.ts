@@ -4,6 +4,7 @@ import express, {
     type Response
 } from "express";
 import { authRouter, meHandler } from "./auth/routes.js";
+import { bugHuntRouter } from "./bugHunt/routes.js";
 import { pool } from "./db.js";
 import { flushRouter } from "./flush/routes.js";
 import { checkGameRegistry, registryMessage } from "./games/registry.js";
@@ -83,6 +84,8 @@ app.use("/api/flush", flushRouter);
 app.use("/api/reaction", reactionRouter);
 
 app.use("/api/memory", memoryRouter);
+
+app.use("/api/bug-hunt", bugHuntRouter);
 
 app.use("/api", gameRouter);
 

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { GAME_SLUGS } from "./constants.js";
 import { registryMessage } from "./registry.js";
@@ -6,21 +6,20 @@ import { registryMessage } from "./registry.js";
 const APP = readFileSync(new URL("../app.ts", import.meta.url), "utf8");
 const MIGRATIONS_DIR = new URL("../../migrations/", import.meta.url);
 
-/** Slugs any migration inserts into `games`. */
+/**
+ * Slugs any migration inserts into `games`.
+ *
+ * Reads the whole migrations directory rather than a hardcoded list. The list
+ * was itself a thing to forget: adding a game meant remembering to name its
+ * migration here, and this assertion exists precisely because remembering is
+ * what failed last time.
+ */
 function seededSlugs(): string[] {
-    const files = readFileSync(new URL("007_create_games.sql", MIGRATIONS_DIR), "utf8");
-    const all = [files];
-
-    for (const name of [
-        "008_create_tick.sql",
-        "009_rename_tick_to_flush.sql",
-        "012_create_reaction.sql",
-        "013_create_memory.sql"
-    ]) {
-        all.push(readFileSync(new URL(name, MIGRATIONS_DIR), "utf8"));
-    }
-
-    const sql = all.join("\n");
+    const sql = readdirSync(MIGRATIONS_DIR)
+        .filter((name) => name.endsWith(".sql"))
+        .sort()
+        .map((name) => readFileSync(new URL(name, MIGRATIONS_DIR), "utf8"))
+        .join("\n");
     const seeded = new Set<string>();
 
     // INSERT ... VALUES ('slug', ...)
@@ -37,7 +36,7 @@ function seededSlugs(): string[] {
 }
 
 describe("every registered game has a migration that seeds it", () => {
-    it("covers all four slugs", () => {
+    it("covers every slug the code registers", () => {
         // This is the check that would have caught the Memory outage before it
         // reached the database: the code knew about `memory`, and the assertion
         // is that some migration puts that row there.
