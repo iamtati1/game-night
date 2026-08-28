@@ -1,8 +1,9 @@
 :root {
-    --bg: #0d0f16;
-    --surface: #161a24;
-    --surface-2: #1d2230;
-    --border: #262d3d;
+    --bg: #08090d;
+    --surface: #11131a;
+    --surface-2: #191c26;
+    --border: #2a2e3a;
+
     --text: #e7e9ef;
     --muted: #98a2b6;
     --accent: #8b5cf6;
@@ -28,9 +29,45 @@
     --radius: 12px;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
+    /* ---------- Layer 1: the scales the rest of the system can build on ----------
+
+       These name what the stylesheet was already doing with literals. Nothing
+       below is rewritten to use them -- 3,000 lines of working values are not
+       worth churning -- but the shared primitives adopt them, so Layers 2-5 have
+       one vocabulary to reach for instead of inventing a fourth radius. */
+
+    /* Radii. 9, 10, 12 and 20 were all in use; these are those, named. */
+    --radius-sm: 9px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    /* Spacing. A 4px base, because every ad-hoc value already in the sheet
+       rounds to it. */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+
+    /* Elevation, as a ladder rather than four unrelated rgba() literals.
+       background -> surface -> elevated -> active is the hierarchy these exist
+       to express, and each step is a shadow plus the inset highlight that makes
+       a dark surface read as lit from above rather than as a lighter rectangle. */
+    --lift: 0 1px 0 rgba(255, 255, 255, 0.035) inset;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.22);
+    --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.28);
+
+    /* Text tones. --text and --muted covered two levels; the sheet had quietly
+       grown four, spelled as raw hex in a dozen places. Naming the other two
+       gives tertiary information somewhere to sit without inventing a colour. */
+    --muted-2: #6b7492;
+    --faint: #4b5470;
+
     color-scheme: dark;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    line-height: 1.55;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
 }
 
 * {
@@ -41,13 +78,256 @@ body {
     margin: 0;
     background: radial-gradient(1100px 500px at 50% -10%, #1b1533 0%, var(--bg) 60%);
     color: var(--text);
+    /* 100vh is the height of the viewport with mobile browser chrome HIDDEN, so
+       on a phone the ambient gradient below gets cut off by the address bar and
+       the page can scroll a few pixels for no reason. dvh follows the visible
+       viewport. The vh line stays as the fallback for anything without dvh. */
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .app {
+    position: relative;
     max-width: 820px;
     margin: 0 auto;
     padding: 0 1.25rem 2rem;
+}
+
+/* ---------- Jolt: spatial atmosphere ---------- */
+
+/* The ambient glows below are fixed and deliberately hang off both edges, which
+   on a 375px viewport pushed the document to 394px and produced a horizontal
+   scrollbar over nothing. `overflow-x: hidden` on body does not catch it,
+   because the scroll container is the root element, not body.
+   `clip` rather than `hidden`: hidden would make the root a scroll container and
+   break `position: sticky` for anything that later wants it. */
+html {
+    overflow-x: clip;
+}
+
+body {
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Ambient light sources.
+   They should be felt more than seen. */
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+}
+
+body::before {
+    width: 700px;
+    height: 700px;
+    top: -300px;
+    left: -250px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            color-mix(in srgb, var(--jolt) 9%, transparent) 0%,
+            transparent 68%);
+    filter: blur(20px);
+}
+
+body::after {
+    width: 650px;
+    height: 650px;
+    right: -280px;
+    bottom: -250px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            color-mix(in srgb, var(--accent) 8%, transparent) 0%,
+            transparent 68%);
+    filter: blur(25px);
+}
+
+/* ---------- Jolt: spatial game surface ---------- */
+
+/* The gameplay area becomes a physical-feeling surface. */
+.bh-incident {
+    position: relative;
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+    border-radius: 20px;
+
+    background:
+        linear-gradient(145deg,
+            color-mix(in srgb, var(--surface) 94%, var(--accent)),
+            var(--surface));
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.035) inset,
+        0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+/* A very subtle "table lighting" effect. */
+.bh-incident::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+
+    background:
+        radial-gradient(circle at 50% 0%,
+            color-mix(in srgb, var(--accent) 7%, transparent),
+            transparent 55%);
+
+    opacity: 0.8;
+}
+
+/* Keep the actual game content above the atmospheric layer. */
+.bh-incident>* {
+    position: relative;
+    z-index: 1;
+}
+
+/* Code becomes the centerpiece sitting on the surface. */
+.bh-code {
+    border-color: color-mix(in srgb, var(--border) 85%, var(--accent));
+    background: #0b0e17;
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.03) inset,
+        0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Active selectable rows feel slightly embedded into the game surface. */
+.bh-line.selectable .bh-line-label {
+    border-left-color: color-mix(in srgb,
+            var(--accent) 20%,
+            transparent);
+}
+
+.bh-line.selectable:hover .bh-line-label {
+    background:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--accent) 10%, transparent),
+            transparent 75%);
+}
+
+/* The selected answer gets a stronger sense of being "locked in". */
+.bh-line.selected .bh-line-label {
+    box-shadow:
+        inset 3px 0 0 var(--accent),
+        0 0 20px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+/* ---------- station framing ---------- */
+
+.bh-systembar {
+    background: #0b0f18;
+    border-color: #20283a;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.025) inset,
+        0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* Make the game HUD feel attached to the surface. */
+.bh-systembar,
+.bh-services {
+    position: relative;
+    z-index: 2;
+}
+
+/* ---------- subtle edge lighting ---------- */
+
+.bh-incident {
+    isolation: isolate;
+}
+
+.bh-incident::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+
+    background: linear-gradient(135deg,
+            color-mix(in srgb, var(--accent) 30%, transparent),
+            transparent 35%,
+            transparent 70%,
+            color-mix(in srgb, var(--accent) 8%, transparent));
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+
+    pointer-events: none;
+    opacity: 0.65;
+}
+
+/* The application becomes the "room" inside the background. */
+
+.app {
+    position: relative;
+}
+
+/* A subtle central atmosphere behind gameplay. */
+
+.app::before {
+    content: "";
+    position: absolute;
+    top: 4rem;
+    left: 50%;
+    width: min(760px, 110vw);
+    height: 520px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: radial-gradient(ellipse,
+            color-mix(in srgb, var(--accent) 5%, transparent),
+            transparent 70%);
+    filter: blur(35px);
+    z-index: -1;
+}
+
+/* Give major gameplay areas a sense of elevation. */
+
+.bh-incident,
+.bh-results {
+    position: relative;
+}
+
+/* Soft environmental glow around the active game. */
+
+.bh-incident::before,
+.bh-results::before {
+    content: "";
+    position: absolute;
+    inset: -2rem -3rem;
+    pointer-events: none;
+    z-index: -1;
+    border-radius: 32px;
+    background: radial-gradient(ellipse at center,
+            color-mix(in srgb, var(--accent) 4%, transparent),
+            transparent 70%);
+    filter: blur(20px);
+}
+
+/* Active surfaces should feel slightly lifted. */
+
+.bh-systembar,
+.bh-diagnostic,
+.bh-feedback,
+.bh-results-stats {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.025) inset,
+        0 12px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* The code panel is the "table" the game is played on. */
+
+.bh-code {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.025) inset,
+        0 18px 45px rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- header ---------- */
@@ -137,7 +417,7 @@ body {
 h1 {
     font-size: clamp(1.9rem, 5vw, 2.9rem);
     line-height: 1.1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.035em;
     margin: 0 0 0.75rem;
 }
 
@@ -275,11 +555,16 @@ a {
 
 /* ---------- panels / forms ---------- */
 
+/* The shared surface primitive, given the same lit-from-above treatment the
+   gameplay surface already uses. It was a flat rectangle with a border, which
+   read as a region rather than as a thing sitting on the background. Same
+   language as .bh-incident, one step quieter. */
 .panel {
     padding: 1.75rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-md);
     background: var(--surface);
+    box-shadow: var(--lift), var(--shadow-2);
 }
 
 .narrow {
@@ -305,8 +590,15 @@ input {
     font: inherit;
 }
 
+/* `outline: none` here was overriding the global :focus-visible ring for every
+   input in Jolt -- so a keyboard user tabbing through the login form got a 1px
+   border tint where every other control gives them a 2px ring. Mouse users keep
+   the quieter border-only treatment; keyboard users get the ring back. */
 input:focus {
     border-color: var(--accent);
+}
+
+input:focus:not(:focus-visible) {
     outline: none;
 }
 
@@ -364,9 +656,20 @@ input:focus {
 }
 
 @keyframes score-bump {
-    0%   { transform: scale(1);    color: var(--text); }
-    28%  { transform: scale(1.28); color: var(--correct); }
-    100% { transform: scale(1);    color: var(--text); }
+    0% {
+        transform: scale(1);
+        color: var(--text);
+    }
+
+    28% {
+        transform: scale(1.28);
+        color: var(--correct);
+    }
+
+    100% {
+        transform: scale(1);
+        color: var(--text);
+    }
 }
 
 /* Rises out of the score and fades. Absolutely positioned so it cannot reflow
@@ -385,10 +688,25 @@ input:focus {
 }
 
 @keyframes award-float {
-    0%   { opacity: 0; transform: translateY(4px)   scale(0.9); }
-    22%  { opacity: 1; transform: translateY(-2px)  scale(1.06); }
-    70%  { opacity: 1; transform: translateY(-9px)  scale(1); }
-    100% { opacity: 0; transform: translateY(-15px) scale(1); }
+    0% {
+        opacity: 0;
+        transform: translateY(4px) scale(0.9);
+    }
+
+    22% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.06);
+    }
+
+    70% {
+        opacity: 1;
+        transform: translateY(-9px) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-15px) scale(1);
+    }
 }
 
 .countdown {
@@ -538,9 +856,20 @@ input:focus {
 }
 
 @keyframes option-pop {
-    0%   { transform: scale(1);     box-shadow: 0 0 0 0 #34d39900; }
-    40%  { transform: scale(1.018); box-shadow: 0 0 0 4px #34d39930; }
-    100% { transform: scale(1);     box-shadow: 0 0 0 0 #34d39900; }
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 #34d39900;
+    }
+
+    40% {
+        transform: scale(1.018);
+        box-shadow: 0 0 0 4px #34d39930;
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 #34d39900;
+    }
 }
 
 .option.chosen-incorrect {
@@ -556,11 +885,27 @@ input:focus {
 /* Small and horizontal. A large shake reads as an error dialog; this should read
    as "no, the other one". */
 @keyframes option-shake {
-    0%, 100% { transform: translateX(0); }
-    20%      { transform: translateX(-5px); }
-    40%      { transform: translateX(4px); }
-    60%      { transform: translateX(-3px); }
-    80%      { transform: translateX(2px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-5px);
+    }
+
+    40% {
+        transform: translateX(4px);
+    }
+
+    60% {
+        transform: translateX(-3px);
+    }
+
+    80% {
+        transform: translateX(2px);
+    }
 }
 
 /* The answer the player missed: outlined rather than filled, and it arrives a
@@ -574,8 +919,15 @@ input:focus {
 }
 
 @keyframes reveal-in {
-    from { opacity: 0.5; transform: translateY(-3px); }
-    to   { opacity: 1;   transform: translateY(0); }
+    from {
+        opacity: 0.5;
+        transform: translateY(-3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Options that took no part. Dimming them is what makes the two that matter
@@ -598,13 +950,21 @@ input:focus {
 }
 
 @keyframes feedback-in {
-    from { opacity: 0; transform: translateY(3px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Honour the OS setting: keep every colour and state change, drop the motion.
    The states are load-bearing information, the movement is not. */
 @media (prefers-reduced-motion: reduce) {
+
     .score-value,
     .option.chosen-correct,
     .option.chosen-incorrect,
@@ -618,8 +978,15 @@ input:focus {
     }
 
     @keyframes award-fade {
-        0%, 70% { opacity: 1; }
-        100%    { opacity: 0; }
+
+        0%,
+        70% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0;
+        }
     }
 }
 
@@ -878,7 +1245,7 @@ input:focus {
     margin-top: 1rem;
 }
 
-.sequences > div > span {
+.sequences>div>span {
     display: block;
     margin-bottom: 0.4rem;
     font-size: 0.75rem;
@@ -910,6 +1277,7 @@ input:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .console-line,
     .tile {
         transition: none;
@@ -935,13 +1303,27 @@ input:focus {
 }
 
 @keyframes stage-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 @keyframes stage-out {
-    from { opacity: 1; transform: none; }
-    to   { opacity: 0; transform: translateY(-8px); }
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
 }
 
 /* Timer tiers. `calm` is deliberately unstyled beyond the base: the clock should
@@ -961,8 +1343,15 @@ input:focus {
 /* Opacity only, and a shallow range. A scale or colour flash at 1Hz across a
    full-width bar is exactly the effect photosensitivity guidance warns about. */
 @keyframes timer-pulse {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.72; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.72;
+    }
 }
 
 /* Time ran out: the tag earns more weight than the inline pill it shares a class
@@ -975,6 +1364,7 @@ input:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .play-stage,
     .play-stage.leaving {
         animation: none;
@@ -1007,7 +1397,7 @@ input:focus {
 
 /* Pause is pushed to the far edge so the score sits in the true centre of the
    bar rather than wherever three flex children happen to land. */
-.hud > .button {
+.hud>.button {
     justify-self: end;
 }
 
@@ -1120,6 +1510,7 @@ input:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .pip,
     .option:active:not(:disabled) {
         transition: none;
@@ -1296,9 +1687,20 @@ input:focus {
 }
 
 @keyframes line-snap {
-    0%   { transform: translateX(-6px); background: var(--accent-soft); }
-    60%  { transform: translateX(0);    background: var(--accent-soft); }
-    100% { transform: none;             background: #34d39914; }
+    0% {
+        transform: translateX(-6px);
+        background: var(--accent-soft);
+    }
+
+    60% {
+        transform: translateX(0);
+        background: var(--accent-soft);
+    }
+
+    100% {
+        transform: none;
+        background: #34d39914;
+    }
 }
 
 /* ---------- the tile rack ---------- */
@@ -1365,15 +1767,29 @@ input:focus {
 /* Restrained on purpose: a wrong tile already costs the round's multiplier, so
    the animation only has to say "not that one", not punish. */
 @keyframes tile-reject {
-    0%, 100% { transform: translateX(0); }
-    25%      { transform: translateX(-4px); }
-    50%      { transform: translateX(3px); }
-    75%      { transform: translateX(-2px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-4px);
+    }
+
+    50% {
+        transform: translateX(3px);
+    }
+
+    75% {
+        transform: translateX(-2px);
+    }
 }
 
 /* ---------- narrow ---------- */
 
 @media (max-width: 720px) {
+
     /* Stacking beats shrinking: two half-width panels of monospace at 394px
        would wrap the code and make both unreadable. */
     .board {
@@ -1699,6 +2115,7 @@ a.card-body:hover .card-play svg {
 /* ---------- responsive ---------- */
 
 @media (prefers-reduced-motion: reduce) {
+
     a.card-body:hover,
     a.card-body:focus-visible {
         transform: none;
@@ -1797,6 +2214,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .preview-bar,
     .preview-line {
         transition: none;
@@ -2214,7 +2632,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 /* The verdict follows the reward, so the vertical rhythm stays tight. */
-.xp-earned + .verdict {
+.xp-earned+.verdict {
     margin-top: 0;
 }
 
@@ -2252,8 +2670,15 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 @keyframes tick-in {
-    from { opacity: 0; transform: scale(0.75); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: scale(0.75);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2324,13 +2749,28 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     animation: rx-breathe 3.2s ease-out infinite;
 }
 
-.rx-orb span:nth-child(2) { animation-delay: 1.05s; }
-.rx-orb span:nth-child(3) { animation-delay: 2.1s; }
+.rx-orb span:nth-child(2) {
+    animation-delay: 1.05s;
+}
+
+.rx-orb span:nth-child(3) {
+    animation-delay: 2.1s;
+}
 
 @keyframes rx-breathe {
-    0%   { transform: scale(0.45); opacity: 0; }
-    40%  { opacity: 0.55; }
-    100% { transform: scale(1); opacity: 0; }
+    0% {
+        transform: scale(0.45);
+        opacity: 0;
+    }
+
+    40% {
+        opacity: 0.55;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
 }
 
 .rx-shape {
@@ -2392,8 +2832,15 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 @keyframes rx-pulse {
-    0%, 100% { opacity: 0.55; }
-    50%      { opacity: 1; }
+
+    0%,
+    100% {
+        opacity: 0.55;
+    }
+
+    50% {
+        opacity: 1;
+    }
 }
 
 /*
@@ -2414,8 +2861,13 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 @keyframes rx-snap {
-    from { transform: scale(0.985); }
-    to   { transform: none; }
+    from {
+        transform: scale(0.985);
+    }
+
+    to {
+        transform: none;
+    }
 }
 
 /* ---------- round result ---------- */
@@ -2442,8 +2894,15 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 @keyframes rx-land {
-    from { opacity: 0; transform: scale(0.82); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: scale(0.82);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .rx-tier,
@@ -2460,11 +2919,25 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 /* Tier colours run cool-to-warm, but every tier also has its own word, so the
    scale never depends on colour alone. */
-.tier-lightning  { color: #22d3ee; }
-.tier-incredible { color: #34d399; }
-.tier-fast       { color: #a3e635; }
-.tier-solid      { color: #fbbf24; }
-.tier-sharp      { color: var(--muted); }
+.tier-lightning {
+    color: #22d3ee;
+}
+
+.tier-incredible {
+    color: #34d399;
+}
+
+.tier-fast {
+    color: #a3e635;
+}
+
+.tier-solid {
+    color: #fbbf24;
+}
+
+.tier-sharp {
+    color: var(--muted);
+}
 
 .rx-points {
     color: var(--accent);
@@ -2604,6 +3077,7 @@ a.card-body:focus-visible .preview-dot {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .rx-orb span,
     .rx-arena.is-waiting .rx-state,
     .rx-arena.is-signal,
@@ -2686,13 +3160,31 @@ a.card-body:focus-visible .preview-dot {
     animation: mem-fade 3.4s ease-in-out infinite;
 }
 
-.mem-trace .glyph:nth-child(2) { animation-delay: 0.45s; }
-.mem-trace .glyph:nth-child(3) { animation-delay: 0.9s; }
+.mem-trace .glyph:nth-child(2) {
+    animation-delay: 0.45s;
+}
+
+.mem-trace .glyph:nth-child(3) {
+    animation-delay: 0.9s;
+}
 
 @keyframes mem-fade {
-    0%, 20%  { opacity: 1; transform: none; }
-    60%      { opacity: 0.12; transform: translateY(-6px); }
-    100%     { opacity: 1; transform: none; }
+
+    0%,
+    20% {
+        opacity: 1;
+        transform: none;
+    }
+
+    60% {
+        opacity: 0.12;
+        transform: translateY(-6px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .mem-shape {
@@ -2772,8 +3264,15 @@ a.card-body:focus-visible .preview-dot {
 }
 
 @keyframes mem-land {
-    from { opacity: 0; transform: scale(0.6); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* ---------- recall slots ---------- */
@@ -2874,8 +3373,15 @@ a.card-body:focus-visible .preview-dot {
 }
 
 @keyframes mem-reveal {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .mem-verdict {
@@ -2955,7 +3461,7 @@ a.card-body:focus-visible .preview-dot {
     list-style: none;
 }
 
-.mem-review > li {
+.mem-review>li {
     padding-top: 1rem;
     border-top: 1px solid var(--border);
 }
@@ -2977,8 +3483,13 @@ a.card-body:focus-visible .preview-dot {
     transition: opacity 260ms ease-out;
 }
 
-.preview-chip.is-fading { opacity: 0.45; }
-.preview-chip.is-gone   { opacity: 0.14; }
+.preview-chip.is-fading {
+    opacity: 0.45;
+}
+
+.preview-chip.is-gone {
+    opacity: 0.14;
+}
 
 /* Hovering restores the faded ones: the card previews remembering. */
 a.card-body:hover .preview-chip,
@@ -2987,6 +3498,7 @@ a.card-body:focus-visible .preview-chip {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .mem-trace .glyph,
     .mem-shown,
     .mem-slot.filled,
@@ -3076,8 +3588,15 @@ a.card-body:focus-visible .preview-chip {
    difference between "something needs attention" and "something is wrong with
    your monitor". */
 @keyframes bh-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
 }
 
 .bh-title {
@@ -3100,7 +3619,9 @@ a.card-body:focus-visible .preview-chip {
     flex-wrap: wrap;
 }
 
-.bh-brief-stats div { text-align: center; }
+.bh-brief-stats div {
+    text-align: center;
+}
 
 .bh-brief-stats dt {
     color: var(--muted);
@@ -3148,7 +3669,9 @@ a.card-body:focus-visible .preview-chip {
     line-height: 1.4rem;
 }
 
-.bh-rules { counter-reset: bh-rule; }
+.bh-rules {
+    counter-reset: bh-rule;
+}
 
 /* ---------- incident ---------- */
 
@@ -3205,7 +3728,9 @@ a.card-body:focus-visible .preview-chip {
 
 /* ---------- integrity ---------- */
 
-.bh-integrity { min-width: 8rem; }
+.bh-integrity {
+    min-width: 8rem;
+}
 
 .bh-integrity-track {
     height: 5px;
@@ -3221,8 +3746,13 @@ a.card-body:focus-visible .preview-chip {
     transition: width 500ms ease, background 500ms ease;
 }
 
-.bh-integrity.degraded .bh-integrity-fill { background: #fbbf24; }
-.bh-integrity.critical .bh-integrity-fill { background: #f87171; }
+.bh-integrity.degraded .bh-integrity-fill {
+    background: #fbbf24;
+}
+
+.bh-integrity.critical .bh-integrity-fill {
+    background: #f87171;
+}
 
 .bh-integrity-label {
     display: flex;
@@ -3234,14 +3764,27 @@ a.card-body:focus-visible .preview-chip {
     text-transform: uppercase;
 }
 
-.bh-integrity-word { color: var(--muted); }
-.bh-integrity.degraded .bh-integrity-word { color: #fbbf24; }
-.bh-integrity.critical .bh-integrity-word { color: #f87171; }
-.bh-integrity-value { font-variant-numeric: tabular-nums; }
+.bh-integrity-word {
+    color: var(--muted);
+}
+
+.bh-integrity.degraded .bh-integrity-word {
+    color: #fbbf24;
+}
+
+.bh-integrity.critical .bh-integrity-word {
+    color: #f87171;
+}
+
+.bh-integrity-value {
+    font-variant-numeric: tabular-nums;
+}
 
 /* ---------- the report ---------- */
 
-.bh-report { margin: 1.5rem 0 1.25rem; }
+.bh-report {
+    margin: 1.5rem 0 1.25rem;
+}
 
 .bh-theme {
     margin: 0;
@@ -3349,7 +3892,9 @@ a.card-body:focus-visible .preview-chip {
     border-left-color: var(--accent);
 }
 
-.bh-line.selected code { color: #fff; }
+.bh-line.selected code {
+    color: #fff;
+}
 
 .bh-line-mark {
     flex: none;
@@ -3365,7 +3910,9 @@ a.card-body:focus-visible .preview-chip {
     outline-offset: -2px;
 }
 
-.bh-line.inert .bh-line-label { color: #6b7492; }
+.bh-line.inert .bh-line-label {
+    color: #6b7492;
+}
 
 /* ---------- patches ---------- */
 
@@ -3470,8 +4017,15 @@ a.card-body:focus-visible .preview-chip {
 }
 
 @keyframes bh-rise {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .bh-feedback.resolved {
@@ -3499,11 +4053,21 @@ a.card-body:focus-visible .preview-chip {
     letter-spacing: 0.02em;
 }
 
-.bh-feedback.resolved .bh-feedback-head { color: #4ade80; }
-.bh-feedback.retry .bh-feedback-head { color: #fbbf24; }
-.bh-feedback.failed .bh-feedback-head { color: #f87171; }
+.bh-feedback.resolved .bh-feedback-head {
+    color: #4ade80;
+}
 
-.bh-feedback-mark { font-size: 1.05rem; }
+.bh-feedback.retry .bh-feedback-head {
+    color: #fbbf24;
+}
+
+.bh-feedback.failed .bh-feedback-head {
+    color: #f87171;
+}
+
+.bh-feedback-mark {
+    font-size: 1.05rem;
+}
 
 .bh-feedback-score {
     display: flex;
@@ -3569,7 +4133,9 @@ a.card-body:focus-visible .preview-chip {
     margin: 0 auto;
 }
 
-.bh-results-head { text-align: center; }
+.bh-results-head {
+    text-align: center;
+}
 
 .bh-results-state {
     display: inline-flex;
@@ -3582,8 +4148,13 @@ a.card-body:focus-visible .preview-chip {
     text-transform: uppercase;
 }
 
-.bh-results-state.restored { color: #4ade80; }
-.bh-results-state.degraded { color: #fbbf24; }
+.bh-results-state.restored {
+    color: #4ade80;
+}
+
+.bh-results-state.degraded {
+    color: #fbbf24;
+}
 
 .bh-results-line {
     margin: 0.6rem 0 1.5rem;
@@ -3653,8 +4224,13 @@ a.card-body:focus-visible .preview-chip {
     text-transform: uppercase;
 }
 
-.bh-readout-line.strong .bh-readout-tag { color: #4ade80; }
-.bh-readout-line.weak .bh-readout-tag { color: #fbbf24; }
+.bh-readout-line.strong .bh-readout-tag {
+    color: #4ade80;
+}
+
+.bh-readout-line.weak .bh-readout-tag {
+    color: #fbbf24;
+}
 
 /* ---------- incident log ---------- */
 
@@ -3674,8 +4250,13 @@ a.card-body:focus-visible .preview-chip {
     background: #0f1320;
 }
 
-.bh-log-row.resolved { border-left-color: #4ade80; }
-.bh-log-row.failed { border-left-color: #f87171; }
+.bh-log-row.resolved {
+    border-left-color: #4ade80;
+}
+
+.bh-log-row.failed {
+    border-left-color: #f87171;
+}
 
 .bh-log-head {
     display: flex;
@@ -3713,8 +4294,13 @@ a.card-body:focus-visible .preview-chip {
     font-weight: 700;
 }
 
-.bh-log-status.resolved { color: #4ade80; }
-.bh-log-status.failed { color: #f87171; }
+.bh-log-status.resolved {
+    color: #4ade80;
+}
+
+.bh-log-status.failed {
+    color: #f87171;
+}
 
 .bh-log-points {
     min-width: 3rem;
@@ -3781,6 +4367,7 @@ a.card-body:focus-visible .preview-chip {
 /* Motion is the last thing added and the first thing removed. Every animation
    here is decorative -- the state is always carried by text and a mark too. */
 @media (prefers-reduced-motion: reduce) {
+
     .bh-alert-dot,
     .bh-feedback,
     .bh-restored-mark {
@@ -3820,8 +4407,15 @@ a.card-body:focus-visible .preview-chip {
 /* One expanding ring, not a strobe. It reads as a beacon rather than as an
    error the browser is having, and it stops the moment the incident lands. */
 @keyframes bh-siren {
-    0% { transform: scale(0.7); opacity: 1; }
-    100% { transform: scale(1.35); opacity: 0; }
+    0% {
+        transform: scale(0.7);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.35);
+        opacity: 0;
+    }
 }
 
 .bh-alert-kicker {
@@ -3889,8 +4483,15 @@ a.card-body:focus-visible .preview-chip {
     letter-spacing: 0.12em;
 }
 
-.bh-severity.sev-4 { background: #45200733; color: #fbbf24; }
-.bh-severity.sev-5 { background: #45090933; color: #f87171; }
+.bh-severity.sev-4 {
+    background: #45200733;
+    color: #fbbf24;
+}
+
+.bh-severity.sev-5 {
+    background: #45090933;
+    color: #f87171;
+}
 
 .bh-legend-sub {
     color: var(--muted);
@@ -3910,11 +4511,19 @@ a.card-body:focus-visible .preview-chip {
     color: var(--muted);
 }
 
-.countdown-status.warn { color: #fbbf24; }
-.countdown-status.urgent { color: #f87171; }
+.countdown-status.warn {
+    color: #fbbf24;
+}
+
+.countdown-status.urgent {
+    color: #f87171;
+}
 
 @media (prefers-reduced-motion: reduce) {
-    .bh-alert-ring { animation: none; opacity: 0.9; }
+    .bh-alert-ring {
+        animation: none;
+        opacity: 0.9;
+    }
 }
 
 /* ---------- Bug Hunt: targeting + diagnostic run ---------- */
@@ -3931,7 +4540,9 @@ a.card-body:focus-visible .preview-chip {
     text-transform: uppercase;
 }
 
-.bh-targeted-mark { font-size: 0.9rem; }
+.bh-targeted-mark {
+    font-size: 0.9rem;
+}
 
 .bh-diagnostic {
     margin: 1.25rem 0 0;
@@ -3967,10 +4578,21 @@ a.card-body:focus-visible .preview-chip {
     transition: color 160ms ease;
 }
 
-.bh-check.done { color: #c9cee0; }
-.bh-check.done .bh-check-mark { color: #4ade80; }
-.bh-check.failed { color: #fca5a5; }
-.bh-check.failed .bh-check-mark { color: #f87171; }
+.bh-check.done {
+    color: #c9cee0;
+}
+
+.bh-check.done .bh-check-mark {
+    color: #4ade80;
+}
+
+.bh-check.failed {
+    color: #fca5a5;
+}
+
+.bh-check.failed .bh-check-mark {
+    color: #f87171;
+}
 
 .bh-check-mark {
     width: 1ch;
@@ -3979,7 +4601,9 @@ a.card-body:focus-visible .preview-chip {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bh-check { transition: none; }
+    .bh-check {
+        transition: none;
+    }
 }
 
 /* ---------- Bug Hunt: service panel + integrity legend ---------- */
@@ -4003,15 +4627,28 @@ a.card-body:focus-visible .preview-chip {
     color: #4b5470;
 }
 
-.bh-service-dot { font-size: 0.7rem; }
+.bh-service-dot {
+    font-size: 0.7rem;
+}
 
-.bh-service.restored { color: #86efac; }
-.bh-service.critical { color: var(--accent); font-weight: 700; }
-.bh-service.down { color: #f87171; }
+.bh-service.restored {
+    color: #86efac;
+}
+
+.bh-service.critical {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.bh-service.down {
+    color: #f87171;
+}
 
 /* Services still to come are named but muted -- present enough to show the shape
    of the run, quiet enough not to compete with the one that is on fire. */
-.bh-service.pending .bh-service-name { opacity: 0.55; }
+.bh-service.pending .bh-service-name {
+    opacity: 0.55;
+}
 
 .bh-integrity-costs {
     display: flex;
@@ -4028,8 +4665,34 @@ a.card-body:focus-visible .preview-chip {
     color: #4b5470;
 }
 
-.bh-integrity-costs dt { text-transform: uppercase; }
-.bh-integrity-costs dd { margin: 0; font-variant-numeric: tabular-nums; }
+.bh-integrity-costs dt {
+    text-transform: uppercase;
+}
+
+.bh-integrity-costs dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- depth system ---------- */
+
+:root {
+    --shadow-sm:
+        0 4px 12px rgba(0, 0, 0, 0.22);
+
+    --shadow-md:
+        0 10px 30px rgba(0, 0, 0, 0.32);
+
+    --shadow-lg:
+        0 18px 50px rgba(0, 0, 0, 0.42);
+
+    --surface-glow:
+        0 0 0 1px rgba(255, 255, 255, 0.025),
+        0 10px 30px rgba(0, 0, 0, 0.28);
+
+    --game-glow:
+        0 0 28px color-mix(in srgb, var(--accent) 12%, transparent);
+}
 
 /* ---------- Bug Hunt: debrief sign-off ---------- */
 
@@ -4060,12 +4723,17 @@ a.card-body:focus-visible .preview-chip {
     background: #0d111c;
 }
 
-.bh-systembar .bh-integrity-costs { margin: 0; }
+.bh-systembar .bh-integrity-costs {
+    margin: 0;
+}
 
 @media (max-width: 620px) {
+
     /* The costs are reference material; the failing service is not. On a narrow
        screen the reference goes rather than wrapping the strip to three rows. */
-    .bh-systembar .bh-integrity-costs { display: none; }
+    .bh-systembar .bh-integrity-costs {
+        display: none;
+    }
 }
 
 /* ---------- Bug Hunt: streak + run phase ---------- */
@@ -4090,7 +4758,9 @@ a.card-body:focus-visible .preview-chip {
     transform: scale(1.08);
 }
 
-.bh-streak-n { letter-spacing: -0.02em; }
+.bh-streak-n {
+    letter-spacing: -0.02em;
+}
 
 .bh-phase {
     margin: 0 0 0.2rem;
@@ -4102,5 +4772,97 @@ a.card-body:focus-visible .preview-chip {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bh-streak-badge { transition: none; transform: none; }
+    .bh-streak-badge {
+        transition: none;
+        transform: none;
+    }
+}
+/* ================= Layer 1: foundation polish =================
+   Additive only. Nothing above is replaced; these are the few places the
+   foundation was missing a step that Layers 2-5 would otherwise each have to
+   invent for themselves. */
+
+/* Selection should be Jolt's, not the browser's default blue. Uses the live
+   --accent, so it recolours per game the same way buttons already do. */
+::selection {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    color: var(--text);
+}
+
+/* A third heading level. The sheet jumped from h1 (clamped, ~2.9rem) straight to
+   h2 at 1rem, so anything needing a step between them was reaching for a class.
+   Sized to sit between them rather than to introduce a new voice. */
+h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+/* Tertiary text. --muted is the second level and was carrying both jobs, which
+   is why captions and labels kept reaching for raw hex. */
+.muted-2 {
+    color: var(--muted-2);
+}
+
+.faint {
+    color: var(--faint);
+}
+
+/* Eyebrows are the sheet's most repeated pattern -- uppercase, tracked, small,
+   accent-coloured -- and several sections reimplement it locally because there
+   was no shared piece to reach for beyond .eyebrow, which carries its own
+   margin. This is the type treatment without the spacing opinion. */
+.label-caps {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Code should read the same wherever it appears. The mono stack was already a
+   token; this makes sure anything falling back to a bare <code> or <pre> gets
+   it, at a size that holds up against the body text around it. */
+code,
+pre {
+    font-family: var(--mono);
+    font-size: 0.9em;
+}
+
+pre {
+    margin: 0;
+    overflow-x: auto;
+}
+
+/* Long identifiers in code and long words in prose should wrap rather than
+   force the page sideways. The app container is capped at 820px, so anything
+   wider than that is a horizontal scrollbar on a phone. */
+.app {
+    overflow-wrap: break-word;
+}
+
+/* The focus ring is the one thing that must stay visible against every surface
+   in the system, including the accent-coloured buttons it would otherwise sit
+   on top of. A dark halo under the ring keeps it readable on light accents
+   without changing its colour. */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Buttons carry the elevation ladder rather than sitting flat on the surface
+   they are on. Kept to the lowest step: a button is an active element, not an
+   elevated panel, and the existing hover/active transitions still own the
+   interaction. Layer 3 can take this further. */
+.button {
+    box-shadow: var(--shadow-1);
+}
+
+.button.ghost {
+    box-shadow: none;
+}
+
+.button.primary {
+    box-shadow: var(--lift), var(--shadow-1);
 }
