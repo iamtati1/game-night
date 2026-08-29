@@ -511,6 +511,13 @@ export function BugHuntPage() {
 
     return (
         <IncidentScreen
+            /* Remount per incident. It already happened by accident -- the alert
+               beat's early return unmounts this subtree between hunts, which is
+               the only reason deadlineAt re-derives instead of carrying the
+               previous hunt's expired clock. Saying it explicitly makes that
+               correctness intentional rather than a side effect of a sibling
+               phase, and it is what lets the incident animate in. */
+            key={incident.roundId}
             incident={incident}
             phase={phase}
             feedback={feedback}
@@ -570,12 +577,12 @@ function Briefing({ busy, onStart }: { busy: boolean; onStart: () => void }) {
             </p>
 
             <h1 className="bh-title">Bug Hunt</h1>
-            <p className="bh-tagline">Five incidents detected across production.</p>
+            <p className="bh-tagline">Ten incidents detected across production.</p>
 
             <dl className="bh-brief-stats">
                 <div>
                     <dt>Incidents</dt>
-                    <dd>5</dd>
+                    <dd>10</dd>
                 </div>
                 <div>
                     <dt>System integrity</dt>
@@ -703,12 +710,12 @@ function IncidentScreen({
                     {streak > 0 && (
                         <p className={`bh-streak-badge${streak >= 3 ? " hot" : ""}`}>
                             <span aria-hidden="true">🔥</span>
-                            <span className="bh-streak-n">{streak}</span>
+                            <span className="bh-streak-n" key={streak}>{streak}</span>
                         </p>
                     )}
 
                     <p className="bh-score">
-                        <span className="bh-score-value">{score}</span>
+                        <span className="bh-score-value" key={score}>{score}</span>
                     </p>
                     <button
                         className="button ghost small"

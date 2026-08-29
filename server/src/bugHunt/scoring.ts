@@ -365,7 +365,7 @@ export const INTEGRITY_HINT_COST = 1;
  * Derived, never stored: a column would drift from the rounds it claims to
  * summarise and then neither could be trusted. It is a reading of how the run
  * has actually gone, which is why a flawless player arrives at the boss on 100%
- * and finishes on 100%. The escalation at incident five comes from the framing,
+ * and finishes on 100%. The escalation at the final incident comes from the framing,
  * not from quietly draining a meter to manufacture tension.
  */
 export function systemIntegrity(rounds: ScoredRound[]): number {
@@ -390,7 +390,7 @@ const XP_PER_RESOLVED_INCIDENT = perUnitXp(BUG_HUNT_INCIDENTS_PER_SESSION);
  *
  * Hints cost score, never XP. XP is the one number compared across games, and
  * bolting a Bug-Hunt-only penalty onto it would make this game a worse way to
- * earn the same skill -- so five resolved incidents is 125, exactly as a perfect
+ * earn the same skill -- so ten resolved incidents is 125, exactly as a perfect
  * run of every other game is.
  */
 export function xpForSession(rounds: ScoredRound[]): number {

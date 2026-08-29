@@ -56,6 +56,10 @@ export interface GameEntry {
     motif: GameMotif;
 }
 
+/* Order is the landing page's spatial composition, not an accident of when each
+   game was built: two rows of two, then Memory alone at the foot of the space.
+   Nothing reads this array for anything but display order -- history and results
+   look games up by slug -- so this is presentation, not data. */
 export const GAMES: GameEntry[] = [
     {
         slug: CODE_BLITZ,
@@ -72,6 +76,7 @@ export const GAMES: GameEntry[] = [
         motif: "blitz"
     },
     {
+
         slug: FLUSH,
         name: "Flush",
         hook: "Predict what prints, in order. One wrong call ends the round.",
@@ -86,6 +91,24 @@ export const GAMES: GameEntry[] = [
         motif: "flush"
     },
     {
+
+        slug: BUG_HUNT,
+        name: "Bug Hunt",
+        hook: "Something is broken. Find it before the system does.",
+        category: "Debugging",
+        // Alert amber: the only game framed as a thing going wrong, and the one
+        // colour on the platform that already means "look here".
+        accent: "#f97316",
+        status: "live",
+        path: "/bug-hunt",
+        shape: "10 hunts · easy start, hard finish",
+        intensity: 3,
+        instinct: "Reading code under pressure",
+        unit: "Incident",
+        motif: "bughunt"
+    },
+    {
+
         slug: REACTION,
         name: "Reaction",
         hook: "Wait for the signal. Beat your own reflexes.",
@@ -102,6 +125,7 @@ export const GAMES: GameEntry[] = [
         motif: "reaction"
     },
     {
+
         slug: MEMORY,
         name: "Memory",
         hook: "Watch the sequence. Hold it. Play it back.",
@@ -116,22 +140,6 @@ export const GAMES: GameEntry[] = [
         instinct: "Working memory and recall",
         unit: "Round",
         motif: "memory"
-    },
-    {
-        slug: BUG_HUNT,
-        name: "Bug Hunt",
-        hook: "Something is broken. Find it before the system does.",
-        category: "Debugging",
-        // Alert amber: the only game framed as a thing going wrong, and the one
-        // colour on the platform that already means "look here".
-        accent: "#f97316",
-        status: "live",
-        path: "/bug-hunt",
-        shape: "5 incidents · 45s+ each",
-        intensity: 3,
-        instinct: "Reading code under pressure",
-        unit: "Incident",
-        motif: "bughunt"
     }
 ];
 

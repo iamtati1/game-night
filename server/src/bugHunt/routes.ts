@@ -85,7 +85,7 @@ async function serveIncident(round: db.BugHuntRoundRow, now = new Date()) {
         roundId: round.id,
         incidentNumber: round.display_order,
         totalIncidents: BUG_HUNT_INCIDENTS_PER_SESSION,
-        /** Incident five is the boss. Positional, so it is known before it is played. */
+        /** Incident ten is the boss. Positional, so it is known before it is played. */
         isBoss: round.display_order === BOSS_DISPLAY_ORDER,
         title: incident.title,
         theme: incident.theme,
@@ -270,7 +270,7 @@ bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response)
         }
     }
 
-    // A run needs five distinct incidents. Refusing up front beats dealing a
+    // A run needs ten distinct incidents. Refusing up front beats dealing a
     // three-incident session that silently scores out of a different total.
     const eligible = await db.countEligibleIncidents();
 

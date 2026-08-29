@@ -9,11 +9,46 @@ import type { GameEntry } from "../games/catalog.js";
  * different pictures, because they are two different games -- a shared card
  * shape with a swapped accent would say the opposite.
  */
+/**
+ * The one shared piece of every preview.
+ *
+ * Every Jolt game puts a label, a clock and a score along the top of its
+ * gameplay screen, so a card that shows the same strip reads as a screenshot of
+ * a game rather than as an abstract graphic. It is three empty spans -- the
+ * point is the silhouette, not the data -- which is what keeps this a thumbnail
+ * instead of a second copy of each game's HUD.
+ *
+ * `fill` is how far the meter has run, so a card can suggest "early in a round"
+ * or "nearly out of time" without any of them animating.
+ */
+function PreviewHud({ fill = 62 }: { fill?: number }) {
+    return (
+        <span className="pv-hud">
+            <i className="pv-hud-label" />
+            <i className="pv-hud-meter">
+                <i style={{ width: `${fill}%` }} />
+            </i>
+            <i className="pv-hud-score" />
+        </span>
+    );
+}
+
+/**
+ * A miniature of the real thing.
+ *
+ * Each of these is the smallest arrangement that still reads as its game: the
+ * answer stack with one row hit, the console with one line already printed, the
+ * signal alone in the middle, the sequence half faded, the listing with one line
+ * flagged. Deliberately NOT a scaled copy of the gameplay markup -- these share
+ * the HUD strip above and nothing else, so a change to a game's screen cannot
+ * silently break its card.
+ */
 function Preview({ motif }: { motif: GameEntry["motif"] }) {
     if (motif === "blitz") {
+        // Reading fast against a clock: a stack of answers, one of them taken.
         return (
             <div className="preview preview-blitz" aria-hidden="true">
-                <span className="preview-bar" />
+                <PreviewHud fill={38} />
                 <span className="preview-row" />
                 <span className="preview-row is-hit" />
                 <span className="preview-row" />
@@ -22,8 +57,10 @@ function Preview({ motif }: { motif: GameEntry["motif"] }) {
     }
 
     if (motif === "flush") {
+        // Output landing in order, with tiles still waiting underneath.
         return (
             <div className="preview preview-flush" aria-hidden="true">
+                <PreviewHud fill={70} />
                 <span className="preview-line is-printed" />
                 <span className="preview-line" />
                 <span className="preview-line" />
@@ -37,15 +74,23 @@ function Preview({ motif }: { motif: GameEntry["motif"] }) {
     }
 
     if (motif === "reaction") {
+        // Nothing but the signal. The empty space IS the game.
         return (
             <div className="preview preview-reaction" aria-hidden="true">
-                <span className="preview-ring" />
-                <span className="preview-dot" />
+                <PreviewHud fill={88} />
+                <span className="preview-stage">
+                    <span className="preview-ring" />
+                    <span className="preview-dot" />
+                </span>
             </div>
         );
     }
 
     if (motif === "memory") {
+        // Untouched, deliberately. Adding the shared strip shrank the sequence
+        // and stranded it at the bottom of the card -- it made the benchmark
+        // worse. The sequence filling the whole preview IS the read here, and
+        // this one was already doing its job.
         return (
             <div className="preview preview-memory" aria-hidden="true">
                 <span className="preview-chip" />
@@ -57,12 +102,15 @@ function Preview({ motif }: { motif: GameEntry["motif"] }) {
     }
 
     if (motif === "bughunt") {
+        // Was four identical bars and read as a barcode. Line numbers in the
+        // gutter are what make a stack of rectangles read as code, and one
+        // flagged row is what makes it read as code with something wrong in it.
         return (
             <div className="preview preview-bughunt" aria-hidden="true">
-                <span className="preview-bugline" />
-                <span className="preview-bugline is-flagged" />
-                <span className="preview-bugline" />
-                <span className="preview-bugline" />
+                <PreviewHud fill={46} />
+                <span className="preview-codeline" />
+                <span className="preview-codeline is-flagged" />
+                <span className="preview-codeline is-short" />
             </div>
         );
     }

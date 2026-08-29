@@ -262,7 +262,9 @@ describe("the briefing", () => {
 
         await waitFor(() => expect(screen.queryByText(/system alert/i)).not.toBeNull());
 
-        expect(screen.queryByText(/five incidents detected/i)).not.toBeNull();
+        // The briefing said "five" long after the run became ten hunts. Pinned to
+        // ten so the copy and the deal cannot drift apart again unnoticed.
+        expect(screen.queryByText(/ten incidents detected/i)).not.toBeNull();
         expect(screen.queryByRole("button", { name: /start hunt/i })).not.toBeNull();
     });
 

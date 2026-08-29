@@ -11,6 +11,7 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { GameIntro } from "../components/GameIntro.js";
 import { PausedRun } from "../components/PausedRun.js";
 import { ResumeCountdown } from "../components/ResumeCountdown.js";
 import { FLUSH, gameBySlug } from "../games/catalog.js";
@@ -55,6 +56,9 @@ export function FlushPage() {
     const navigate = useNavigate();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [round, setRound] = useState<FlushRound | null>(null);
+    /** False until the player chooses to begin -- see the note in GamePage. */
+    const [entered, setEntered] = useState(false);
+    const [beginning, setBeginning] = useState(false);
     const [score, setScore] = useState(0);
     const [reveal, setReveal] = useState<Reveal | null>(null);
     const [lastWrong, setLastWrong] = useState<string | null>(null);
@@ -151,6 +155,36 @@ export function FlushPage() {
         }
     }
 
+    /** Starts the run. Only the entrance's button calls this. */
+    async function begin() {
+        setBeginning(true);
+
+        try {
+            const data = await api.post<FlushStartResponse>("/api/flush/sessions");
+
+            if (data.session) {
+                navigate(`/flush/results/${data.session.id}`, { replace: true });
+                return;
+            }
+
+            setSessionId(data.sessionId ?? null);
+            setRound(data.round ?? null);
+            setScore(data.scoreSoFar ?? 0);
+            setEntered(true);
+        } catch (err) {
+            const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+            if (conflicting) {
+                setConflict(conflicting);
+                return;
+            }
+
+            setError(err instanceof ApiError ? err.detailText : "Could not start a game");
+        } finally {
+            setBeginning(false);
+        }
+    }
+
     useEffect(() => {
         let active = true;
 
@@ -182,32 +216,26 @@ export function FlushPage() {
 
             if (!active) return;
 
-            await api
-                .post<FlushStartResponse>("/api/flush/sessions")
-                .then((data) => {
-                    if (!active) return;
-                    if (data.session) {
-                        navigate(`/flush/results/${data.session.id}`, { replace: true });
-                        return;
-                    }
-                    setSessionId(data.sessionId ?? null);
-                    setRound(data.round ?? null);
-                    setScore(data.scoreSoFar ?? 0);
-                })
-                .catch((err) => {
-                    if (!active) return;
+            // Already mid-run? GET /flush/sessions/current answers that without
+            // creating anything -- it 404s when nothing is in progress. Refreshing
+            // mid-run returns the player to their round; arriving fresh shows the
+            // entrance.
+            try {
+                const current = await api.get<FlushCurrentResponse>(
+                    "/api/flush/sessions/current"
+                );
 
-                    // 409 is not a failure: another game holds the single active
-                    // session slot, and the player gets to choose what happens.
-                    const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
+                if (!active) return;
 
-                    if (conflicting) {
-                        setConflict(conflicting);
-                        return;
-                    }
+                if (current.round) {
+                    setRound(current.round);
+                    setScore(current.scoreSoFar ?? 0);
+                    setEntered(true);
+                }
+            } catch {
+                // 404 -- no run in progress, which is the normal first arrival.
+            }
 
-                    setError(err instanceof ApiError ? err.detailText : "Could not start Flush");
-                });
         })();
 
         return () => {
@@ -402,6 +430,29 @@ export function FlushPage() {
         );
     }
 
+    /* The entrance, after the paused/conflict/error gates for the same reason as
+       Code Blitz: those explain why you cannot play, this only covers not having
+       started. */
+    if (!entered) {
+        return (
+            <GameIntro
+                eyebrow="Flush"
+                title="Predict the order."
+                lede={
+                    <>
+                        The code runs. Place each line of output in the order it prints.
+                        <br />
+                        One wrong call ends the round.
+                    </>
+                }
+                shape="5 rounds · 20s + 10s per output"
+                busy={beginning}
+                onStart={() => void begin()}
+                startLabel="Start flush"
+            />
+        );
+    }
+
     if (!round) {
         return <p className="muted center">Queueing up…</p>;
     }
@@ -457,6 +508,10 @@ export function FlushPage() {
                     produces on the other. Two panels side by side say "this
                     produces that" without a sentence of instruction, and it is
                     deliberately not Code Blitz's single centred column. */}
+                {/* Layer 5: the stage. The board, the stakes line and the rack
+                    are one place where the game happens, rather than three
+                    stacked blocks floating on the page. */}
+                <div className="flush-stage">
                 <div className="board">
                     <div className="board-panel">
                         <span className="board-label">Code</span>
@@ -531,6 +586,8 @@ export function FlushPage() {
                         ))}
                     </ul>
                 )}
+
+                </div>
 
             {reveal && (
                 <div className="reveal" role="status">

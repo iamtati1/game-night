@@ -78,7 +78,7 @@ const INCIDENT_COLUMNS = `id, slug, title, bug_report, error_log, theme, bug_cat
  *
  * The single-correct rule is already a unique index, but "exactly one" also
  * needs the zero case excluded: an incident whose correct option was retired
- * would be unwinnable, and dealing it would waste one of a player's five rounds
+ * would be unwinnable, and dealing it would waste one of a player's ten rounds
  * on something with no right answer. Same spirit as Flush's eligible-snippet
  * predicate.
  */
@@ -121,7 +121,7 @@ export async function findBugHuntSessionForUser(
 }
 
 /**
- * Creates a Bug Hunt session and deals all five incidents atomically.
+ * Creates a Bug Hunt session and deals all ten incidents atomically.
  *
  * Dealt up front rather than one at a time, so a session is a complete, fixed
  * object the moment it exists -- the property every other game has, and what
@@ -570,8 +570,8 @@ export interface BugHuntResultRow extends BugHuntRoundRow {
  *
  * LEFT JOIN LATERAL for the correct option rather than a second round-trip per
  * round: the mission report shows what the bug actually was for every incident,
- * including the ones that were failed, and five sequential lookups to build one
- * screen is five chances for it to be slow.
+ * including the ones that were failed, and ten sequential lookups to build one
+ * screen is ten chances for it to be slow.
  *
  * Safe to expose only because every round here has ended -- the caller is the
  * results endpoint. Nothing in this shape may be sent for a round still in play.

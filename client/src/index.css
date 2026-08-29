@@ -58,6 +58,32 @@
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
     --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.22);
     --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.28);
+    /* Contact, not elevation. The ladder above casts light-grey shadows meant
+       for a light surface; on the floor (about rgb(10,11,15)) a 25%-black
+       2px shadow moves the pixels underneath by two units and vanishes. These
+       are dark and tight on purpose: the near part is the occlusion where an
+       object meets a surface, the far part is the soft pool it casts. Together
+       they are what makes a station read as SET DOWN on the floor rather than
+       drawn on it. --contact-raised is the same shadow after the object has
+       lifted: looser, weaker, because contact is what you lose by rising. */
+    --contact: 0 2px 3px rgba(0, 0, 0, 0.5), 0 8px 18px -8px rgba(0, 0, 0, 0.6);
+    --contact-raised: 0 4px 6px rgba(0, 0, 0, 0.38);
+
+    /* ---------- Layer 3: the interaction vocabulary ----------
+
+       Three new tokens, because the alternative is repeating the same three
+       magic numbers across six controls and having them drift apart. Jolt's
+       controls should agree on how far a press travels and how fast a surface
+       responds, or the platform feels assembled from different products.
+
+       The timing is arcade timing, not website timing: hover resolves before
+       you finish moving onto the control, and the press has no transition at
+       all -- a button that eases into being pressed feels laggy, because the
+       finger is already down. */
+    --press-y: 1px;
+    --t-hover: 140ms;
+    --t-surface: 190ms;
+    --ease-control: cubic-bezier(0.2, 0, 0, 1);
 
     /* Text tones. --text and --muted covered two levels; the sheet had quietly
        grown four, spelled as raw hex in a dozen places. Naming the other two
@@ -76,7 +102,8 @@
 
 body {
     margin: 0;
-    background: radial-gradient(1100px 500px at 50% -10%, #1b1533 0%, var(--bg) 60%);
+    /* No background here on purpose. The environment belongs to the root element
+       -- see the html rule below for why putting it on body breaks continuity. */
     color: var(--text);
     /* 100vh is the height of the viewport with mobile browser chrome HIDDEN, so
        on a phone the ambient gradient below gets cut off by the address bar and
@@ -103,11 +130,44 @@ body {
    break `position: sticky` for anything that later wants it. */
 html {
     overflow-x: clip;
+
+    /* ---------- the continuous environment ----------
+
+       This is one background for the whole document, and the COLOUR is the half
+       that makes it continuous.
+
+       It used to live on body as a lone gradient image with no background
+       colour. Two things followed from that. Body's background propagates to the
+       canvas, but a propagated image is sized to the ROOT element's box rather
+       than to the scrollable document -- and background-repeat defaults to
+       `repeat`. So anything that scrolled past the root box tiled the image and
+       replayed the halo from the top of the page as a seam near the bottom. That
+       is the "different black underneath": not a second background, the same one
+       starting over.
+
+       A background-colour has no edge to reach and nothing to tile, so it covers
+       the canvas at any scroll position. The halo is layered on top of it as an
+       image, fading to `transparent` rather than to --bg so the colour below
+       shows through as the single source of the black. */
+    background-color: var(--bg);
+    background-image: radial-gradient(1100px 500px at 50% -10%,
+            #1b1533 0%,
+            transparent 60%);
+    background-repeat: no-repeat;
 }
 
 body {
     position: relative;
-    overflow-x: hidden;
+    /* `overflow-x: hidden` was here and it made scrolling feel stiff.
+       Per spec, setting one axis to anything but `visible` forces the other to
+       compute as `auto` -- so body became a scroll container nested inside the
+       document scroller, and the wheel had to fill body's scroll range before
+       chaining to html. That handoff is what read as jumpy.
+
+       It is also redundant: html { overflow-x: clip } above already prevents the
+       glows from producing a horizontal scrollbar, and `clip` deliberately does
+       NOT create a scroll container. Verified: body is no longer a scroller and
+       no horizontal scrollbar returns. */
 }
 
 /* Ambient light sources.
@@ -215,6 +275,20 @@ body::after {
     box-shadow:
         inset 3px 0 0 var(--accent),
         0 0 20px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+/* Layer 3: targeting a line should feel like pressing it. The rail thickens and
+   the row seats for the duration of the click -- the only feedback this control
+   had was the hover wash, so a click and a hover were indistinguishable.
+   Deliberately no transform: the code listing is being read, and shifting a
+   line of code sideways under the cursor makes it harder to read, not easier. */
+.bh-line.selectable:active .bh-line-label {
+    background:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--accent) 18%, transparent),
+            transparent 75%);
+    box-shadow: inset 4px 0 0 var(--accent);
+    transition: none;
 }
 
 /* ---------- station framing ---------- */
@@ -332,12 +406,28 @@ body::after {
 
 /* ---------- header ---------- */
 
+/* Layer 2: the header is the way into Jolt, so it gets a floor rather than
+   ending in nothing. A fading hairline, not a bar -- a solid rule across the top
+   of a dark page reads as a document header, which is the opposite of the goal. */
 .site-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     padding: 1.25rem 0 1.75rem;
+}
+
+.site-header::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+            transparent,
+            color-mix(in srgb, var(--border) 90%, var(--jolt)) 22%,
+            color-mix(in srgb, var(--border) 90%, var(--jolt)) 78%,
+            transparent);
 }
 
 /* Both the brand and the buttons were breaking into two lines around 790px.
@@ -347,6 +437,27 @@ body::after {
 .site-header nav a,
 .site-header .button {
     white-space: nowrap;
+}
+
+/* Layer 3: navigation gets a state, not a costume. These are links into the
+   platform, not arcade controls -- the tactile language belongs around gameplay.
+   So: a colour lift on hover, the global focus ring untouched, and a press that
+   acknowledges the click without moving the header around. */
+.site-header nav a {
+    text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    text-underline-offset: 3px;
+    transition: color var(--t-hover) var(--ease-control),
+        text-decoration-color var(--t-hover) var(--ease-control);
+}
+
+.site-header nav a:hover {
+    color: color-mix(in srgb, var(--accent) 80%, #fff);
+    text-decoration-color: currentColor;
+}
+
+.site-header nav a:active {
+    opacity: 0.75;
+    transition: none;
 }
 
 /* Inline rather than a banner: logout failing is a small, recoverable problem,
@@ -482,8 +593,17 @@ a {
     background: #262c3c;
 }
 
+/* Layer 3: every button gets the pressed state, not just .primary.
+   The primary button gained a real seated-and-dimmed press in Layer 2 and the
+   others kept a bare 1px nudge, which made the same gesture feel like two
+   different controls depending on which one you hit. */
 .button:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: translateY(var(--press-y));
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.button.ghost:active:not(:disabled) {
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.22);
 }
 
 .button.primary {
@@ -495,6 +615,18 @@ a {
     /* brightness, not a hardcoded violet: this button is recoloured by --accent in
        Flush and on the auth pages, and a fixed hex undid the swap on hover. */
     filter: brightness(1.1);
+    /* Layer 2: the accent halo appears on hover and only on hover. A button that
+       glows at rest stops meaning "press me" and starts meaning "decoration". */
+    box-shadow: var(--lift), var(--shadow-2),
+        0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Pressed should feel like the control went down and the light went with it.
+   The shared .button:active already moves it 1px; this removes the lift so the
+   surface reads as seated rather than floating one pixel lower. */
+.button.primary:active:not(:disabled) {
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+    filter: brightness(0.97);
 }
 
 .button.ghost {
@@ -803,14 +935,44 @@ input:focus:not(:focus-visible) {
     font-size: 0.98rem;
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    /* Layer 3: transform and shadow join the transition. This control had only
+       border and background, so answering a question felt like ticking a form
+       row rather than pressing anything. It is the most-clicked surface in
+       Jolt and it was the least tactile. */
+    transition:
+        border-color var(--t-hover) var(--ease-control),
+        background var(--t-hover) var(--ease-control),
+        transform var(--t-hover) var(--ease-control),
+        box-shadow var(--t-hover) var(--ease-control);
 }
 
 .option:hover:not(:disabled) {
     border-color: var(--accent);
     background: var(--surface-2);
+    /* One pixel, not four. An answer list is a column of adjacent controls, and
+       a big lift on one of five rows shoves the others around. */
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-1);
 }
 
+/* Pressed: seated, with the light gone out from under it. No transition on the
+   way down -- see the note on --t-hover. */
+.option:active:not(:disabled) {
+    transform: translateY(var(--press-y));
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28);
+    transition: none;
+}
+
+/* Every hover and press rule above is :not(:disabled), which is what keeps the
+   interaction layer off the gameplay states. Once an answer is submitted the
+   options are disabled, so .chosen-correct, .chosen-incorrect and .revealed own
+   the surface uncontested -- exactly as they did before Layer 3. */
+/* Left without a transform reset on purpose. The hover and active rules above
+   are already :not(:disabled), so a disabled option cannot pick either up, and
+   adding `transform: none` here would put a normal declaration in the way of
+   the reveal-in and option-pop animations that the gameplay states run. It only
+   loses that race today because of source order, which is not a thing to rely
+   on. */
 .option:disabled {
     cursor: default;
 }
@@ -1294,8 +1456,28 @@ input:focus:not(:focus-visible) {
 /* The stage carries the whole question so it can move as one object. Only
    opacity and transform animate -- anything affecting box size would reflow the
    answer buttons under the player's cursor mid-click. */
+/* Layer 5: the stage.
+   .play-stage already wrapped the question and the answers -- it just carried an
+   animation and no surface, so the challenge floated on the page. Memory and
+   Reaction both put the challenge inside a bounded, slightly raised area, and
+   that is most of why they read as games rather than pages. Same treatment here,
+   no DOM change. */
 .play-stage {
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 70%, transparent),
+            color-mix(in srgb, var(--bg) 90%, var(--surface)));
+    box-shadow: var(--lift), var(--shadow-2);
     animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The dead space between the timer and the question was ~140px of nothing --
+   the stage now starts where the eye expects it to. */
+.play-stage {
+    margin-top: 1.1rem;
 }
 
 .play-stage.leaving {
@@ -1582,9 +1764,14 @@ input:focus:not(:focus-visible) {
    that output. Code Blitz is a centred column of answers to read; this is a
    workspace to manipulate, which is the difference the two games need. */
 
+/* Measured: a typical Flush snippet needs ~476px and an even split at the 820px
+   page width gave the code 335px, so the panel fell back to its horizontal
+   scroll and the player had to drag sideways to read code they were being timed
+   on. The code gets the larger share -- the output console holds short lines and
+   needs less room than the code does. Paired with the wider page below. */
 .board {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.35fr 0.65fr;
     gap: 0.85rem;
     margin-bottom: 0.85rem;
 }
@@ -1860,7 +2047,83 @@ input:focus:not(:focus-visible) {
 }
 
 .landing {
+    position: relative;
     width: 100%;
+
+    /* ---------- room for the room ----------
+
+       Measured before changing anything: at 1440 the floor ran from y=352 to
+       y=1399 of a 1430px document -- 36px of space above it and 31px below.
+       The environment was not too subtle, it had nowhere to exist. No amount of
+       ambient treatment can read in 31px, which is why the pool of light below
+       was invisible: it was lying underneath the floor with nothing either side.
+
+       This opens the band. It is deliberately larger below than above, the way
+       more ground is visible in front of a thing than behind it. */
+    padding-bottom: 4rem;
+}
+
+/* ---------- the room the floor stands in ----------
+
+   The page already had atmosphere -- a gradient off the top and two corner
+   glows -- but every bit of it is position: fixed, so it is anchored to the
+   VIEWPORT while the floor is anchored to the DOCUMENT. Scroll and they slide
+   past each other. That is why the floor read as pasted onto a background
+   rather than as standing in a space: they were two unrelated planes.
+
+   This is the same idea, anchored to the page instead. A single wide pool of
+   light centred on the game floor, so the floor sits in something. It scrolls
+   with the floor, which is the entire point.
+
+   No border, no motion, no second effect. It should be felt rather than
+   noticed -- at these alphas you should only be able to prove it is there by
+   turning it off. */
+.landing::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 18%;
+    left: 50%;
+    /* Wider and taller than the floor on purpose. The floor's own surface is
+       lighter than the page, so a pool the same size as the floor is hidden
+       underneath it -- the only part that reads is the bleed around the edges,
+       and that needs room to happen.
+
+       First pass at 7%/4% with a 40px blur was invisible: screenshots with and
+       without it were indistinguishable. These values are the point where it
+       registers as light in the room without becoming a visible shape. */
+    width: 155%;
+    /* Anchored top and bottom rather than given a height. At `height: 92%` the
+       pool started at 18% and ended at 110% of the floor -- it hung 100px below
+       the layout, and because an absolutely-positioned box still contributes to
+       scrollable overflow, those 100px became real scroll into a region past the
+       end of the page. Ending it at the floor's own bottom edge removes the
+       phantom scroll without shrinking anything you can see: the gradient is
+       already fully transparent by 74%, so the part removed was empty.
+
+       The 26px blur still bleeds past this box. Blur is ink overflow, which does
+       not add scroll, so the glow keeps its soft edge. */
+    bottom: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+    /* Reshaped so the light actually reaches the ground.
+       At `48% at 50% 46%` the ellipse's transparent stop landed at normalised
+       distance 1.01 from the floor's bottom edge -- measured, not guessed -- so
+       the pool contributed exactly zero light to the band opened around the
+       floor. All of it was trapped under the floor's own surface.
+       Taller (68%) and centred slightly lower (52%) puts the fade across the
+       floor's edges instead of inside it: light now spills into the ground
+       below, past the sides, and just above the floor's top edge.
+       Peak alphas come DOWN as the lit area goes up -- 15/9 over a small ellipse
+       became 12/8 over a large one -- so the room gets bigger without getting
+       brighter. The black stays dominant; the centre is still hidden under the
+       floor and only the perimeter reads. */
+    background:
+        radial-gradient(ellipse 58% 68% at 50% 52%,
+            color-mix(in srgb, var(--jolt) 12%, transparent) 0%,
+            color-mix(in srgb, var(--accent) 8%, transparent) 42%,
+            transparent 80%);
+    filter: blur(26px);
 }
 
 .jolt-logo {
@@ -1870,11 +2133,20 @@ input:focus:not(:focus-visible) {
     color: var(--jolt);
 }
 
+/* Layer 2: the wordmark reads as a platform brand rather than nav text.
+   Deliberately not bigger -- the change is density. Heavier weight and slightly
+   tighter tracking make it feel set rather than typed, and the mark beside it
+   carries a trace of --jolt so the brand has a light source of its own. */
 .jolt-word {
     color: var(--text);
     font-size: 1.15rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
+    font-weight: 850;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.jolt-logo svg {
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--jolt) 45%, transparent));
 }
 
 /* ---------- hero ---------- */
@@ -1926,6 +2198,12 @@ input:focus:not(:focus-visible) {
     display: flex;
 }
 
+/* Layer 2: the card reads as a machine you could walk up to.
+   Three ingredients, and no more: a lit top edge in the game's colour, an
+   interior that darkens toward the base so the surface has a direction, and the
+   lowest rung of the elevation ladder so it sits ON the background rather than
+   in it. Everything stronger is held back for hover -- a grid of five cards all
+   glowing at rest is a menu with no focus. */
 .card-body {
     position: relative;
     display: flex;
@@ -1935,10 +2213,15 @@ input:focus:not(:focus-visible) {
     padding: 1.15rem;
     border: 1px solid var(--border);
     border-radius: 16px;
-    background: var(--surface);
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 96%, var(--card-accent)) 0%,
+            var(--surface) 38%,
+            color-mix(in srgb, var(--surface) 92%, var(--bg)) 100%);
     color: inherit;
     text-decoration: none;
     overflow: hidden;
+    box-shadow: var(--lift), var(--contact);
     transition: transform 180ms ease-out, border-color 180ms, box-shadow 180ms;
 }
 
@@ -1950,18 +2233,62 @@ input:focus:not(:focus-visible) {
     inset: 0 0 auto;
     height: 3px;
     background: var(--card-accent, var(--jolt));
+    /* Layer 2: the edge bleeds a little light into the card below it, so it
+       reads as illuminated rather than as a painted stripe. Kept to a few
+       pixels -- this is the recurring Jolt border language, and it only works
+       if it stays subtle enough to use on every surface that matters. */
+    box-shadow: 0 0 12px 0 color-mix(in srgb, var(--card-accent, var(--jolt)) 55%, transparent);
 }
 
 a.card-body:hover,
 a.card-body:focus-visible {
     transform: translateY(-4px);
     border-color: var(--card-accent);
-    box-shadow: 0 16px 34px #00000055;
+    /* Layer 2: elevation plus a thin ring of the game's own colour. The ring is
+       what turns "a card lifted" into "this machine is selected". */
+    box-shadow:
+        var(--lift),
+        var(--contact-raised),
+        var(--shadow-3),
+        0 0 0 1px color-mix(in srgb, var(--card-accent) 55%, transparent),
+        0 0 28px -6px color-mix(in srgb, var(--card-accent) 40%, transparent);
 }
 
 a.card-body:focus-visible {
     outline: 2px solid var(--card-accent);
     outline-offset: 3px;
+}
+
+/* Layer 3: selecting a machine, not clicking a link.
+   The card compresses out of its hover lift rather than from rest, so the
+   gesture reads as pushing something that was already raised toward you. */
+a.card-body:active {
+    transform: translateY(-1px) scale(0.995);
+    box-shadow:
+        var(--shadow-1),
+        0 0 0 1px color-mix(in srgb, var(--card-accent) 45%, transparent);
+    transition: none;
+}
+
+/* The screen wakes when the machine does. Brightness and border only -- the
+   content inside the preview stays still, because animating it is Layer 4. */
+.preview {
+    transition:
+        filter var(--t-surface) var(--ease-control),
+        border-color var(--t-surface) var(--ease-control);
+}
+
+a.card-body:hover .preview,
+a.card-body:focus-visible .preview {
+    filter: brightness(1.12);
+    border-color: color-mix(in srgb, var(--card-accent, var(--jolt)) 35%, var(--border));
+}
+
+/* The Play affordance is the thing the card is asking you to do, so it gets
+   brighter rather than staying at the same weight as the metadata beside it. */
+a.card-body:hover .card-play,
+a.card-body:focus-visible .card-play {
+    filter: brightness(1.15);
 }
 
 .card-top {
@@ -2018,8 +2345,10 @@ a.card-body:focus-visible {
     padding-top: 0.75rem;
 }
 
+/* Layer 2: the run's shape is supporting information and was competing with
+   the Play affordance beside it. Dropped a tone so the accent wins the corner. */
 .card-shape {
-    color: var(--muted);
+    color: var(--muted-2);
     font-size: 0.78rem;
     font-variant-numeric: tabular-nums;
 }
@@ -2050,14 +2379,27 @@ a.card-body:hover .card-play svg {
 
 /* ---------- previews ---------- */
 
+/* Layer 2: the preview is the machine's screen, so it is recessed into the
+   card rather than laid on top of it. Inset shadow does the recessing; the
+   hairline of the game's accent at the top is the screen catching the same
+   light as the card's top edge. No new DOM, no illustration -- the existing
+   bars and lines inside are the picture. */
 .preview {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
     height: 92px;
     padding: 0.6rem;
     border-radius: 10px;
-    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--card-accent, var(--jolt)) 12%, var(--border));
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--bg) 92%, var(--card-accent, var(--jolt))) 0%,
+            var(--bg) 55%);
+    box-shadow:
+        inset 0 2px 10px rgba(0, 0, 0, 0.45),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.015);
 }
 
 .preview-bar {
@@ -2156,6 +2498,7 @@ a.card-body:hover .card-play svg {
 .hero-brand {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.12em;
     margin: 0 0 0.35rem;
     font-size: clamp(3.6rem, 11vw, 7rem);
@@ -2463,8 +2806,21 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 /* ---------- masthead: name, four words, then the games ---------- */
 
+/* ---------- the entrance ----------
+
+   Centred, and that is the whole treatment.
+
+   The floor below is a centred 1120px surface; the masthead was left-aligned
+   against it. Two different axes on one page is what made this read as "site
+   header, then a grid" -- the heading belonged to the page, not to the room.
+   Sharing the floor's axis is what turns it into a sign hung over the entrance:
+   you read the name, then walk straight down into the space it names.
+
+   No new element, no rule, no accent. The alignment IS the idea, and anything
+   added on top of it would be decoration standing in for structure. */
 .masthead {
     padding: 1.5rem 0 2rem;
+    text-align: center;
 }
 
 .masthead-tagline {
@@ -2479,8 +2835,12 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .masthead-note {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.55rem;
-    margin: 1.1rem 0 0;
+    /* Pushed down from 1.1rem so the run count reads as the readout UNDER the
+       sign rather than a third line of it. The name and the four words are one
+       object; this is supporting information about the room. */
+    margin: 1.5rem 0 0;
     color: var(--muted);
     font-size: 0.88rem;
 }
@@ -2497,11 +2857,52 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     background: var(--border);
 }
 
-/* Two games, so two columns that stay generous rather than auto-fitting a third
-   phantom track. The cards are the page now; they get the room. */
+/* ---------- the game space ----------
+
+   This rule dates from when Jolt had two games: auto-fit with a 300px floor gave
+   two columns then, and quietly gave three once there were five. Fixed at two,
+   which is what the comment always meant, and what turns a row of cards into a
+   room with stations in it.
+
+   The <ul> IS the floor. No wrapper was added -- it already had the right shape,
+   the right children and the right place in the document, and a div around it
+   would have been a div that existed only to hold a background.
+
+   Deliberately no border. The boundary is a surface a shade above the page, a
+   hairline of light along the top edge and a shadow underneath, which reads as
+   a floor the cards sit on rather than as a box drawn around them. */
 .game-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    padding-bottom: 2.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.15rem;
+    padding: 1.5rem;
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 55%, transparent) 0%,
+            color-mix(in srgb, var(--bg) 92%, var(--surface)) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 24px 60px -30px rgba(0, 0, 0, 0.75);
+}
+
+/* The heading needs air between it and the space below it, or the room reads as
+   part of the masthead rather than as somewhere you walk into. */
+.landing .game-grid {
+    /* The gap that separates the entrance from the floor. The masthead reads as
+       the sign you pass under; the floor should start far enough below it to
+       feel like a separate plane rather than the next block down. */
+    margin-top: 3.5rem;
+}
+
+/* Memory closes the space, centred on its own row.
+   Scoped to :nth-child(5):last-child so it only applies to a five-card layout --
+   a sixth game would fill the row properly and this rule would stop matching
+   rather than stranding a card. The width matches one column exactly, so the
+   card is centred without being stretched. */
+.game-card:nth-child(5):last-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - 0.575rem);
 }
 
 /* ---------- run result ---------- */
@@ -4865,4 +5266,447 @@ pre {
 
 .button.primary {
     box-shadow: var(--lift), var(--shadow-1);
+}
+
+/* ================= Layer 3: reduced motion =================
+   Everything Layer 3 added that MOVES is removed here. Everything it added that
+   carries meaning -- border, background, shadow, brightness -- stays, because a
+   player who has asked for less motion still has to be able to tell a pressed
+   control from a resting one.
+
+   The press states keep their inset shadow and lose only the translation, so
+   "this is being pressed" survives without anything travelling. */
+@media (prefers-reduced-motion: reduce) {
+
+    .button:active:not(:disabled),
+    .option:hover:not(:disabled),
+    .option:active:not(:disabled),
+    a.card-body:active {
+        transform: none;
+    }
+
+    .option,
+    .preview,
+    .site-header nav a {
+        transition: none;
+    }
+
+    /* Hover on an answer loses its lift, so the border and background have to do
+       the whole job. Strengthened so the affordance does not get quieter for the
+       people who opted out of movement. */
+    .option:hover:not(:disabled) {
+        border-color: var(--accent);
+        background: var(--surface-2);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    /* Same reasoning for the card: Layer 2's ring already survives here via the
+       existing reduced-motion block, and the preview still brightens, which is
+       a change of state rather than a movement. */
+    a.card-body:active {
+        box-shadow:
+            var(--shadow-1),
+            0 0 0 2px color-mix(in srgb, var(--card-accent) 55%, transparent);
+    }
+}
+
+/* ================= Layer 4: game feel & state feedback =================
+
+   Bug Hunt is the whole of this layer. The other four games already had it:
+   Code Blitz has score-bump, award-float, option-pop, option-shake, reveal-in
+   and stage transitions; Flush has line-snap and tile-reject; Reaction has
+   rx-snap and rx-land; Memory has mem-land and mem-reveal. Bug Hunt shipped
+   with three keyframes, all atmospheric (a siren, a pulse, a fade-up), and
+   nothing that reacts to what the player did.
+
+   So this is almost entirely re-use. Bug Hunt now speaks the vocabulary the
+   rest of the platform already speaks, which matters more than giving it a
+   voice of its own -- a correct answer should feel the same everywhere in Jolt.
+
+   The one exception is documented where it appears. */
+
+/* The incident arrives. Reuses Code Blitz's question transition, because a new
+   hunt and a new question are the same event: the board just changed. */
+.bh-incident {
+    animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The score reacts. Same keyframe and timing as Code Blitz's, keyed on the
+   score so it re-fires per award rather than once per mount. */
+.bh-score-value {
+    display: inline-block;
+    animation: score-bump 380ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+/* The points land in the feedback panel. Delayed past the panel's own rise so
+   the number arrives after the verdict, not with it -- reading "patch
+   successful" and "+150" simultaneously makes neither of them a moment. */
+.bh-feedback-score strong {
+    display: inline-block;
+    animation: tick-in 320ms cubic-bezier(0.2, 1.3, 0.4, 1) 140ms both;
+}
+
+/* The verdict itself. Correct pops, wrong shakes -- Code Blitz's own two
+   answers, so the gesture that means "yes" and the one that means "no" are
+   identical across the platform. Composed with the panel's existing rise
+   rather than replacing it. */
+.bh-feedback.resolved {
+    animation:
+        bh-rise 220ms ease-out,
+        option-pop 260ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+.bh-feedback.retry,
+.bh-feedback.failed {
+    animation:
+        bh-rise 220ms ease-out,
+        option-shake 300ms ease-in-out;
+}
+
+/* Each diagnostic check lands as it completes, rather than the row simply
+   changing colour. Flush's tick, because it is the same idea: a thing
+   resolving one step at a time. */
+.bh-check.done .bh-check-mark {
+    display: inline-block;
+    animation: tick-in 320ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+/* Targeting confirms. The marker lands; the line itself does not move, for the
+   reason given in Layer 3 -- this is code being read. */
+.bh-line.selected .bh-line-mark,
+.bh-patch.selected .bh-patch-mark {
+    display: inline-block;
+    animation: tick-in 260ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+/* The streak counts up. Keyed on the streak, so every increment lands. */
+.bh-streak-n {
+    display: inline-block;
+    animation: tick-in 300ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+/* The one new keyframe in this layer.
+   Reaching three is the milestone the streak exists for, and nothing in the
+   sheet pulses a ring in the element's OWN colour -- option-pop hardcodes the
+   green of a correct answer, which would be wrong on an amber streak. One
+   short flare, once, when the badge goes hot. */
+.bh-streak-badge.hot {
+    animation: streak-flare 420ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes streak-flare {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 0 transparent;
+    }
+
+    35% {
+        transform: scale(1.22);
+        text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
+    }
+
+    100% {
+        transform: scale(1.08);
+        text-shadow: 0 0 0 transparent;
+    }
+}
+
+/* Layer 4 motion is feedback, so removing it must not remove the feedback.
+   Every rule below drops the movement and keeps the state: the score still
+   changes, the verdict panel still appears, the checks still turn green, the
+   streak still goes hot and stays scaled. */
+@media (prefers-reduced-motion: reduce) {
+
+    .bh-incident,
+    .bh-score-value,
+    .bh-feedback-score strong,
+    .bh-feedback.resolved,
+    .bh-feedback.retry,
+    .bh-feedback.failed,
+    .bh-check.done .bh-check-mark,
+    .bh-line.selected .bh-line-mark,
+    .bh-patch.selected .bh-patch-mark,
+    .bh-streak-n {
+        animation: none;
+    }
+
+    /* The flare is removed but the state it announces is not -- .hot keeps the
+       colour and the scale it had before this layer existed. */
+    .bh-streak-badge.hot {
+        animation: none;
+        transform: scale(1.08);
+    }
+}
+
+/* ================= Layer 5: card previews as miniature screens =================
+   The previews were abstract shapes. These give them the one silhouette every
+   Jolt gameplay screen shares -- label, clock, score -- so a card reads as a
+   picture of a game rather than as decoration. Nothing here duplicates gameplay
+   markup: it is one shared strip plus each game's smallest recognisable shape. */
+
+/* Only the previews that gained a HUD strip need the extra few pixels. Memory
+   keeps the original geometry, because its preview was already right. */
+.preview-blitz,
+.preview-flush,
+.preview-reaction,
+.preview-bughunt {
+    height: 96px;
+    gap: 0.26rem;
+}
+
+.pv-hud {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 7px;
+    margin-bottom: 0.12rem;
+}
+
+.pv-hud-label {
+    width: 22%;
+    height: 100%;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card-accent, var(--jolt)) 55%, transparent);
+}
+
+.pv-hud-meter {
+    flex: 1;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+}
+
+.pv-hud-meter i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--card-accent, var(--jolt));
+    transition: width var(--t-surface) var(--ease-control);
+}
+
+.pv-hud-score {
+    width: 14%;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--surface-2);
+}
+
+/* Rows shrink to make room for the strip without the card growing. */
+.preview-row,
+.preview-line {
+    height: 13px;
+}
+
+/* ---------- Bug Hunt: a listing, not a barcode ----------
+   The gutter is what does the work. Four equal bars read as a barcode; four
+   bars with a numbered gutter read as code, and then one flagged row reads as
+   the bug. Numbers are drawn as a dotted rail rather than glyphs, because real
+   digits at 7px are mush. */
+.preview-codeline {
+    position: relative;
+    height: 13px;
+    margin-left: 14px;
+    border-radius: 4px;
+    background: var(--surface-2);
+}
+
+.preview-codeline::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 50%;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #3f4760;
+    transform: translateY(-50%);
+}
+
+.preview-codeline.is-short {
+    margin-right: 32%;
+}
+
+.preview-codeline.is-flagged {
+    background: color-mix(in srgb, var(--bughunt) 26%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bughunt) 70%, transparent);
+}
+
+.preview-codeline.is-flagged::before {
+    background: var(--bughunt);
+}
+
+/* Reaction: the signal needs its own centred area now that the strip sits above
+   it, or the ring drifts off-centre. */
+.preview-stage {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pv-hud-meter i {
+        transition: none;
+    }
+}
+
+/* The room is a desktop composition. Below this the floor would be a frame
+   around a single column of cards, which is decoration rather than structure --
+   so the surface flattens out and the cards go back to being a list. */
+@media (max-width: 780px) {
+    .game-grid {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    .landing .game-grid {
+        margin-top: 1.5rem;
+    }
+
+    /* No floor here means no room around it. The environment band would just be
+       dead space under a list, so it goes away with the surface it belonged to. */
+    .landing {
+        padding-bottom: 0;
+    }
+
+    /* Memory is just the last card again. */
+    .game-card:nth-child(5):last-child {
+        grid-column: auto;
+        justify-self: stretch;
+        width: auto;
+    }
+}
+
+/* ---------- the entrance ----------
+   Derived from Memory's intro, which is why Memory feels like a game you enter
+   rather than a page that starts. Centred, vertical, no HUD and no clock -- the
+   run has not begun yet, and the screen should not pretend otherwise. */
+
+.game-intro {
+    max-width: 34rem;
+    margin: 4rem auto 0;
+    text-align: center;
+}
+
+.game-intro-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.game-intro-title {
+    margin: 0 0 0.8rem;
+    font-size: clamp(1.9rem, 5vw, 2.6rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+}
+
+.game-intro-lede {
+    margin: 0 auto 1.75rem;
+    max-width: 30rem;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.game-intro-preview {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.game-intro-shape {
+    margin: 0 0 1.5rem;
+    color: var(--muted-2);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+    .game-intro {
+        margin-top: 2rem;
+    }
+}
+
+/* ---------- Code Blitz: streak ----------
+   Reuses Bug Hunt's treatment so a streak means the same thing and looks the
+   same wherever it appears. tick-in on the numeral so each increment lands. */
+/* The HUD's first cell now holds the name and the streak side by side, so the
+   three-column grid is untouched. */
+.hud-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.blitz-streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #9aa3bd;
+    transition: color 200ms ease;
+}
+
+.blitz-streak.hot {
+    color: var(--accent);
+}
+
+.blitz-streak-n {
+    display: inline-block;
+    animation: tick-in 300ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .blitz-streak-n {
+        animation: none;
+    }
+
+    .blitz-streak {
+        transition: none;
+    }
+}
+
+/* Flush's stage. Same treatment as Code Blitz's .play-stage -- the board, the
+   stakes line and the tile rack become one surface the game is played on
+   instead of three blocks stacked on the page. The reveal deliberately sits
+   OUTSIDE it: that is the round talking back, not part of the board. */
+.flush-stage {
+    padding: 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 70%, transparent),
+            color-mix(in srgb, var(--bg) 90%, var(--surface)));
+    box-shadow: var(--lift), var(--shadow-2);
+    margin-top: 1.1rem;
+}
+
+@media (max-width: 620px) {
+    .flush-stage {
+        padding: 0.9rem;
+    }
+}
+
+/* Flush is the one game whose challenge is two panels side by side, so it needs
+   more width than the 820px reading column the other games use. Same :has()
+   approach as the landing page: no route has to know what it is rendered inside,
+   and where :has() is unsupported the page simply keeps the narrower column. */
+.app:has(.game.flush) {
+    max-width: 1080px;
 }

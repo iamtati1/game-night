@@ -11,6 +11,7 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { GameIntro } from "../components/GameIntro.js";
 import { PausedRun } from "../components/PausedRun.js";
 import { ResumeCountdown } from "../components/ResumeCountdown.js";
 import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
@@ -101,6 +102,25 @@ export function GamePage() {
         score: number;
     } | null>(null);
     const [question, setQuestion] = useState<ServedQuestion | null>(null);
+    /**
+     * False until the player has actually chosen to begin.
+     *
+     * The page used to POST /api/sessions on mount, so arriving on the route WAS
+     * starting a run -- question one was already on screen with its clock going
+     * before the player had read anything. The entrance gates that.
+     */
+    const [entered, setEntered] = useState(false);
+    const [beginning, setBeginning] = useState(false);
+    /**
+     * Consecutive correct answers in this run.
+     *
+     * The value already existed -- results reports "best streak" -- but only once
+     * the run was over, which is exactly when it can no longer change how anyone
+     * plays. Tracked here so it is visible while there is still something to
+     * protect. Client-side only; the server keeps deriving the authoritative
+     * figure from the stored answers.
+     */
+    const [streak, setStreak] = useState(0);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [runningScore, setRunningScore] = useState(0);
     const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
@@ -237,44 +257,67 @@ export function GamePage() {
 
             if (!active) return;
 
-            await api
-                .post<StartSessionResponse>("/api/sessions")
-                .then((data) => {
-                    if (!active) return;
+            // Is a run already going? GET /sessions/current says so without
+            // creating one -- it 404s when there is nothing in progress. A player
+            // who refreshes mid-run goes straight back to their question; a
+            // player arriving fresh gets the entrance.
+            try {
+                const current = await api.get<CurrentQuestionResponse>("/api/sessions/current");
 
-                    if (data.session) {
-                        finish(data.session.id);
-                        return;
-                    }
+                if (!active) return;
 
-                    setSessionId(data.sessionId ?? null);
-                    setQuestion(data.question ?? null);
-                    // Resuming mid-game restores the real banked score rather than
-                    // restarting a local tally at zero.
-                    setRunningScore(data.scoreSoFar ?? 0);
-                })
-                .catch((err) => {
-                    if (!active) return;
+                if (current.complete && current.session) {
+                    finish(current.session.id);
+                    return;
+                }
 
-                    // 409 is not a failure: another game holds the single active
-                    // session slot, and the player gets to choose what happens.
-                    const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
-
-                    if (conflicting) {
-                        setConflict(conflicting);
-                        return;
-                    }
-
-                    setError(
-                        err instanceof ApiError ? err.detailText : "Could not start a game"
-                    );
-                });
+                if (current.question) {
+                    setQuestion(current.question);
+                    setRunningScore(current.scoreSoFar ?? 0);
+                    setEntered(true);
+                    return;
+                }
+            } catch {
+                // 404 means no run in progress, which is the normal first arrival.
+            }
         })();
 
         return () => {
             active = false;
         };
     }, [finish, attempt]);
+
+    /** Starts the run. Only ever called by the entrance's button. */
+    const begin = useCallback(async () => {
+        setBeginning(true);
+
+        try {
+            const data = await api.post<StartSessionResponse>("/api/sessions");
+
+            if (data.session) {
+                finish(data.session.id);
+                return;
+            }
+
+            setSessionId(data.sessionId ?? null);
+            setQuestion(data.question ?? null);
+            setRunningScore(data.scoreSoFar ?? 0);
+            setEntered(true);
+        } catch (err) {
+            // 409 is not a failure: another game holds the single active session
+            // slot, and the player gets to choose what happens.
+            const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+            if (conflicting) {
+                setConflict(conflicting);
+                return;
+            }
+
+            setError(err instanceof ApiError ? err.detailText : "Could not start a game");
+        } finally {
+            setBeginning(false);
+        }
+    }, [finish]);
 
     /**
      * Fetches the next question and starts its clock.
@@ -316,6 +359,7 @@ export function GamePage() {
 
             setRunningScore(result.scoreSoFar);
             setBeat((n) => n + 1);
+            setStreak((n) => (result.outcome === "correct" ? n + 1 : 0));
             setFeedback({
                 outcome: result.outcome,
                 correctOption: result.correctOption,
@@ -369,6 +413,7 @@ export function GamePage() {
 
             setRunningScore(data.scoreSoFar ?? 0);
             setBeat((n) => n + 1);
+            setStreak(0);
             setFeedback({
                 outcome: "timed_out",
                 correctOption: "",
@@ -451,6 +496,29 @@ export function GamePage() {
         );
     }
 
+    /* The entrance. Sits after the paused/conflict/error gates so a held run or a
+       blocked start still wins -- those are answers to "why can I not play", and
+       the intro is only for "you have not started yet". */
+    if (!entered) {
+        return (
+            <GameIntro
+                eyebrow="Code Blitz"
+                title="Read it. Call it."
+                lede={
+                    <>
+                        A snippet appears. Work out what it logs
+                        <br />
+                        and pick the answer before the clock runs out.
+                    </>
+                }
+                shape="10 questions · 35s each"
+                busy={beginning}
+                onStart={() => void begin()}
+                startLabel="Start blitz"
+            />
+        );
+    }
+
     if (!question) {
         return <p className="muted center">Dealing your questions…</p>;
     }
@@ -460,7 +528,20 @@ export function GamePage() {
             {/* Names the game, reports the score, offers the exit. Three things,
                 so the player always knows where they are and how to leave. */}
             <header className="hud">
-                <span className="hud-title">Code Blitz</span>
+                <span className="hud-left">
+                    <span className="hud-title">Code Blitz</span>
+
+                    {/* Only from two. A streak of one is just an answer, and a
+                        badge that is always on screen stops meaning anything. */}
+                    {streak > 1 && (
+                        <span className={`blitz-streak${streak >= 4 ? " hot" : ""}`}>
+                            <span aria-hidden="true">🔥</span>
+                            <span key={`k${streak}`} className="blitz-streak-n">
+                                {streak}
+                            </span>
+                        </span>
+                    )}
+                </span>
 
                 {/* The award floats out of the score rather than sitting beside it,
                     so the number the player watches is the one that moves. */}
