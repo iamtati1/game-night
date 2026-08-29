@@ -7,6 +7,7 @@ import {
     averageReactionMs,
     bestReactionMs,
     isPlausibleReaction,
+    isReacted,
     pointsForReaction,
     scoreForSession,
     tierFor,
@@ -17,6 +18,7 @@ import {
 const reacted = (reactionMs: number): ScoredRound => ({ status: "reacted", reactionMs });
 const falseStart = (): ScoredRound => ({ status: "false_start", reactionMs: null });
 const pending = (): ScoredRound => ({ status: "pending", reactionMs: null });
+const timedOut = (): ScoredRound => ({ status: "timed_out", reactionMs: null });
 
 describe("isPlausibleReaction", () => {
     it("accepts a human reaction", () => {
@@ -175,5 +177,70 @@ describe("bestReactionMs and averageReactionMs", () => {
         expect(averageReactionMs([falseStart()])).toBeNull();
         expect(bestReactionMs([])).toBeNull();
         expect(averageReactionMs([])).toBeNull();
+    });
+});
+
+describe("a timed-out round", () => {
+
+    it("scores nothing, like a false start", () => {
+        expect(scoreForSession([timedOut()])).toBe(0);
+        expect(scoreForSession([timedOut(), reacted(200)])).toBe(
+            scoreForSession([reacted(200)])
+        );
+    });
+
+    it("is not a reaction, so it never reaches pointsForReaction as a number", () => {
+        expect(isReacted(timedOut())).toBe(false);
+    });
+
+    it("is excluded from the best and the average", () => {
+        // Averaging a round the player never answered would drag their real
+        // numbers down with a value that was never a reaction.
+        expect(bestReactionMs([timedOut(), reacted(240)])).toBe(240);
+        expect(averageReactionMs([timedOut(), reacted(240), reacted(260)])).toBe(250);
+    });
+
+    it("leaves best and average null when it is the only kind of round", () => {
+        expect(bestReactionMs([timedOut(), timedOut()])).toBeNull();
+        expect(averageReactionMs([timedOut(), timedOut()])).toBeNull();
+    });
+
+    it("still counts as a round played, because XP is progression not performance", () => {
+        // Same treatment as a false start: the existing rule counts every round
+        // that is no longer pending, and a timeout resolves the round.
+        const fiveTimeouts = Array.from({ length: 5 }, timedOut);
+        const fiveFalseStarts = Array.from({ length: 5 }, falseStart);
+
+        expect(xpForSession(fiveTimeouts)).toBe(xpForSession(fiveFalseStarts));
+    });
+
+    it("does not count while the round is still pending", () => {
+        expect(xpForSession([pending()])).toBeLessThan(
+            xpForSession([timedOut()])
+        );
+    });
+});
+
+describe("the boundary the timeout replaces", () => {
+    it("accepts a reaction at the limit", () => {
+        expect(isPlausibleReaction(MAX_PLAUSIBLE_MS)).toBe(true);
+        expect(pointsForReaction(MAX_PLAUSIBLE_MS)).toBeGreaterThan(0);
+    });
+
+    it("accepts one just inside it", () => {
+        expect(isPlausibleReaction(MAX_PLAUSIBLE_MS - 1)).toBe(true);
+    });
+
+    it("refuses one past it, which is now reported as a timeout instead", () => {
+        expect(isPlausibleReaction(MAX_PLAUSIBLE_MS + 1)).toBe(false);
+    });
+
+    it("pays the base rate for any reaction that lands, however slow", () => {
+        // The floor is what stops a slow round reading as punishment. A timeout
+        // scores zero; a genuine slow reaction never does.
+        expect(pointsForReaction(MAX_PLAUSIBLE_MS)).toBe(pointsForReaction(600));
+        expect(pointsForReaction(MAX_PLAUSIBLE_MS)).toBeGreaterThan(
+            scoreForSession([timedOut()])
+        );
     });
 });

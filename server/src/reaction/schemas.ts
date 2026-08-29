@@ -21,5 +21,18 @@ export const reactionRoundSchema = z.discriminatedUnion("outcome", [
     z.object({
         outcome: z.literal("false_start"),
         roundId: bigintId
+    }),
+    /**
+     * The signal came and went unanswered. Carries no time for the same reason a
+     * false start does not: there is no reaction to measure.
+     *
+     * The client reports this rather than the server inferring it, because only
+     * the browser knows when the signal was painted -- the same reason reactionMs
+     * is measured there. A client that never sends it simply leaves the round
+     * pending, which is the state it was already in.
+     */
+    z.object({
+        outcome: z.literal("timed_out"),
+        roundId: bigintId
     })
 ]);

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GAME_ADAPTERS } from "../sessions/adapters.js";
 import { GAME_SLUGS, REACTION } from "../games/constants.js";
 import { reactionRoundSchema } from "./schemas.js";
+import { MAX_PLAUSIBLE_MS, isPlausibleReaction } from "./scoring.js";
 
 const ROUTES = readFileSync(new URL("./routes.ts", import.meta.url), "utf8");
 const QUERIES = readFileSync(new URL("./queries.ts", import.meta.url), "utf8");
@@ -130,5 +131,67 @@ describe("submitting a round", () => {
         // measurement it is storing. That has to be written down next to the code.
         expect(ROUTES).toMatch(/TIMING INTEGRITY/);
         expect(ROUTES).toMatch(/performance\.now\(\)/);
+    });
+});
+
+/**
+ * A reaction past 5000ms used to be an HTTP 400. That is the wrong shape for
+ * what it describes: the player looked away, which the game should answer with a
+ * result rather than an API error and a round that can never be submitted.
+ */
+describe("a signal nobody answered", () => {
+    const TIMEOUT_MIGRATION = readFileSync(
+        new URL("../../migrations/016_reaction_timeout.sql", import.meta.url),
+        "utf8"
+    )
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("--"))
+        .join("\n")
+        .trim();
+
+    it("is a status the table accepts", () => {
+        expect(TIMEOUT_MIGRATION).toMatch(
+            /CHECK \(status IN \('pending', 'reacted', 'false_start', 'timed_out'\)\)/
+        );
+    });
+
+    it("carries no reaction time, like a false start", () => {
+        expect(TIMEOUT_MIGRATION).toMatch(/reaction_rounds_timed_out_state/);
+        expect(TIMEOUT_MIGRATION).toMatch(/status <> 'timed_out'[\s\S]*?reaction_ms IS NULL/);
+    });
+
+    it("leaves the plausibility bound on reaction_ms exactly as it was", () => {
+        // The ceiling still means "no real reaction is this slow". What changed is
+        // what crossing it produces, not the number.
+        expect(TIMEOUT_MIGRATION).not.toMatch(/reaction_rounds_reaction_plausible/);
+        expect(MAX_PLAUSIBLE_MS).toBe(5000);
+    });
+
+    it("is accepted by the round schema with no time attached", () => {
+        const parsed = reactionRoundSchema.safeParse({ outcome: "timed_out", roundId: "42" });
+
+        expect(parsed.success).toBe(true);
+        expect(parsed.success && parsed.data).toEqual({ outcome: "timed_out", roundId: "42" });
+    });
+
+    it("is written by the route through its own query, not as a reaction", () => {
+        expect(ROUTES).toMatch(/outcome === "timed_out"/);
+        expect(ROUTES).toMatch(/db\.recordTimeout\(round\.id\)/);
+        expect(QUERIES).toMatch(/SET status = 'timed_out', ended_at = CURRENT_TIMESTAMP/);
+    });
+
+    it("only resolves a round that is still pending, so a late press cannot overwrite it", () => {
+        expect(QUERIES).toMatch(
+            /SET status = 'timed_out'[\s\S]*?WHERE id = \$1 AND status = 'pending'/
+        );
+    });
+
+    it("is counted on the results screen alongside false starts", () => {
+        expect(ROUTES).toMatch(/timeouts: scored\.filter\(\(r\) => r\.status === "timed_out"\)\.length/);
+    });
+
+    it("still refuses an out-of-range reaction time, and says what to send instead", () => {
+        expect(isPlausibleReaction(MAX_PLAUSIBLE_MS + 1)).toBe(false);
+        expect(ROUTES).toMatch(/timed_out\\" instead/);
     });
 });

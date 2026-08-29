@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { countEligibleQuestions } from "../questions/queries.js";
 import { CODE_BLITZ } from "../games/constants.js";
+import { seededShuffle } from "../games/optionOrder.js";
 import {
     averageDurationMs,
     longestStreak,
@@ -44,19 +45,6 @@ interface ServedQuestion {
     servedAt: string;
     deadlineAt: string;
     msRemaining: number;
-}
-
-/** Fisher-Yates. Option order is randomized per serve and never persisted; the
- *  client answers with an option id, so position carries no meaning. */
-function shuffle<T>(items: T[]): T[] {
-    const copy = [...items];
-
-    for (let i = copy.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-    }
-
-    return copy;
 }
 
 function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[]) {
@@ -200,7 +188,13 @@ async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQue
         totalQuestions: QUESTIONS_PER_SESSION,
         prompt: question.prompt_text,
         // Note what is absent: is_correct and correct_option_text never appear here.
-        options: shuffle(options).map((o) => ({ id: o.id, text: o.option_text })),
+        // Seeded on the session question rather than Math.random(): a question is
+        // re-served on refresh and on resume, and the options used to move each
+        // time under a player who had already half-decided on one.
+        options: seededShuffle(options, question.id).map((o) => ({
+            id: o.id,
+            text: o.option_text
+        })),
         servedAt: servedAt.toISOString(),
         deadlineAt: new Date(deadline).toISOString(),
         msRemaining: Math.max(0, deadline - Date.now())

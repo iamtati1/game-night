@@ -188,6 +188,19 @@ export async function recordFalseStart(roundId: string): Promise<ReactionRoundRo
     return result.rows[0] ?? null;
 }
 
+/** Mirrors recordFalseStart: ends the round with no reaction time. */
+export async function recordTimeout(roundId: string): Promise<ReactionRoundRow | null> {
+    const result = await pool.query<ReactionRoundRow>(
+        `UPDATE reaction_rounds
+         SET status = 'timed_out', ended_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND status = 'pending'
+         RETURNING ${ROUND_COLUMNS}`,
+        [roundId]
+    );
+
+    return result.rows[0] ?? null;
+}
+
 export async function completeSession(
     sessionId: string,
     score: number,

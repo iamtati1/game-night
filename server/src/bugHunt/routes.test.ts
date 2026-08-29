@@ -254,3 +254,40 @@ describe("incident selection", () => {
         expect(QUERIES).toMatch(/AND time_limit_ms IS NOT NULL/);
     });
 });
+
+/**
+ * Every choose_patch incident in the bank was authored with its correct patch
+ * written first, and patch options were served in insertion order -- so the
+ * first option was always the answer, in all thirteen of them. The tier was
+ * beatable without reading any code.
+ */
+describe("patch options do not give the answer away by position", () => {
+    it("shuffles patches, seeded on the round", () => {
+        expect(ROUTES).toMatch(/seededShuffle\(options, roundId\)/);
+        expect(ROUTES).toMatch(/orderOptionsFor\(incident\.challenge_type, round\.id,/);
+    });
+
+    it("leaves find_line alone, because there the order is the snippet's", () => {
+        expect(ROUTES).toMatch(
+            /challengeType === "choose_patch" \? seededShuffle\(options, roundId\) : options/
+        );
+    });
+
+    it("seeds on the round and not on the incident", () => {
+        // Seeding on the incident would give every player the same "random"
+        // order for the same content forever, which is memorisable -- a quieter
+        // version of the bug being fixed.
+        expect(ROUTES).not.toMatch(/seededShuffle\([^)]*incident\.id\)/);
+    });
+
+    it("still serves options without their correctness", () => {
+        // The shuffle must not have become a route for is_correct to escape.
+        const served = ROUTES.slice(ROUTES.indexOf("options: orderOptionsFor"));
+
+        expect(served.slice(0, 400)).not.toMatch(/is_correct/);
+    });
+
+    it("orders by line for the type that needs it", () => {
+        expect(QUERIES).toMatch(/ORDER BY COALESCE\(line_number, 0\), id/);
+    });
+});

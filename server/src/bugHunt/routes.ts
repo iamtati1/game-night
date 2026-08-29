@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
 import { BUG_HUNT } from "../games/constants.js";
+import { seededShuffle } from "../games/optionOrder.js";
 import { findActiveSession, findResumableSession, resumePausedSession } from "../sessions/queries.js";
 import { wantsFreshSession } from "../sessions/schemas.js";
 import * as db from "./queries.js";
@@ -58,6 +59,17 @@ export const bugHuntRouter = Router();
  * timer while the player was still reading feedback, which is exactly the bug
  * that cost Code Blitz 1.8s and Flush 3.3s per unit.
  */
+/**
+ * Patch options are shuffled; line options are not.
+ *
+ * Kept as a named function rather than a ternary at the call site so the rule --
+ * and the reason there is a rule -- is visible to whoever adds the next
+ * challenge type.
+ */
+function orderOptionsFor<T>(challengeType: string, roundId: string, options: T[]): T[] {
+    return challengeType === "choose_patch" ? seededShuffle(options, roundId) : options;
+}
+
 async function serveIncident(round: db.BugHuntRoundRow, now = new Date()) {
     const incident = await db.findIncident(round.incident_id);
 
@@ -98,7 +110,15 @@ async function serveIncident(round: db.BugHuntRoundRow, now = new Date()) {
         // Mapped to camelCase rather than passed through: every other payload in
         // this API is camelCase, and a raw row shape would make the column names
         // part of the client contract.
-        options: (await db.listOptionsForPlay(incident.id)).map((o) => ({
+        // find_line keeps the query's line order -- you are picking a line, and
+        // showing the snippet's lines out of sequence would be its own puzzle.
+        // choose_patch is shuffled, because there the query order IS authoring
+        // order, and every incident in the bank was written with its correct
+        // patch first. Seeded on the round so a refresh or a resume re-serves
+        // the same arrangement.
+        options: orderOptionsFor(incident.challenge_type, round.id, [
+            ...(await db.listOptionsForPlay(incident.id))
+        ]).map((o) => ({
             id: o.id,
             text: o.option_text,
             lineNumber: o.line_number

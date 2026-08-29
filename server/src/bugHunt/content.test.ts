@@ -18,6 +18,18 @@ const SEED = SEED_FILES.map((name) =>
 ).join("\n");
 
 /**
+ * Seed 007 corrects two incidents' worth of defects in place.
+ *
+ * Read here so every invariant below runs against the content a player actually
+ * meets rather than against 006's superseded version. Corrections are applied
+ * over the parsed bank in the same order the database applies them.
+ */
+const FIXES = readFileSync(
+    new URL("../../seeds/007_bug_hunt_tier1_fixes.sql", import.meta.url),
+    "utf8"
+);
+
+/**
  * Incidents seed 006 moves up a tier.
  *
  * They were sitting in tier one and setting the wrong expectation for the first
@@ -95,7 +107,37 @@ function parseSeed(): SeedIncident[] {
         });
 }
 
-const INCIDENTS = parseSeed();
+/** The `fix_bug_hunt_incident(slug, code, options)` calls in seed 007. */
+function parseFixes(): Map<string, { code: string | null; options: SeedOption[] }> {
+    const fixes = new Map<string, { code: string | null; options: SeedOption[] }>();
+
+    for (const block of FIXES.split("SELECT fix_bug_hunt_incident(").slice(1)) {
+        const slug = /^\s*'([a-z0-9-]+)'/.exec(block);
+        const opts = /\$j\$([\s\S]*?)\$j\$/.exec(block);
+
+        if (!slug || !opts) {
+            throw new Error(`Unparseable fix block starting: ${block.slice(0, 60)}`);
+        }
+
+        // Either NULL (leave the code alone) or an E'...' literal.
+        const code = /,\s*E'((?:[^']|'')*)',/.exec(block);
+
+        fixes.set(slug[1]!, {
+            code: code ? code[1]!.replace(/\\n/g, "\n").replace(/''/g, "'") : null,
+            options: JSON.parse(opts[1]!) as SeedOption[]
+        });
+    }
+
+    return fixes;
+}
+
+const INCIDENTS = parseSeed().map((incident) => {
+    const fix = parseFixes().get(incident.slug);
+
+    if (!fix) return incident;
+
+    return { ...incident, code: fix.code ?? incident.code, options: fix.options };
+});
 const named = (i: SeedIncident) => i.slug;
 
 describe("the incident bank is big enough to play", () => {
@@ -369,5 +411,132 @@ describe("the seed is safe to apply", () => {
 
     it("cleans up its own helper", () => {
         expect(SEED).toMatch(/DROP FUNCTION seed_bug_hunt_incident/);
+    });
+});
+
+/**
+ * can-vote-boundary shipped with three correct answers.
+ *
+ * `age >= 18` and `age > 18 || age === 18` are the same predicate spelled two
+ * ways; `age > 17` is the same again for any integer age. A player who reasoned
+ * correctly could be marked wrong, in the untimed tier whose whole job is to
+ * build confidence.
+ *
+ * The general invariant -- exactly one option flagged correct -- never caught it,
+ * because the flags were right and the semantics were not. Nothing can check
+ * predicate equivalence in general, so this pins the specific forms that were
+ * wrong and asserts they cannot come back.
+ */
+describe("can-vote-boundary offers exactly one defensible answer", () => {
+    const incident = INCIDENTS.find((i) => i.slug === "can-vote-boundary")!;
+    const texts = incident.options.map((o) => o.text.replace(/\s+/g, " ").trim());
+
+    /** Every spelling of ">= 18" that is the key in disguise. */
+    const EQUIVALENT_TO_KEY = [
+        "return age > 17;",
+        "return age > 18 || age === 18;",
+        "return age === 18 || age > 18;",
+        "return age >= 18.0;",
+        "return !(age < 18);"
+    ];
+
+    it("still exists and is still a tier-one incident", () => {
+        expect(incident).toBeDefined();
+        expect(incident.difficulty).toBe(1);
+    });
+
+    it("keeps >= 18 as the answer", () => {
+        expect(incident.options.filter((o) => o.correct)).toHaveLength(1);
+        expect(incident.options.find((o) => o.correct)!.text).toBe("return age >= 18;");
+    });
+
+    it("offers no distractor that is the answer written differently", () => {
+        for (const equivalent of EQUIVALENT_TO_KEY) {
+            expect(texts, `"${equivalent}" is the key in disguise`).not.toContain(equivalent);
+        }
+    });
+
+    it("keeps every distractor wrong for the reported symptom", () => {
+        // The report is that eighteen-year-olds are refused, so no distractor may
+        // admit exactly 18. These are the four options as JavaScript, evaluated.
+        for (const option of incident.options.filter((o) => !o.correct)) {
+            const predicate = new Function("age", option.text) as (age: number) => boolean;
+
+            expect(predicate(18), `${option.text} admits 18, so it also fixes the bug`).toBe(
+                false
+            );
+        }
+    });
+
+    it("keeps the correct option actually correct", () => {
+        const key = new Function("age", incident.options.find((o) => o.correct)!.text) as (
+            age: number
+        ) => boolean;
+
+        expect(key(18)).toBe(true);
+        expect(key(19)).toBe(true);
+        expect(key(17)).toBe(false);
+    });
+});
+
+/**
+ * Tier one used to be answerable without reading any code.
+ *
+ * greet-name-typo, multiply-wrong-operator and uppercase-not-called were all the
+ * same three-line shape -- signature, one statement, closing brace -- offered as
+ * exactly those three lines. The bug could only ever be the middle one. Tier one
+ * is untimed so a player learns to read; it was teaching them to count.
+ */
+describe("tier one cannot be answered from structure alone", () => {
+    const tierOne = INCIDENTS.filter((i) => i.difficulty === 1);
+    const findLine = tierOne.filter((i) => i.challengeType === "find_line");
+
+    it("has find_line incidents to check", () => {
+        expect(findLine.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it("never offers a bare brace or punctuation as an option", () => {
+        // An option nobody would ever pick is not a distractor. It narrows a
+        // three-way choice to a two-way one for free.
+        for (const incident of findLine) {
+            for (const option of incident.options) {
+                expect(
+                    /^[\s{}()[\];,]*$/.test(option.text),
+                    `${named(incident)} offers "${option.text}", which is not a statement`
+                ).toBe(false);
+            }
+        }
+    });
+
+    it("does not put the answer on the same line of every incident", () => {
+        const lines = findLine.map((i) => i.options.find((o) => o.correct)!.line);
+
+        expect(new Set(lines).size, `every answer is on line ${lines[0]}`).toBeGreaterThan(1);
+    });
+
+    it("does not always put the answer in the middle of the snippet", () => {
+        const middles = findLine.map((incident) => {
+            const total = incident.code.split("\n").length;
+            const line = incident.options.find((o) => o.correct)!.line!;
+
+            return line > 1 && line < total;
+        });
+
+        expect(middles.every(Boolean), "the answer is always the middle line").toBe(false);
+    });
+
+    it("gives every option a line that carries real code", () => {
+        for (const incident of findLine) {
+            const lines = incident.code.split("\n");
+
+            for (const option of incident.options) {
+                const source = lines[option.line! - 1]!.trim();
+
+                expect(
+                    source.length,
+                    `${named(incident)} line ${option.line} is empty`
+                ).toBeGreaterThan(1);
+            }
+        }
     });
 });

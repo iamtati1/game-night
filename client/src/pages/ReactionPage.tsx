@@ -14,6 +14,7 @@ import { PausedRun } from "../components/PausedRun.js";
 import { ResumeCountdown } from "../components/ResumeCountdown.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { REACTION, gameBySlug } from "../games/catalog.js";
+import { DEADLINE_MS } from "../games/reactionTiming.js";
 
 /**
  * The wait before the signal.
@@ -39,7 +40,18 @@ const READY_MS = 700;
 /** A false start gets slightly longer: there is a sentence to read. */
 const FALSE_START_MS = 1700;
 
-type Phase = "loading" | "intro" | "ready" | "waiting" | "signal" | "result" | "falseStart";
+/** The too-slow card gets the same reading time as the too-early one. */
+const TIMEOUT_MS = 1700;
+
+type Phase =
+    | "loading"
+    | "intro"
+    | "ready"
+    | "waiting"
+    | "signal"
+    | "result"
+    | "falseStart"
+    | "timedOut";
 
 interface RoundOutcome {
     reactionMs: number | null;
@@ -198,39 +210,40 @@ export function ReactionPage() {
      * for it would undo the whole point of the game. The server still decides the
      * score, and a rejection surfaces as an error rather than a silent pass.
      */
-    async function submit(reactionMs: number | null) {
+    async function submit(
+        outcome: "reacted" | "false_start" | "timed_out",
+        reactionMs?: number
+    ) {
         if (!sessionId || !round || settling.current) return;
 
         settling.current = true;
         clearTimers();
 
-        const falseStart = reactionMs === null;
+        const phaseFor = { reacted: "result", false_start: "falseStart", timed_out: "timedOut" } as const;
+        const holdFor = { reacted: RESULT_MS, false_start: FALSE_START_MS, timed_out: TIMEOUT_MS };
 
         try {
             const res = await api.post<ReactionRoundResponse>(
                 `/api/reaction/sessions/${sessionId}/rounds`,
-                falseStart
-                    ? { outcome: "false_start", roundId: round.roundId }
-                    : { outcome: "reacted", roundId: round.roundId, reactionMs }
+                outcome === "reacted"
+                    ? { outcome, roundId: round.roundId, reactionMs }
+                    : { outcome, roundId: round.roundId }
             );
 
             setScore(res.scoreSoFar);
             setOutcome({ reactionMs: res.reactionMs, tier: res.tier, points: res.pointsAwarded });
-            setPhase(falseStart ? "falseStart" : "result");
+            setPhase(phaseFor[outcome]);
 
-            later(
-                () => {
-                    if (res.complete && res.session) {
-                        navigate(`/reaction/results/${res.session.id}`, { replace: true });
-                        return;
-                    }
+            later(() => {
+                if (res.complete && res.session) {
+                    navigate(`/reaction/results/${res.session.id}`, { replace: true });
+                    return;
+                }
 
-                    if (res.round) {
-                        beginWait(res.round);
-                    }
-                },
-                falseStart ? FALSE_START_MS : RESULT_MS
-            );
+                if (res.round) {
+                    beginWait(res.round);
+                }
+            }, holdFor[outcome]);
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Could not record that round");
@@ -241,17 +254,41 @@ export function ReactionPage() {
     const act = useCallback(() => {
         if (phase === "signal" && signalAt.current !== null) {
             const ms = Math.round(performance.now() - signalAt.current);
-            void submit(ms);
+
+            // The deadline timer should already have fired, but a tab that was
+            // backgrounded can deliver a late press against a stale signal. Send
+            // it as the timeout it is rather than as a reaction the server will
+            // refuse.
+            void (ms > DEADLINE_MS ? submit("timed_out") : submit("reacted", ms));
             return;
         }
 
         if (phase === "waiting") {
-            void submit(null);
+            void submit("false_start");
         }
-        // In result / falseStart / intro, a press does nothing: the round is over
-        // and the next wait has not begun.
+        // In result / falseStart / timedOut / intro, a press does nothing: the
+        // round is over and the next wait has not begun.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [phase]);
+
+    /**
+     * The deadline on an unanswered signal.
+     *
+     * An effect rather than a timer scheduled alongside the signal in beginWait:
+     * beginWait is memoised for the life of the component, so the submit() it
+     * closes over is the one from first render, which still believes no round is
+     * in play and returns early. This re-arms per round with a live closure, and
+     * its cleanup cancels it the moment the phase changes -- which is exactly
+     * when the player acts.
+     */
+    useEffect(() => {
+        if (phase !== "signal") return;
+
+        const id = window.setTimeout(() => void submit("timed_out"), DEADLINE_MS);
+
+        return () => window.clearTimeout(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [phase, round?.roundId]);
 
     // Space and Enter play the game, so it is fully keyboard-playable.
     useEffect(() => {
@@ -449,6 +486,13 @@ export function ReactionPage() {
                     <>
                         <span className="rx-state rx-early">Too early</span>
                         <span className="rx-hint">You jumped the signal — next one counts.</span>
+                    </>
+                )}
+
+                {phase === "timedOut" && (
+                    <>
+                        <span className="rx-state rx-early">Too slow</span>
+                        <span className="rx-hint">That one got away — next one counts.</span>
                     </>
                 )}
             </button>

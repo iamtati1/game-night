@@ -60,6 +60,7 @@ function summarize(session: db.ReactionSessionRow, rounds: db.ReactionRoundRow[]
         totalRounds: rounds.length,
         reactedRounds: scored.filter(isReacted).length,
         falseStarts: scored.filter((r) => r.status === "false_start").length,
+        timeouts: scored.filter((r) => r.status === "timed_out").length,
         bestReactionMs: best,
         averageReactionMs: average,
         // The tier reads the average, not the best: one lucky round should not
@@ -243,6 +244,11 @@ reactionRouter.post("/sessions/:id/rounds", requireAuth, async (req: Request, re
 
     if (parsed.data.outcome === "false_start") {
         resolved = await db.recordFalseStart(round.id);
+    } else if (parsed.data.outcome === "timed_out") {
+        // A real outcome, not a rejected request. Before this existed the client
+        // had nothing to send once the deadline passed, so the round stayed
+        // pending and the run could not be finished.
+        resolved = await db.recordTimeout(round.id);
     } else {
         if (!isPlausibleReaction(parsed.data.reactionMs)) {
             res.status(400).json({
@@ -250,7 +256,9 @@ reactionRouter.post("/sessions/:id/rounds", requireAuth, async (req: Request, re
                 details: [
                     {
                         field: "reactionMs",
-                        message: "A reaction must be between 80ms and 5000ms."
+                        message:
+                            "A reaction must be between 80ms and 5000ms. " +
+                            "Past 5000ms, send outcome \"timed_out\" instead."
                     }
                 ]
             });
