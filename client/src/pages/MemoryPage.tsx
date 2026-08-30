@@ -10,7 +10,7 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { GetReady } from "../components/GetReady.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { SymbolGlyph } from "../components/SymbolGlyph.js";
 import { MEMORY, gameBySlug } from "../games/catalog.js";
@@ -73,6 +73,7 @@ export function presentationTiming(displayMs: number, length: number) {
 type Phase =
     | "loading"
     | "intro"
+    | "countingIn"
     | "ready"
     | "showing"
     | "recall"
@@ -319,7 +320,7 @@ export function MemoryPage() {
     }
 
     if (resuming) {
-        return <ResumeCountdown onDone={() => void start(false)} />;
+        return <GetReady onDone={() => void start(false)} />;
     }
 
     if (paused) {
@@ -336,6 +337,10 @@ export function MemoryPage() {
 
     if (phase === "loading") {
         return <p className="muted center">Shuffling…</p>;
+    }
+
+    if (phase === "countingIn") {
+        return <GetReady label="Memory" onDone={() => void start(true)} />;
     }
 
     if (phase === "intro") {
@@ -361,7 +366,7 @@ export function MemoryPage() {
 
                 <button
                     className="button primary big"
-                    onClick={() => void start(true)}
+                    onClick={() => setPhase("countingIn")}
                     disabled={busy}
                 >
                     {busy ? "Starting…" : "Start"}

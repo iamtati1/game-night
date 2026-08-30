@@ -11,7 +11,7 @@ import type {
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { GetReady } from "../components/GetReady.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { REACTION, gameBySlug } from "../games/catalog.js";
 import { DEADLINE_MS } from "../games/reactionTiming.js";
@@ -357,7 +357,7 @@ export function ReactionPage() {
     }
 
     if (resuming) {
-        return <ResumeCountdown onDone={() => void start(false)} />;
+        return <GetReady onDone={() => void start(false)} />;
     }
 
     if (paused) {

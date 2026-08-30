@@ -13,7 +13,7 @@ import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { GetReady } from "../components/GetReady.js";
 import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
@@ -112,6 +112,15 @@ export function GamePage() {
      * before the player had read anything. The entrance gates that.
      */
     const [entered, setEntered] = useState(false);
+    /**
+     * Between pressing Start and the session existing.
+     *
+     * The countdown has to run BEFORE the POST, not after: POST /api/sessions
+     * serves the first question, and serving is what stamps served_at and starts
+     * the 35-second clock. A countdown on the other side of that request would
+     * be spending the player's own time.
+     */
+    const [countingIn, setCountingIn] = useState(false);
     const [beginning, setBeginning] = useState(false);
     /**
      * Consecutive correct answers in this run.
@@ -318,6 +327,9 @@ export function GamePage() {
             setError(err instanceof ApiError ? err.detailText : "Could not start a game");
         } finally {
             setBeginning(false);
+            // Cleared either way. On success `entered` takes over the render; on
+            // failure the conflict and error gates above this one do.
+            setCountingIn(false);
         }
     }, [finish]);
 
@@ -485,7 +497,7 @@ export function GamePage() {
     }
 
     if (resuming) {
-        return <ResumeCountdown onDone={() => void handleResume()} />;
+        return <GetReady onDone={() => void handleResume()} />;
     }
 
     if (paused) {
@@ -504,20 +516,26 @@ export function GamePage() {
        blocked start still wins -- those are answers to "why can I not play", and
        the intro is only for "you have not started yet". */
     if (!entered) {
+        if (countingIn) {
+            return <GetReady label="Code Blitz" onDone={() => void begin()} />;
+        }
+
         return (
             <GameIntro
                 eyebrow="Code Blitz"
                 title="Read it. Call it."
                 lede={
                     <>
-                        A snippet appears. Work out what it logs
+                        A snippet of JavaScript appears. Work out what it logs,
                         <br />
-                        and pick the answer before the clock runs out.
+                        then pick the answer before the clock runs out.
+                        <br />
+                        Questions start on the fundamentals and get harder as you go.
                     </>
                 }
-                shape="10 questions · 35s each"
+                shape="10 questions · 35s each · difficulty climbs"
                 busy={beginning}
-                onStart={() => void begin()}
+                onStart={() => setCountingIn(true)}
                 startLabel="Start blitz"
             />
         );

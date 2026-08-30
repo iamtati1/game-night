@@ -13,7 +13,7 @@ import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { GetReady } from "../components/GetReady.js";
 import { FLUSH, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 
@@ -58,6 +58,8 @@ export function FlushPage() {
     const [round, setRound] = useState<FlushRound | null>(null);
     /** False until the player chooses to begin -- see the note in GamePage. */
     const [entered, setEntered] = useState(false);
+    /** Runs before begin(), because begin() serves round one and starts its clock. */
+    const [countingIn, setCountingIn] = useState(false);
     const [beginning, setBeginning] = useState(false);
     const [score, setScore] = useState(0);
     const [reveal, setReveal] = useState<Reveal | null>(null);
@@ -182,6 +184,9 @@ export function FlushPage() {
             setError(err instanceof ApiError ? err.detailText : "Could not start a game");
         } finally {
             setBeginning(false);
+            // Cleared either way: on success `entered` takes the render, on
+            // failure the conflict and error gates above the intro do.
+            setCountingIn(false);
         }
     }
 
@@ -415,7 +420,7 @@ export function FlushPage() {
     }
 
     if (resuming) {
-        return <ResumeCountdown onDone={() => void handleResume()} />;
+        return <GetReady onDone={() => void handleResume()} />;
     }
 
     if (paused) {
@@ -434,6 +439,10 @@ export function FlushPage() {
        Code Blitz: those explain why you cannot play, this only covers not having
        started. */
     if (!entered) {
+        if (countingIn) {
+            return <GetReady label="Flush" onDone={() => void begin()} />;
+        }
+
         return (
             <GameIntro
                 eyebrow="Flush"
@@ -447,7 +456,7 @@ export function FlushPage() {
                 }
                 shape="5 rounds · 20s + 10s per output"
                 busy={beginning}
-                onStart={() => void begin()}
+                onStart={() => setCountingIn(true)}
                 startLabel="Start flush"
             />
         );

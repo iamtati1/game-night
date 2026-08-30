@@ -12,7 +12,7 @@ import type {
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { PausedRun } from "../components/PausedRun.js";
-import { ResumeCountdown } from "../components/ResumeCountdown.js";
+import { GetReady } from "../components/GetReady.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { BUG_HUNT, gameBySlug } from "../games/catalog.js";
 import { INTEGRITY_COSTS } from "../games/bugHuntIntegrity.js";
@@ -464,7 +464,7 @@ export function BugHuntPage() {
     }
 
     if (resuming) {
-        return <ResumeCountdown onDone={() => void start(false)} />;
+        return <GetReady onDone={() => void start(false)} />;
     }
 
     if (paused) {
@@ -594,10 +594,11 @@ function Briefing({ busy, onStart }: { busy: boolean; onStart: () => void }) {
                 </div>
             </dl>
 
-            {/* Two lines. Anything longer is a manual, and nobody reads a manual
-                to start a game they can learn by playing one round of. */}
+            {/* Three lines. Anything longer is a manual, and nobody reads a
+                manual to start a game they can learn by playing one round of. */}
             <ol className="bh-rules">
                 <li>Read the failing code and find what is actually wrong.</li>
+                <li>The first incidents are untimed. Later ones are not.</li>
                 <li>Stuck? Pull a trace — it costs points, not your attempt.</li>
             </ol>
 
