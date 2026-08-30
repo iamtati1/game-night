@@ -258,6 +258,27 @@ DROP FUNCTION retire_question(TEXT);
 -- missed one, this fails and the whole seed rolls back -- which is the point.
 -- A silent NULL would mean a question the dealer cannot balance and no test
 -- counts.
+--
+-- The DO block runs first purely so the failure is useful. VALIDATE CONSTRAINT
+-- reports only "violated by some row", which tells you nothing about WHICH row
+-- in a table of a hundred and seventy. This names them, with their ids and the
+-- start of their prompts, so the fix is obvious from the error alone.
+DO $$
+DECLARE
+    v_offenders TEXT;
+    v_count INTEGER;
+BEGIN
+    SELECT COUNT(*), string_agg('  [id ' || id || '] ' || left(replace(prompt, E'\n', ' | '), 90), E'\n')
+    INTO v_count, v_offenders
+    FROM questions
+    WHERE is_active AND topic IS NULL;
+
+    IF v_count > 0 THEN
+        RAISE EXCEPTION E'% active question(s) still have no topic:\n\n%\n\nEvery active question needs one of the nine curriculum units. Add each of these to seed 009 -- as a backfill_question if it belongs in the bank, or a retire_question if it does not.', v_count, v_offenders;
+    END IF;
+END;
+$$;
+
 ALTER TABLE questions VALIDATE CONSTRAINT questions_topic_required;
 
 COMMIT;

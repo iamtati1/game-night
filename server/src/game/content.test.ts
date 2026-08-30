@@ -588,3 +588,95 @@ describe("no question turns on a quirk or on the environment", () => {
         }
     });
 });
+
+/**
+ * No active question may reach the database without a curriculum topic.
+ *
+ * The earlier coverage check compared SQL LITERALS -- the `E'...'` source text.
+ * The database compares decoded strings, and those are not the same comparison:
+ * two literals can differ in escaping and still decode to one prompt, or match
+ * as text while decoding differently. A literal-level check can therefore pass
+ * while a row is left untouched, which is exactly the failure that reaches
+ * production as "check constraint questions_topic_required is violated by some
+ * row" with no indication of which.
+ *
+ * So this decodes both sides the way PostgreSQL does and compares the values the
+ * UPDATE will actually match on.
+ */
+describe("every question a seed creates is given a topic by a seed", () => {
+    /** Decodes a PostgreSQL string literal, E'' escapes included. */
+    const decode = (literal: string): string => {
+        const escaped = literal.startsWith("E");
+        const body = literal.slice(escaped ? 2 : 1, -1).replace(/''/g, "'");
+
+        return escaped
+            ? body.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\\\/g, "\\")
+            : body;
+    };
+
+    const FIRST_LITERAL = /^\s*(E?'(?:[^']|'')*')/;
+
+    /** The prompts seeds 001 and 003 actually insert. */
+    const created = new Set(
+        OLD_SEEDS.split("SELECT seed_question(")
+            .slice(1)
+            .map((block) => FIRST_LITERAL.exec(block))
+            .filter((m): m is RegExpExecArray => m !== null)
+            .map((m) => decode(m[1]!))
+    );
+
+    /** The prompts seed 009 either files under a topic or takes out of play. */
+    const addressed = new Set(
+        ["backfill_question", "retire_question"].flatMap((fn) =>
+            BACKFILL.split(`SELECT ${fn}(`)
+                .slice(1)
+                .map((block) => FIRST_LITERAL.exec(block))
+                .filter((m): m is RegExpExecArray => m !== null)
+                .map((m) => decode(m[1]!))
+        )
+    );
+
+    it("parsed both sides", () => {
+        expect(created.size).toBeGreaterThan(0);
+        expect(addressed.size).toBeGreaterThan(0);
+    });
+
+    it("leaves no created question unaddressed once decoded", () => {
+        const missed = [...created].filter((p) => !addressed.has(p));
+
+        expect(
+            missed.map((p) => p.replace(/\n/g, " | ").slice(0, 80)).join("\n"),
+            `${missed.length} question(s) would be inserted with no topic:`
+        ).toBe("");
+    });
+
+    it("addresses nothing that is never created", () => {
+        // The mirror failure: a backfill aimed at a prompt no seed inserts
+        // updates zero rows and passes silently.
+        const phantom = [...addressed].filter((p) => !created.has(p));
+
+        expect(
+            phantom.map((p) => p.replace(/\n/g, " | ").slice(0, 80)).join("\n"),
+            `${phantom.length} backfill target(s) match no question:`
+        ).toBe("");
+    });
+
+    it("gives every question the newer seeds insert a topic inline", () => {
+        // 008 and 010 insert with a topic argument rather than relying on a
+        // later backfill, so there is nothing to reconcile -- but a block that
+        // somehow lost its topic would be a NULL insert, and the constraint
+        // would reject it at seed time rather than at validation.
+        for (const q of QUESTIONS) {
+            expect(q.topic, `${q.prompt.slice(0, 50)} has no topic`).toBeTruthy();
+        }
+    });
+
+    it("names the offending rows when validation fails", () => {
+        // VALIDATE CONSTRAINT reports only "violated by some row". In a table of
+        // a hundred and seventy that is not actionable, so seed 009 checks first
+        // and raises with the ids and prompts.
+        expect(BACKFILL).toMatch(/RAISE EXCEPTION/);
+        expect(BACKFILL).toMatch(/WHERE is_active AND topic IS NULL/);
+        expect(BACKFILL).toMatch(/VALIDATE CONSTRAINT questions_topic_required/);
+    });
+});
