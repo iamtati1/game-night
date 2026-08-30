@@ -824,7 +824,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'Which modern feature makes this clearer?\n\nconst city = user && user.address && user.address.city;',
-    4,
+    2,
     'Optional chaining says the same thing in one step: user?.address?.city. It also stops at null, which the && chain does not distinguish.',
     $j$[
       {"text": "Optional chaining: user?.address?.city", "correct": true},
@@ -835,7 +835,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'Which approach correctly gets the total price?\n\nconst cart = [{ price: 10 }, { price: 5 }];',
-    4,
+    2,
     'reduce() folds a list into one value. map() would give [10, 5], and forEach() returns undefined however you use it.',
     $j$[
       {"text": "cart.reduce((sum, item) => sum + item.price, 0)", "correct": true},
@@ -857,7 +857,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What is the bug in this code?\n\nfunction addItem(list, item) {\n  list.push(item);\n  return list;\n}',
-    4,
+    2,
     'It mutates the caller''s array. Returning [...list, item] keeps the original intact, which is what callers usually expect.',
     $j$[
       {"text": "It mutates the array the caller passed in", "correct": true},
@@ -868,7 +868,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst settings = { retries: 0 };\nconst retries = settings.retries || 3;\nconsole.log(retries);',
-    4,
+    2,
     'A deliberate 0 is falsy, so || silently replaces it with the default. This is the classic case for ?? instead.',
     $j$[
       {"text": "3", "correct": true},
@@ -890,7 +890,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst rows = [3, 1, 2];\nconst sorted = [...rows].sort((a, b) => a - b);\nconsole.log(rows, sorted);',
-    4,
+    2,
     'sort() mutates in place, so copying first is what keeps the original order. Without the spread both names would show the sorted array.',
     $j$[
       {"text": "[3, 1, 2] [1, 2, 3]", "correct": true},
@@ -901,7 +901,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What is the bug in this code?\n\nconst ids = [1, 2, 3];\nlet found;\nids.forEach((id) => {\n  if (id === 2) return id;\n});\nconsole.log(found);',
-    4,
+    2,
     'return inside forEach() only exits that one callback -- it cannot return from the outer function or stop the loop. find() is the right tool.',
     $j$[
       {"text": "return inside forEach() does not return from the outer code", "correct": true},
@@ -912,7 +912,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst users = [{ id: 1, tags: ["a"] }];\nconst copy = structuredClone(users);\ncopy[0].tags.push("b");\nconsole.log(users[0].tags.length);',
-    4,
+    2,
     'structuredClone() copies all the way down, so nested arrays are independent. Spread or Object.assign would have shared that inner array.',
     $j$[
       {"text": "1", "correct": true},
@@ -968,7 +968,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'In what order does this log?\n\nfor (var i = 1; i <= 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}',
-    4,
+    3,
     'var gives one binding for the whole loop, and the timers all run after it finishes -- by then i is 4. Changing var to let fixes it.',
     $j$[
       {"text": "4, 4, 4", "correct": true},
@@ -979,7 +979,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst api = {\n  name: "users",\n  paths: ["a", "b"],\n  list() {\n    return this.paths.map(function (p) {\n      return this.name + "/" + p;\n    });\n  }\n};\nconsole.log(api.list());',
-    4,
+    3,
     'A plain function gets its own this, which is undefined here, so reading .name throws. An arrow function would have inherited this from list().',
     $j$[
       {"text": "TypeError", "correct": true},
@@ -990,7 +990,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst items = [1, 2, 3, 4];\nfor (const n of items) {\n  if (n % 2 === 0) items.splice(items.indexOf(n), 1);\n}\nconsole.log(items);',
-    4,
+    3,
     'Removing items while iterating shifts everything left, so the loop skips the element after each removal. Iterate a copy, or use filter().',
     $j$[
       {"text": "[1, 3]", "correct": true},
@@ -1023,7 +1023,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst config = { handlers: { onSave: null } };\nconsole.log(config.handlers?.onSave?.() ?? "no handler");',
-    4,
+    2,
     '?.() calls only if there is something to call, giving undefined otherwise -- and ?? then supplies the fallback. Three guards, no if statement.',
     $j$[
       {"text": "\"no handler\"", "correct": true},
@@ -1034,7 +1034,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst people = [\n  { name: "a", team: "x" },\n  { name: "b", team: "x" },\n  { name: "c", team: "y" }\n];\nconst grouped = people.reduce((acc, p) => {\n  (acc[p.team] ??= []).push(p.name);\n  return acc;\n}, {});\nconsole.log(grouped);',
-    4,
+    2,
     'reduce() builds an object here rather than a number. ??= creates the array the first time a team is seen, so each key collects its own names.',
     $j$[
       {"text": "{ x: [\"a\", \"b\"], y: [\"c\"] }", "correct": true},
@@ -1045,7 +1045,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst counts = new Map();\ncounts.set("a", 1);\nconsole.log(counts.a, counts.get("a"));',
-    4,
+    2,
     'A Map is not a plain object -- its entries live behind get() and set(), so dot access finds nothing. That separation is why any key type works.',
     $j$[
       {"text": "undefined 1", "correct": true},
@@ -1056,7 +1056,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nconst scores = [\n  { name: "a", score: 2 },\n  { name: "b", score: 2 },\n  { name: "c", score: 1 }\n];\nconst best = Math.max(...scores.map((s) => s.score));\nconsole.log(scores.filter((s) => s.score === best).map((s) => s.name));',
-    4,
+    2,
     'Find the maximum first, then keep everything that matches it -- which is how you get ties. Sorting and taking the first would have dropped one.',
     $j$[
       {"text": "[\"a\", \"b\"]", "correct": true},
@@ -1067,7 +1067,7 @@ SELECT seed_js_question(
 
 SELECT seed_js_question(
     E'What does this log?\n\nfunction once(fn) {\n  let called = false;\n  let result;\n  return (...args) => {\n    if (!called) {\n      called = true;\n      result = fn(...args);\n    }\n    return result;\n  };\n}\nconst init = once((n) => n * 2);\ninit(5);\nconsole.log(init(100));',
-    4,
+    3,
     'The closure remembers both the flag and the first result, so later calls return the cached value and the argument is ignored.',
     $j$[
       {"text": "10", "correct": true},
@@ -1129,6 +1129,218 @@ SELECT seed_js_question(
       {"text": "await Promise.all(urls.map(fetch))", "correct": false},
       {"text": "await Promise.race(urls.map(fetch))", "correct": false},
       {"text": "urls.forEach(async (u) => await fetch(u))", "correct": false}
+    ]$j$::JSONB);
+
+
+
+-- ---------------------------------------------------------------------------
+-- TIER 1, second pass -- the fundamentals the bank was missing.
+--
+-- The first pass covered types, coercion and array methods, but a beginner
+-- opening Jolt met no if/else, no while, no for...of, no ternary and none of the
+-- everyday string methods. Those are the shapes you write on day one, and a
+-- learning progression that skips them is not one.
+--
+-- Every question here is one idea in a few readable lines. The measure applied
+-- to each was: would someone learning JavaScript write better code for having
+-- met it? Anything that was only interesting was left out.
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst score = 45;\n\nif (score >= 50) {\n  console.log("pass");\n} else {\n  console.log("fail");\n}',
+    1,
+    'The else branch runs when the condition is false. 45 is not at least 50, so the first block is skipped entirely.',
+    $j$[
+      {"text": "\"fail\"", "correct": true},
+      {"text": "\"pass\"", "correct": false},
+      {"text": "\"pass\"\n\"fail\"", "correct": false},
+      {"text": "undefined", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nlet n = 3;\nlet out = "";\n\nwhile (n > 0) {\n  out += n;\n  n--;\n}\n\nconsole.log(out);',
+    1,
+    'The loop repeats while the condition holds, counting down 3, 2, 1. n-- is what eventually makes it stop -- without it the loop never ends.',
+    $j$[
+      {"text": "\"321\"", "correct": true},
+      {"text": "\"123\"", "correct": false},
+      {"text": "6", "correct": false},
+      {"text": "\"3210\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst nums = [1, 2, 3];\nlet total = 0;\n\nfor (const n of nums) {\n  total += n;\n}\n\nconsole.log(total);',
+    1,
+    'for...of hands you each value in turn, so there is no index to manage. It is the clearest loop to reach for when you just want the items.',
+    $j$[
+      {"text": "6", "correct": true},
+      {"text": "3", "correct": false},
+      {"text": "[1, 2, 3]", "correct": false},
+      {"text": "0", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst age = 20;\nconst label = age >= 18 ? "adult" : "minor";\nconsole.log(label);',
+    1,
+    'A ternary picks between two values: condition ? whenTrue : whenFalse. It is an expression, so it can be assigned straight to a variable.',
+    $j$[
+      {"text": "\"adult\"", "correct": true},
+      {"text": "\"minor\"", "correct": false},
+      {"text": "true", "correct": false},
+      {"text": "20", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst first = "Ada";\nconst last = "Lovelace";\nconsole.log(first + " " + last);',
+    1,
+    '+ joins strings end to end, so the space in the middle has to be there deliberately. A template literal is usually easier to read.',
+    $j$[
+      {"text": "\"Ada Lovelace\"", "correct": true},
+      {"text": "\"AdaLovelace\"", "correct": false},
+      {"text": "\"Ada\" \"Lovelace\"", "correct": false},
+      {"text": "\"Ada + Lovelace\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst name = "Ada";\nconsole.log(name.length + 1);',
+    1,
+    'length is a property holding a number, not a method -- no parentheses. So this is 3 + 1, arithmetic rather than joining.',
+    $j$[
+      {"text": "4", "correct": true},
+      {"text": "\"Ada1\"", "correct": false},
+      {"text": "3", "correct": false},
+      {"text": "TypeError", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst items = ["a"];\nconst result = items.push("b");\nconsole.log(result, items.length);',
+    1,
+    'push() adds to the end and returns the NEW length, not the array. That catches people who expect to be able to chain from it.',
+    $j$[
+      {"text": "2 2", "correct": true},
+      {"text": "[\"a\", \"b\"] 2", "correct": false},
+      {"text": "\"b\" 2", "correct": false},
+      {"text": "1 2", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst stack = [1, 2, 3];\nconst last = stack.pop();\nconsole.log(last, stack.length);',
+    1,
+    'pop() removes the final item and hands it back, so the array is one shorter afterwards. It changes the original array.',
+    $j$[
+      {"text": "3 2", "correct": true},
+      {"text": "3 3", "correct": false},
+      {"text": "1 2", "correct": false},
+      {"text": "[1, 2] 2", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst user = { name: "Ada", role: "admin" };\nconst key = "role";\nconsole.log(user[key], user.key);',
+    1,
+    'Square brackets use the VALUE of key, so user[key] is user.role. Dot notation looks for a property literally called "key", which is not there.',
+    $j$[
+      {"text": "\"admin\" undefined", "correct": true},
+      {"text": "\"admin\" \"admin\"", "correct": false},
+      {"text": "undefined undefined", "correct": false},
+      {"text": "\"role\" \"role\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconsole.log(3 > 2, 3 >= 3, 2 < 1);',
+    1,
+    'Comparisons produce booleans. >= is true when the values are equal, which is the difference from > that trips people at boundaries.',
+    $j$[
+      {"text": "true true false", "correct": true},
+      {"text": "true false false", "correct": false},
+      {"text": "true true true", "correct": false},
+      {"text": "false true false", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst input = "  hello  ";\nconsole.log(input.trim().length);',
+    1,
+    'trim() removes whitespace from both ends and returns a new string. Useful on anything a person typed into a form.',
+    $j$[
+      {"text": "5", "correct": true},
+      {"text": "9", "correct": false},
+      {"text": "7", "correct": false},
+      {"text": "6", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst path = "a-b-c";\nconsole.log(path.replace("-", "+"));',
+    1,
+    'Given a plain string, replace() changes only the FIRST match. Use replaceAll() when you mean every one of them.',
+    $j$[
+      {"text": "\"a+b-c\"", "correct": true},
+      {"text": "\"a+b+c\"", "correct": false},
+      {"text": "\"a-b-c\"", "correct": false},
+      {"text": "\"abc\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst csv = "a,b,c";\nconsole.log(csv.split(","));',
+    1,
+    'split() cuts a string at each separator and returns an array of the pieces. join() is the operation that puts one back together.',
+    $j$[
+      {"text": "[\"a\", \"b\", \"c\"]", "correct": true},
+      {"text": "\"a b c\"", "correct": false},
+      {"text": "[\"a,b,c\"]", "correct": false},
+      {"text": "3", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst email = "ada@example.com";\nconsole.log(email.includes("@"));',
+    1,
+    'includes() asks whether the text appears anywhere and answers true or false. Strings and arrays both have it.',
+    $j$[
+      {"text": "true", "correct": true},
+      {"text": "false", "correct": false},
+      {"text": "3", "correct": false},
+      {"text": "\"@\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction area(width, height) {\n  return width * height;\n}\n\nconsole.log(area(3, 4));',
+    1,
+    'Arguments fill the parameters in order, and return hands the result back to whoever called. Without return the function gives undefined.',
+    $j$[
+      {"text": "12", "correct": true},
+      {"text": "7", "correct": false},
+      {"text": "undefined", "correct": false},
+      {"text": "\"34\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction greet(name, greeting) {\n  return greeting + " " + name;\n}\n\nconsole.log(greet("Ada"));',
+    1,
+    'A parameter with no argument is undefined, and joining it to a string turns it into the text "undefined". A default value would prevent that.',
+    $j$[
+      {"text": "\"undefined Ada\"", "correct": true},
+      {"text": "\"Ada undefined\"", "correct": false},
+      {"text": "\" Ada\"", "correct": false},
+      {"text": "TypeError", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nlet n = 5;\nn += 3;\nn++;\nconsole.log(n);',
+    1,
+    '+= adds and reassigns in one step; ++ adds exactly one. Both need let, because both change the variable.',
+    $j$[
+      {"text": "9", "correct": true},
+      {"text": "8", "correct": false},
+      {"text": "10", "correct": false},
+      {"text": "\"53\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst users = [{ name: "Ada" }, { name: "Grace" }];\nconsole.log(users[1].name);',
+    1,
+    'Reading an array of objects is two steps: pick the item by index, then the property by name. Indexes start at 0, so [1] is the second one.',
+    $j$[
+      {"text": "\"Grace\"", "correct": true},
+      {"text": "\"Ada\"", "correct": false},
+      {"text": "undefined", "correct": false},
+      {"text": "{ name: \"Grace\" }", "correct": false}
     ]$j$::JSONB);
 
 

@@ -391,3 +391,58 @@ describe("the backfilled questions meet the same standard as the new ones", () =
         expect(tiers.size).toBeGreaterThanOrEqual(3);
     });
 });
+
+/**
+ * The bank has to stay weighted toward fundamentals.
+ *
+ * This is a content-shape rule, not a style preference. Jolt is meant to build a
+ * JavaScript foundation by being played repeatedly, and a bank that drifts
+ * advanced-heavy quietly turns into an interview quiz -- which is what it was
+ * becoming: 36/47/27/33, with the hardest tier nearly as deep as the easiest.
+ *
+ * Writing a hard question is more fun than writing a beginner one, so the drift
+ * is one-directional and needs an actual guard rather than good intentions.
+ * These count the whole active bank, seed 008 plus the backfill in 009 minus its
+ * retirements, because a rule that only watched half of it would not be a rule.
+ */
+describe("the bank is weighted toward learning, not toward difficulty", () => {
+    const backfillTiers = BACKFILL.split("SELECT backfill_question(")
+        .slice(1)
+        .map((block) => {
+            const m = /^\s*E?'(?:[^']|'')*',\s*(\d),/.exec(block);
+
+            if (!m) throw new Error(`Unparseable backfill: ${block.slice(0, 60)}`);
+
+            return Number(m[1]);
+        });
+
+    const active = [...QUESTIONS.map((q) => q.difficulty), ...backfillTiers];
+    const count = (tier: number) => active.filter((t) => t === tier).length;
+
+    it("has a bank worth playing repeatedly", () => {
+        expect(active.length).toBeGreaterThanOrEqual(150);
+    });
+
+    it("gives beginners the most to work with", () => {
+        // Tier 1 is where a learner spends their first sessions, and the curve
+        // draws three of every ten questions from it.
+        expect(count(1)).toBeGreaterThanOrEqual(45);
+    });
+
+    it("keeps fundamentals and practical work far larger than the hardest tier", () => {
+        expect(count(1) + count(2)).toBeGreaterThan(count(3) + count(4) + 40);
+    });
+
+    it("keeps the hardest tier the smallest", () => {
+        expect(count(4)).toBeLessThan(count(1));
+        expect(count(4)).toBeLessThan(count(2));
+        expect(count(4)).toBeLessThan(count(3));
+    });
+
+    it("still has enough tier 4 to close a run without repeating quickly", () => {
+        // The curve wants one tier-4 question for the last slot of every run, so
+        // this is the tier whose depth decides how soon the hardest content
+        // starts coming round again.
+        expect(count(4)).toBeGreaterThanOrEqual(15);
+    });
+});
