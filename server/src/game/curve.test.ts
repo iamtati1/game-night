@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { UNTIERED_AS, dealSession, difficultyCurve, topTierFor, type Dealable } from "./curve.js";
 
+/**
+ * The candidate order the query produces: unseen first, RANDOM() within that.
+ *
+ * The dealer is deliberately deterministic for a given order -- that is what
+ * preserves the recency preference -- so any test about variety has to supply
+ * the randomness the database would.
+ */
+function asQueryWouldOrder<T>(items: readonly T[]): T[] {
+    const copy = [...items];
+
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+    }
+
+    return copy;
+}
+
 /** A deterministic stand-in for Math.random, cycling through fixed draws. */
 function fakeRandom(values: number[]): () => number {
     let i = 0;
@@ -8,25 +26,38 @@ function fakeRandom(values: number[]): () => number {
     return () => values[i++ % values.length]!;
 }
 
+/** The nine curriculum units, so a generated bank has real topics to spread. */
+const TOPICS = [
+    "variables",
+    "conditionals",
+    "loops",
+    "arrays",
+    "objects",
+    "functions",
+    "array-methods",
+    "scope",
+    "async"
+];
+
 const bank = (spec: Record<number, number>): Dealable[] =>
     Object.entries(spec).flatMap(([tier, count]) =>
         Array.from({ length: count }, (_, i) => ({
             id: `t${tier}-${i}`,
             difficulty: Number(tier),
-            prompt: `What does this log?\n\nconsole.log(${tier}${i});`
+            topic: TOPICS[i % TOPICS.length]!
         }))
     );
 
 /**
- * The real shape of the active bank, counted from the seeds: 161 questions,
- * 54/58/31/18 across the four tiers -- weighted toward fundamentals, with the
+ * The real shape of the active bank, counted from the seeds: 199 questions,
+ * 76/71/34/18 across the four tiers -- weighted toward fundamentals, with the
  * hardest tier the smallest.
  *
  * Modelled exactly rather than approximately, because the tier the curve leans
  * on hardest -- tier 4, wanted for the last slot of every run -- is the one
  * whose depth decides how soon the hardest questions start repeating.
  */
-const REAL_BANK = bank({ 1: 54, 2: 58, 3: 31, 4: 18 });
+const REAL_BANK = bank({ 1: 76, 2: 71, 3: 34, 4: 18 });
 
 describe("the curve climbs", () => {
     it("opens on tier 1 however the dice fall", () => {
@@ -175,20 +206,9 @@ describe("dealing follows the curve", () => {
         // test below pins it. Variety comes from upstream: the query orders by
         // RANDOM() within the seen/unseen split. So this shuffles the bank the
         // way the database does, then asks whether runs actually differ.
-        const shuffled = () => {
-            const copy = [...REAL_BANK];
-
-            for (let i = copy.length - 1; i > 0; i -= 1) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-            }
-
-            return copy;
-        };
-
         const runs = new Set(
             Array.from({ length: 100 }, () =>
-                dealSession(shuffled(), 10)
+                dealSession(asQueryWouldOrder(REAL_BANK), 10)
                     .map((q) => q.id)
                     .join(",")
             )
@@ -201,8 +221,8 @@ describe("dealing follows the curve", () => {
         // The query hands over unseen questions before recently-seen ones. The
         // dealer must take the first acceptable match rather than re-shuffling,
         // or recency avoidance is silently discarded.
-        const seen = { id: "seen", difficulty: 1, prompt: "seen" };
-        const unseen = { id: "unseen", difficulty: 1, prompt: "unseen" };
+        const seen = { id: "seen", difficulty: 1, topic: "loops" };
+        const unseen = { id: "unseen", difficulty: 1, topic: "loops" };
 
         expect(dealSession([unseen, seen], 1)[0]!.id).toBe("unseen");
     });
@@ -223,40 +243,64 @@ describe("dealing survives a thin bank", () => {
     });
 
     it("treats an untiered question as practical rather than dropping it", () => {
-        const untiered: Dealable[] = [{ id: "u", difficulty: null, prompt: "u" }];
+        const untiered: Dealable[] = [{ id: "u", difficulty: null, topic: "loops" }];
 
         expect(dealSession(untiered, 1)).toHaveLength(1);
         expect(UNTIERED_AS).toBe(2);
     });
 });
 
-describe("dealing keeps consecutive questions from repeating a subject", () => {
-    it("prefers a different opening line to the previous question", () => {
-        const same = (id: string) => ({
-            id,
-            difficulty: 2,
-            prompt: "What does this log?\n\nconsole.log([1, 2].map((n) => n));"
-        });
-        const different = {
-            id: "different",
-            difficulty: 2,
-            prompt: "What does this log?\n\nconsole.log(typeof null);"
-        };
+describe("dealing spreads across curriculum units", () => {
+    it("prefers a different topic to the one just asked", () => {
+        const loops = (id: string) => ({ id, difficulty: 2, topic: "loops" });
+        const arrays = { id: "arrays", difficulty: 2, topic: "arrays" };
 
-        // Two identical-subject questions first, so the naive pick would take
+        // Two loop questions first, so a dealer that ignored topic would take
         // both in a row.
-        const dealt = dealSession([same("a"), same("b"), different], 2);
+        const dealt = dealSession([loops("a"), loops("b"), arrays], 2);
 
-        expect(dealt[1]!.id).toBe("different");
+        expect(dealt[1]!.topic).toBe("arrays");
     });
 
-    it("still deals a full session when every candidate shares a subject", () => {
+    it("still deals a full session when the tier holds only one topic", () => {
+        // A preference, not a filter. Abandoning the difficulty curve to avoid a
+        // repeated topic would be the wrong trade.
         const identical = Array.from({ length: 6 }, (_, i) => ({
             id: `q${i}`,
             difficulty: 2,
-            prompt: "What does this log?\n\nconsole.log(1);"
+            topic: "loops"
         }));
 
         expect(dealSession(identical, 5)).toHaveLength(5);
+    });
+
+    it("touches several units in a normal run", () => {
+        for (let run = 0; run < 100; run += 1) {
+            const topics = new Set(
+                dealSession(asQueryWouldOrder(REAL_BANK), 10).map((q) => q.topic)
+            );
+
+            expect(topics.size, `run ${run} covered only ${topics.size} unit(s)`)
+                .toBeGreaterThanOrEqual(4);
+        }
+    });
+
+    it("does not deal a fixed rota of units", () => {
+        // Structured randomness, not a curriculum quiz: the player must not be
+        // able to learn that question three is always about loops.
+        const thirdTopic = new Set(
+            Array.from({ length: 200 }, () => dealSession(asQueryWouldOrder(REAL_BANK), 10)[2]!.topic)
+        );
+
+        expect(thirdTopic.size).toBeGreaterThan(1);
+    });
+
+    it("copes with a question that has no topic yet", () => {
+        const mixed: Dealable[] = [
+            { id: "a", difficulty: 1, topic: null },
+            { id: "b", difficulty: 1, topic: "loops" }
+        ];
+
+        expect(dealSession(mixed, 2)).toHaveLength(2);
     });
 });

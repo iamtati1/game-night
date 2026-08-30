@@ -30,11 +30,12 @@ BEGIN;
 CREATE OR REPLACE FUNCTION backfill_question(
     p_prompt TEXT,
     p_difficulty INTEGER,
+    p_topic TEXT,
     p_explanation TEXT
 ) RETURNS VOID LANGUAGE plpgsql AS $$
 BEGIN
     UPDATE questions
-    SET difficulty = p_difficulty, explanation = p_explanation
+    SET difficulty = p_difficulty, topic = p_topic, explanation = p_explanation
     WHERE prompt = p_prompt;
 END;
 $$;
@@ -84,168 +85,179 @@ SELECT retire_question(E'What does this log?\n\nconsole.log(0.1 + 0.2 === 0.3);'
 -- ---------------------------------------------------------------------------
 -- TIER 1 -- fundamentals
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof null);', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof null);', 1, 'variables',
     'A bug preserved from 1995 for backwards compatibility. Use `value === null` to test for null -- typeof cannot.');
 
-SELECT backfill_question(E'What does this log?\n\nconst nums = [2, 4, 6];\nconsole.log(nums.map(n => n * 2));', 1,
+SELECT backfill_question(E'What does this log?\n\nconst nums = [2, 4, 6];\nconsole.log(nums.map(n => n * 2));', 1, 'array-methods',
     'map() builds a new array by running the function on each item. The original is left alone.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(1 + "1");', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(1 + "1");', 1, 'variables',
     'With a string on either side, + concatenates rather than adds. Every other arithmetic operator converts to number instead.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log("5" - 3);', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log("5" - 3);', 1, 'variables',
     '- has no string meaning, so both sides convert to numbers. This is why + is the odd one out.');
 
-SELECT backfill_question(E'What does this log?\n\nlet x;\nconsole.log(x);', 1,
+SELECT backfill_question(E'What does this log?\n\nlet x;\nconsole.log(x);', 1, 'variables',
     'A declared variable with no value is undefined. null is different: it is a value you assign deliberately.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].filter(n => n > 1).length);', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].filter(n => n > 1).length);', 1, 'array-methods',
     'filter() keeps every item the test returns true for, so two survive.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(Array.isArray([]));', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(Array.isArray([]));', 1, 'variables',
     'Arrays are objects, so typeof cannot tell them apart. Array.isArray() is the check that can.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([3, 25, 4].sort((a, b) => a - b));', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([3, 25, 4].sort((a, b) => a - b));', 1, 'array-methods',
     'The comparator makes the sort numeric. Returning a - b orders ascending; b - a orders descending.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log("5" * "2");', 1,
-    '* has no string meaning, so both strings convert to numbers first.');
+-- duplicates "5" - 3
+SELECT retire_question(E'What does this log?\n\nconsole.log("5" * "2");');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof []);', 1,
-    'Arrays, objects and null all report "object". Only Array.isArray() distinguishes an array.');
+-- duplicates typeof null plus the Array.isArray question
+SELECT retire_question(E'What does this log?\n\nconsole.log(typeof []);');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof function () {});', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof function () {});', 1, 'variables',
     'Functions are the one kind of object typeof names specifically -- handy for checking a callback before calling it.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].indexOf(4));', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].indexOf(4));', 1, 'arrays',
     'indexOf() returns -1 rather than undefined when nothing matches, because -1 is not a valid index.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3][5]);', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3][5]);', 1, 'arrays',
     'Reading past the end gives undefined rather than an error. JavaScript arrays have no bounds check.');
 
-SELECT backfill_question(E'What does this log?\n\nfunction f() {}\nconsole.log(f());', 1,
+SELECT backfill_question(E'What does this log?\n\nfunction f() {}\nconsole.log(f());', 1, 'functions',
     'A function with no return statement returns undefined. Forgetting return is the commonest cause of an unexpected undefined.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(null ?? "fallback");', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(null ?? "fallback");', 1, 'conditionals',
     '?? falls back only on null or undefined. Here the left side is null, so the fallback is used.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log("abc".slice(-2));', 1,
+SELECT backfill_question(E'What does this log?\n\nconsole.log("abc".slice(-2));', 1, 'arrays',
     'A negative index counts back from the end, so this takes the last two characters.');
 
 
 -- ---------------------------------------------------------------------------
 -- TIER 2 -- practical
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([10, 9, 1].sort());', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([10, 9, 1].sort());', 2, 'array-methods',
     'Without a comparator sort() compares as text, so "10" sorts before "9". Always pass (a, b) => a - b for numbers.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([..."abc"]);', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([..."abc"]);', 2, 'arrays',
     'Strings are iterable, so spreading one gives an array of its characters -- shorter than split("").');
 
-SELECT backfill_question(E'What does this log?\n\nconst a = { n: 1 };\nconst b = a;\nb.n = 2;\nconsole.log(a.n);', 2,
+SELECT backfill_question(E'What does this log?\n\nconst a = { n: 1 };\nconst b = a;\nb.n = 2;\nconsole.log(a.n);', 2, 'objects',
     'Objects are held by reference. a and b are two names for one object, so a change through either is visible from both.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([5, 100, 20].sort());', 2,
-    'Compared as text, "100" comes before "20" because "1" comes before "2". The digits are compared one at a time.');
+-- duplicates [10, 9, 1].sort()
+SELECT retire_question(E'What does this log?\n\nconsole.log([5, 100, 20].sort());');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(true + true);', 2,
-    '+ converts booleans to numbers, and true is 1. This is why counting with `sum += Boolean(x)` works.');
+-- cute, but nothing you would ever write
+SELECT retire_question(E'What does this log?\n\nconsole.log(true + true);');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof NaN);', 2,
-    'NaN means "not a valid number", but it is still of type number -- it is what failed numeric operations produce.');
+-- quirk recall
+SELECT retire_question(E'What does this log?\n\nconsole.log(typeof NaN);');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].reduce((a, b) => a + b, 10));', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].reduce((a, b) => a + b, 10));', 2, 'array-methods',
     'The second argument is the starting value, so the total begins at 10 rather than at the first item.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].map(n => n * 2).filter(n => n > 3));', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2, 3].map(n => n * 2).filter(n => n > 3));', 2, 'array-methods',
     'Chains run left to right: double first, giving [2, 4, 6], then keep what is over 3.');
 
-SELECT backfill_question(E'What does this log?\n\nconst a = [1, 2];\nconst b = [...a];\nb.push(3);\nconsole.log(a.length);', 2,
+SELECT backfill_question(E'What does this log?\n\nconst a = [1, 2];\nconst b = [...a];\nb.push(3);\nconsole.log(a.length);', 2, 'arrays',
     'Spread makes a new array, so pushing to the copy leaves the original alone. It is a shallow copy -- nested objects are still shared.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log({ a: 1 } === { a: 1 });', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log({ a: 1 } === { a: 1 });', 2, 'objects',
     'Objects compare by identity, not contents. These are two different objects that happen to look alike.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(null == undefined);', 2,
-    '== treats null and undefined as equal to each other and to nothing else. That is the one case where == is genuinely useful.');
+-- == quirk
+SELECT retire_question(E'What does this log?\n\nconsole.log(null == undefined);');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(null === undefined);', 2,
-    'They are different types, so === says no. Use === unless you specifically want to catch both null and undefined.');
+-- orphaned once its == pair goes
+SELECT retire_question(E'What does this log?\n\nconsole.log(null === undefined);');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(Boolean("0"));', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(Boolean("0"));', 2, 'variables',
     'Every string is truthy except the empty one. The characters inside do not matter, so "0" and "false" are both true.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(Boolean([]));', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(Boolean([]));', 2, 'variables',
     'Every object is truthy, including empty arrays. Check `array.length` when you mean "has items".');
 
-SELECT backfill_question(E'What does this log?\n\nlet x = 1;\nfunction f() { let x = 2; return x; }\nconsole.log(f() + x);', 2,
+SELECT backfill_question(E'What does this log?\n\nlet x = 1;\nfunction f() { let x = 2; return x; }\nconsole.log(f() + x);', 2, 'scope',
     'The inner x shadows the outer one inside f only. So f() returns 2, and the outer x is still 1.');
 
-SELECT backfill_question(E'What does this log?\n\nconst o = { a: 1 };\nconsole.log(o.b?.c);', 2,
+SELECT backfill_question(E'What does this log?\n\nconst o = { a: 1 };\nconsole.log(o.b?.c);', 2, 'objects',
     '?. stops and gives undefined when the value before it is null or undefined. Without it this would throw.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(0 ?? "fallback");', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(0 ?? "fallback");', 2, 'conditionals',
     '?? only falls back on null or undefined. 0 is neither, so it survives -- which is usually what you wanted.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(0 || "fallback");', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(0 || "fallback");', 2, 'conditionals',
     '|| falls back on any falsy value, and 0 is falsy. This is the bug ?? was added to fix.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log("a,b,,c".split(",").length);', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log("a,b,,c".split(",").length);', 2, 'arrays',
     'The two commas together produce an empty string between them, and it counts. Use .filter(Boolean) to drop empties.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, [2, [3]]].flat().length);', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log([1, [2, [3]]].flat().length);', 2, 'array-methods',
     'flat() unwraps one level by default, leaving [1, 2, [3]]. Pass a depth, or Infinity, to go further.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(parseInt("08"));', 2,
-    'parseInt reads leading digits and stops at anything else. The leading zero is not octal -- that behaviour was removed in ES5.');
+-- a gotcha that no longer applies -- negative learning value
+SELECT retire_question(E'What does this log?\n\nconsole.log(parseInt("08"));');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(parseInt("12px"));', 2,
+SELECT backfill_question(E'What does this log?\n\nconsole.log(parseInt("12px"));', 2, 'variables',
     'parseInt stops at the first character that is not a digit and returns what it has. Number("12px") would give NaN instead.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(Number(""));', 2,
-    'Number("") is 0, which surprises people, while Number(" ") is also 0 and Number("abc") is NaN.');
+-- edge-case recall
+SELECT retire_question(E'What does this log?\n\nconsole.log(Number(""));');
 
-SELECT backfill_question(E'What does this print?\n\nconst newWord = (str) => {\n    let result = "";\n\n    for (const char of str) {\n        result += char.repeat(3);\n    }\n\n    return result;\n};\n\nconsole.log(newWord("cat"));', 2,
+SELECT backfill_question(E'What does this print?\n\nconst newWord = (str) => {\n    let result = "";\n\n    for (const char of str) {\n        result += char.repeat(3);\n    }\n\n    return result;\n};\n\nconsole.log(newWord("cat"));', 2, 'loops',
     'The loop takes one character at a time and repeats that character, so the letters stay in order: ccc, then aaa, then ttt.');
 
 
 -- ---------------------------------------------------------------------------
 -- TIER 3 -- deeper reasoning
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([1, 2] + [3, 4]);', 3,
-    '+ has no array meaning, so both convert to strings: "1,2" and "3,4". Joining those gives "1,23,4".');
+-- the same coercion puzzle in another costume
+SELECT retire_question(E'What does this log?\n\nconsole.log([1, 2] + [3, 4]);');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log([] + {});', 3,
-    'Both convert to strings first: [] becomes "" and {} becomes "[object Object]". Concatenating leaves the second.');
+-- pure coercion puzzle -- nobody writes this
+SELECT retire_question(E'What does this log?\n\nconsole.log([] + {});');
 
-SELECT backfill_question(E'What does this log?\n\nconst o = { x: 1 };\nfunction f(v) { v = { x: 9 }; }\nf(o);\nconsole.log(o.x);', 3,
+SELECT backfill_question(E'What does this log?\n\nconst o = { x: 1 };\nfunction f(v) { v = { x: 9 }; }\nf(o);\nconsole.log(o.x);', 3, 'objects',
     'The parameter is a copy of the reference. Reassigning it repoints the local name only -- setting v.x would have been visible.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log("" == 0);', 3,
-    '== converts before comparing, and "" becomes 0. This is the class of surprise === exists to avoid.');
+-- an == puzzle; "prefer ===" is taught better elsewhere
+SELECT retire_question(E'What does this log?\n\nconsole.log("" == 0);');
 
-SELECT backfill_question(E'What does this log?\n\nconst fns = [];\nfor (let i = 0; i < 3; i++) fns.push(() => i);\nconsole.log(fns[0]());', 3,
+SELECT backfill_question(E'What does this log?\n\nconst fns = [];\nfor (let i = 0; i < 3; i++) fns.push(() => i);\nconsole.log(fns[0]());', 3, 'scope',
     'let creates a fresh binding each iteration, so each function captured a different i. With var they would all see 3.');
 
-SELECT backfill_question(E'What does this log?\n\nconst a = [1, 2, 3];\na.length = 1;\nconsole.log(a);', 3,
-    'length is writable, not just readable. Lowering it truncates the array in place.');
+-- truncating an array through length is rarely written
+SELECT retire_question(E'What does this log?\n\nconst a = [1, 2, 3];\na.length = 1;\nconsole.log(a);');
 
-SELECT backfill_question(E'In what order does this log?\n\nconsole.log("A");\nsetTimeout(() => console.log("B"), 0);\nconsole.log("C");', 3,
+SELECT backfill_question(E'In what order does this log?\n\nconsole.log("A");\nsetTimeout(() => console.log("B"), 0);\nconsole.log("C");', 3, 'async',
     'setTimeout queues a task for after the current code finishes. Even at 0ms it cannot jump the queue.');
 
-SELECT backfill_question(E'In what order does this log?\n\nconsole.log("A");\nPromise.resolve().then(() => console.log("B"));\nconsole.log("C");', 3,
+SELECT backfill_question(E'In what order does this log?\n\nconsole.log("A");\nPromise.resolve().then(() => console.log("B"));\nconsole.log("C");', 3, 'async',
     'A .then() callback is a microtask: it waits for the synchronous code to finish, but runs before any timer.');
 
-SELECT backfill_question(E'In what order does this log?\n\nsetTimeout(() => console.log("A"), 0);\nPromise.resolve().then(() => console.log("B"));\nconsole.log("C");', 3,
+SELECT backfill_question(E'In what order does this log?\n\nsetTimeout(() => console.log("A"), 0);\nPromise.resolve().then(() => console.log("B"));\nconsole.log("C");', 3, 'async',
     'Synchronous first, then microtasks, then timers. The whole microtask queue drains before a single timer runs.');
 
-SELECT backfill_question(E'In what order does this log?\n\nasync function run() {\n  console.log("A");\n  await null;\n  console.log("B");\n}\nrun();\nconsole.log("C");', 3,
+SELECT backfill_question(E'In what order does this log?\n\nasync function run() {\n  console.log("A");\n  await null;\n  console.log("B");\n}\nrun();\nconsole.log("C");', 3, 'async',
     'An async function runs synchronously until its first await. Everything after that await is queued as a microtask.');
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(Math.max());', 3,
-    'With no arguments Math.max returns -Infinity, so that any real number beats it. Math.min() returns Infinity for the same reason.');
+-- trivia -- calling it with no arguments is not a thing people do
+SELECT retire_question(E'What does this log?\n\nconsole.log(Math.max());');
 
-DROP FUNCTION backfill_question(TEXT, INTEGER, TEXT);
+DROP FUNCTION backfill_question(TEXT, INTEGER, TEXT, TEXT);
 DROP FUNCTION retire_question(TEXT);
+
+-- Every active question now has a topic, so the rule can be checked against the
+-- rows that were already there.
+--
+-- Migration 018 added questions_topic_required as NOT VALID: enforced for every
+-- insert and update since, but never checked against the fifty-eight rows seeded
+-- before the column existed. This is the other half. If the backfill above has
+-- missed one, this fails and the whole seed rolls back -- which is the point.
+-- A silent NULL would mean a question the dealer cannot balance and no test
+-- counts.
+ALTER TABLE questions VALIDATE CONSTRAINT questions_topic_required;
 
 COMMIT;

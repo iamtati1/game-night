@@ -139,6 +139,7 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
         const candidates = await client.query<{
             id: string;
             difficulty: number | null;
+            topic: string | null;
             prompt: string;
         }>(
             `WITH recent AS (
@@ -154,7 +155,7 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
                      LIMIT ${RECENT_SESSIONS_AVOIDED}
                  )
              )
-             SELECT q.id, q.difficulty, q.prompt
+             SELECT q.id, q.difficulty, q.topic, q.prompt
              FROM questions q
              WHERE ${ELIGIBLE_QUESTION_PREDICATE}
              ORDER BY (q.id IN (SELECT question_id FROM recent)) ASC, RANDOM()`,

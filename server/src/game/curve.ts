@@ -16,7 +16,8 @@ export interface Dealable {
     id: string;
     /** 1-4. Null for a question written before tiers existed. */
     difficulty: number | null;
-    prompt: string;
+    /** Its curriculum unit -- 'loops', 'functions', and so on. */
+    topic: string | null;
 }
 
 /**
@@ -128,16 +129,6 @@ export function difficultyCurve(
     return curve;
 }
 
-/** The first line of code in a prompt, which is a decent proxy for its subject. */
-function subject(prompt: string): string {
-    return (
-        prompt
-            .split("\n")
-            .map((line) => line.trim())
-            .find((line) => line.length > 0 && !line.endsWith("?")) ?? ""
-    );
-}
-
 /**
  * Picks one question per slot, following the curve.
  *
@@ -168,11 +159,21 @@ export function dealSession<T extends Dealable>(
         const atTier = remaining.filter((q) => tierOf(q) === want);
         const pool = atTier.length > 0 ? atTier : nearestTier(remaining, want, tierOf);
 
-        // Soft guard against two questions in a row about the same thing. It is
-        // a preference, not a filter: if every candidate at this tier opens the
-        // same way, a repeated subject beats abandoning the tier.
-        const lastSubject = dealt.length > 0 ? subject(dealt[dealt.length - 1]!.prompt) : null;
-        const fresh = pool.filter((q) => subject(q.prompt) !== lastSubject);
+        // Soft guard against two questions in a row on the same curriculum unit.
+        //
+        // This used to compare the first line of code of each prompt, which was a
+        // string-similarity guess: two map() questions with different variable
+        // names read as unrelated, and two unrelated questions that both opened
+        // `const nums = [1, 2, 3];` read as identical. The topic is the real
+        // answer to the question that guess was approximating.
+        //
+        // Still a preference rather than a filter, and deliberately so. Forcing
+        // a different unit every slot would turn the run into a curriculum quiz
+        // whose next topic you could predict; letting it repeat when the tier has
+        // nothing else keeps the difficulty curve in charge. Structured
+        // randomness, not a fixed rota.
+        const lastTopic = dealt.length > 0 ? dealt[dealt.length - 1]!.topic : null;
+        const fresh = pool.filter((q) => q.topic !== lastTopic);
         const pick = (fresh.length > 0 ? fresh : pool)[0]!;
 
         dealt.push(pick);

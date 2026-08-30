@@ -12,15 +12,14 @@ import { describe, expect, it } from "vitest";
  * code produces is EXECUTED, and its real output compared against the option
  * marked correct.
  *
- * Only seed 008 is checked. The older seeds write their options in a different
- * style (quoted values like '"object"' rather than what console.log prints), and
- * retro-fitting one convention onto the other would mean rewriting content this
- * pass was told to leave alone.
+ * Covers the seeds that write their own questions -- 008 and the curriculum
+ * questions in 010. The backfilled originals in 009 update rows seeded by 001
+ * and 003, whose options are written as SQL arguments rather than JSON, so they
+ * are checked structurally further down instead.
  */
-const SEED = readFileSync(
-    new URL("../../seeds/008_code_blitz_modern_js.sql", import.meta.url),
-    "utf8"
-);
+const SEED = ["008_code_blitz_modern_js.sql", "010_code_blitz_curriculum.sql"]
+    .map((name) => readFileSync(new URL(`../../seeds/${name}`, import.meta.url), "utf8"))
+    .join("\n");
 
 interface SeedOption {
     text: string;
@@ -30,6 +29,7 @@ interface SeedOption {
 interface SeedQuestion {
     prompt: string;
     difficulty: number;
+    topic: string;
     explanation: string;
     options: SeedOption[];
     /** The snippet, i.e. the prompt with its question line removed. */
@@ -50,7 +50,7 @@ function parseSeed(): SeedQuestion[] {
         .slice(1)
         .map((block) => {
             const prompt = /^\s*E'((?:[^']|'')*)'/.exec(block);
-            const meta = /',\s*(\d),\s*'((?:[^']|'')*)',/.exec(block);
+            const meta = /',\s*(\d),\s*'([a-z-]+)',\s*'((?:[^']|'')*)',/.exec(block);
             const options = /\$j\$([\s\S]*?)\$j\$/.exec(block);
 
             if (!prompt || !meta || !options) {
@@ -62,7 +62,8 @@ function parseSeed(): SeedQuestion[] {
             return {
                 prompt: text,
                 difficulty: Number(meta[1]),
-                explanation: unescape(meta[2]!),
+                topic: meta[2]!,
+                explanation: unescape(meta[3]!),
                 options: JSON.parse(options[1]!) as SeedOption[],
                 code: text.split("\n").slice(1).join("\n").trim()
             };
@@ -364,11 +365,15 @@ describe("the backfilled questions meet the same standard as the new ones", () =
     const entries = BACKFILL.split("SELECT backfill_question(")
         .slice(1)
         .map((block) => {
-            const m = /^\s*E?'(?:[^']|'')*',\s*(\d),\s*'((?:[^']|'')*)'/.exec(block);
+            const m = /^\s*E?'(?:[^']|'')*',\s*(\d),\s*'([a-z-]+)',\s*'((?:[^']|'')*)'/.exec(block);
 
             if (!m) throw new Error(`Unparseable backfill: ${block.slice(0, 80)}`);
 
-            return { difficulty: Number(m[1]), explanation: m[2]!.replace(/''/g, "'") };
+            return {
+                difficulty: Number(m[1]),
+                topic: m[2]!,
+                explanation: m[3]!.replace(/''/g, "'")
+            };
         });
 
     it("tiers every one between 1 and 4", () => {
@@ -444,5 +449,142 @@ describe("the bank is weighted toward learning, not toward difficulty", () => {
         // this is the tier whose depth decides how soon the hardest content
         // starts coming round again.
         expect(count(4)).toBeGreaterThanOrEqual(15);
+    });
+});
+
+/**
+ * Curriculum guards.
+ *
+ * Code Blitz is meant to be a JavaScript curriculum delivered as a game, and the
+ * audit that produced this shape found the bank failing at exactly that while
+ * looking fine by every other measure: five loop questions and twelve function
+ * questions against twenty-six about objects, every one correctly tiered. A
+ * difficulty ladder cannot see a curriculum gap.
+ *
+ * These are floors, not targets. They exist because writing a clever question is
+ * more enjoyable than writing the eleventh loop question, so the drift runs one
+ * way and needs something structural in its path.
+ */
+describe("the bank is a curriculum", () => {
+    const TOPICS = [
+        "variables",
+        "conditionals",
+        "loops",
+        "arrays",
+        "objects",
+        "functions",
+        "array-methods",
+        "scope",
+        "async"
+    ];
+
+    const backfilled = BACKFILL.split("SELECT backfill_question(")
+        .slice(1)
+        .map((block) => {
+            const m = /^\s*E?'(?:[^']|'')*',\s*(\d),\s*'([a-z-]+)',/.exec(block);
+
+            if (!m) throw new Error(`Unparseable backfill: ${block.slice(0, 70)}`);
+
+            return { difficulty: Number(m[1]), topic: m[2]! };
+        });
+
+    const active = [
+        ...QUESTIONS.map((q) => ({ difficulty: q.difficulty, topic: q.topic })),
+        ...backfilled
+    ];
+
+    const inTopic = (t: string) => active.filter((q) => q.topic === t).length;
+
+    it("gives every active question a topic from the nine units", () => {
+        for (const q of active) {
+            expect(TOPICS, `unknown topic "${q.topic}"`).toContain(q.topic);
+        }
+    });
+
+    it("teaches every unit, so none can quietly vanish", () => {
+        for (const topic of TOPICS) {
+            expect(inTopic(topic), `${topic} has almost nothing in it`).toBeGreaterThanOrEqual(8);
+        }
+    });
+
+    /**
+     * The four units a beginner practises most. Loops and functions carry their
+     * own floors because those two were the ones that had actually collapsed --
+     * to five and twelve respectively -- while the bank still looked healthy.
+     */
+    it("keeps substantial practice in loops", () => {
+        expect(inTopic("loops")).toBeGreaterThanOrEqual(20);
+    });
+
+    it("keeps substantial practice in functions", () => {
+        expect(inTopic("functions")).toBeGreaterThanOrEqual(20);
+    });
+
+    it("keeps substantial practice in arrays", () => {
+        expect(inTopic("arrays")).toBeGreaterThanOrEqual(20);
+    });
+
+    it("keeps substantial practice in conditionals", () => {
+        expect(inTopic("conditionals")).toBeGreaterThanOrEqual(16);
+    });
+
+    it("keeps the fundamentals larger than the advanced units", () => {
+        const fundamentals = ["loops", "arrays", "functions", "conditionals", "variables"]
+            .map(inTopic)
+            .reduce((a, b) => a + b, 0);
+        const advanced = ["scope", "async"].map(inTopic).reduce((a, b) => a + b, 0);
+
+        expect(fundamentals).toBeGreaterThan(advanced * 2);
+    });
+
+    it("gives each fundamental unit a beginner on-ramp", () => {
+        // A unit that exists only at tier 3 is not being taught, it is being
+        // tested.
+        for (const topic of ["loops", "arrays", "functions", "conditionals", "variables"]) {
+            const beginner = active.filter((q) => q.topic === topic && q.difficulty === 1);
+
+            expect(beginner.length, `${topic} has no tier-1 questions`).toBeGreaterThanOrEqual(5);
+        }
+    });
+});
+
+describe("no question turns on a quirk or on the environment", () => {
+    it("never asks the player to predict how a function or Promise prints", () => {
+        // console.log of a function or a Promise shows different text in Node and
+        // in a browser, so any answer written that way is right in one place and
+        // wrong in the other. Two questions were caught by this and rewritten to
+        // ask about the concept instead.
+        for (const q of PREDICTIVE) {
+            const answer = q.options.find((o) => o.correct)!.text;
+
+            expect(answer, `${q.code.slice(0, 40)}: environment-dependent output`).not.toMatch(
+                /^function |^\(?\w*\)? =>|Promise \{|\[object |^class /
+            );
+        }
+    });
+
+    it("keeps the retired coercion puzzles out of the bank", () => {
+        // The fourteen retired in seed 009 were quirk recall with no practical
+        // payoff. Nothing stops someone reintroducing one as a new question, so
+        // the shapes themselves are named here.
+        const BANNED = [
+            /console\.log\(\[\] \+ \{\}\)/,
+            /console\.log\(\[1, 2\] \+ \[3, 4\]\)/,
+            /console\.log\(""\s*==\s*0\)/,
+            /console\.log\(true \+ true\)/,
+            /console\.log\(typeof NaN\)/,
+            /console\.log\(Math\.max\(\)\)/,
+            /console\.log\(Number\(""\)\)/,
+            /parseInt\("08"\)/,
+            /console\.log\(null == undefined\)/
+        ];
+
+        for (const q of QUESTIONS) {
+            for (const banned of BANNED) {
+                expect(q.code, `reintroduces a retired quirk: ${q.code.slice(0, 45)}`).not.toMatch(
+                    banned
+                );
+            }
+        }
     });
 });
