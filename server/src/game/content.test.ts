@@ -257,3 +257,122 @@ describe("every predicted output is the real output", () => {
         }
     });
 });
+
+/**
+ * The backfill, checked against the seeds it claims to update.
+ *
+ * Seed 009 matches questions by prompt text. A typo in one of those prompts
+ * would not fail anything at runtime -- the UPDATE would simply match no rows,
+ * and that question would keep a NULL tier and no explanation, which shows up as
+ * a question that silently teaches nothing. So every prompt named there is
+ * checked against the prompts that actually exist, and every surviving question
+ * is checked for coverage.
+ */
+const OLD_SEEDS = ["001_code_blitz_questions.sql", "003_code_blitz_expansion.sql"]
+    .map((name) => readFileSync(new URL(`../../seeds/${name}`, import.meta.url), "utf8"))
+    .join("\n");
+
+const BACKFILL = readFileSync(
+    new URL("../../seeds/009_code_blitz_backfill.sql", import.meta.url),
+    "utf8"
+);
+
+/** Prompts as seed_question() wrote them -- the first string literal of each call. */
+function originalPrompts(): Set<string> {
+    const prompts = new Set<string>();
+
+    for (const block of OLD_SEEDS.split("SELECT seed_question(").slice(1)) {
+        const literal = /^\s*(E?'(?:[^']|'')*')/.exec(block);
+
+        if (literal) prompts.add(literal[1]!);
+    }
+
+    return prompts;
+}
+
+/** The prompt literal each backfill or retire call targets. */
+function targeted(fn: string): string[] {
+    return BACKFILL.split(`SELECT ${fn}(`)
+        .slice(1)
+        .map((block) => {
+            const literal = /^\s*(E?'(?:[^']|'')*')/.exec(block);
+
+            if (!literal) throw new Error(`Unparseable ${fn} call: ${block.slice(0, 60)}`);
+
+            return literal[1]!;
+        });
+}
+
+const ORIGINALS = originalPrompts();
+const BACKFILLED = targeted("backfill_question");
+const RETIRED = targeted("retire_question");
+
+describe("the backfill reaches the questions it names", () => {
+    it("found the original seeds to check against", () => {
+        expect(ORIGINALS.size).toBe(58);
+    });
+
+    it("names only prompts that actually exist", () => {
+        for (const prompt of [...BACKFILLED, ...RETIRED]) {
+            expect(
+                ORIGINALS.has(prompt),
+                `no question has this prompt, so the UPDATE matches nothing:\n${prompt.slice(0, 90)}`
+            ).toBe(true);
+        }
+    });
+
+    it("leaves no surviving question without a tier and an explanation", () => {
+        const retired = new Set(RETIRED);
+        const covered = new Set(BACKFILLED);
+        const missed = [...ORIGINALS].filter((p) => !retired.has(p) && !covered.has(p));
+
+        expect(
+            missed.map((p) => p.slice(0, 70)).join("\n"),
+            `${missed.length} question(s) would keep a NULL tier:`
+        ).toBe("");
+    });
+
+    it("never both retires and backfills the same question", () => {
+        const overlap = BACKFILLED.filter((p) => RETIRED.includes(p));
+
+        expect(overlap).toHaveLength(0);
+    });
+
+    it("accounts for every original question exactly once", () => {
+        expect(BACKFILLED.length + RETIRED.length).toBe(ORIGINALS.size);
+        expect(new Set(BACKFILLED).size).toBe(BACKFILLED.length);
+        expect(new Set(RETIRED).size).toBe(RETIRED.length);
+    });
+});
+
+describe("the backfilled questions meet the same standard as the new ones", () => {
+    const entries = BACKFILL.split("SELECT backfill_question(")
+        .slice(1)
+        .map((block) => {
+            const m = /^\s*E?'(?:[^']|'')*',\s*(\d),\s*'((?:[^']|'')*)'/.exec(block);
+
+            if (!m) throw new Error(`Unparseable backfill: ${block.slice(0, 80)}`);
+
+            return { difficulty: Number(m[1]), explanation: m[2]!.replace(/''/g, "'") };
+        });
+
+    it("tiers every one between 1 and 4", () => {
+        for (const e of entries) {
+            expect(e.difficulty).toBeGreaterThanOrEqual(1);
+            expect(e.difficulty).toBeLessThanOrEqual(4);
+        }
+    });
+
+    it("explains every one, within the column's limit", () => {
+        for (const e of entries) {
+            expect(e.explanation.trim().length).toBeGreaterThan(20);
+            expect(e.explanation.length).toBeLessThanOrEqual(400);
+        }
+    });
+
+    it("spreads across tiers rather than parking everything in the middle", () => {
+        const tiers = new Set(entries.map((e) => e.difficulty));
+
+        expect(tiers.size).toBeGreaterThanOrEqual(3);
+    });
+});

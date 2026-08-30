@@ -3,6 +3,7 @@ import { pool } from "../db.js";
 import { CODE_BLITZ } from "../games/constants.js";
 import { ELIGIBLE_QUESTION_PREDICATE } from "../questions/queries.js";
 import { QUESTIONS_PER_SESSION, scoreForSession } from "./scoring.js";
+import { dealSession } from "./curve.js";
 
 /**
  * How many of the player's previous runs are checked for questions to avoid.
@@ -122,36 +123,54 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
         // out. `ORDER BY (id IN recent) ASC` puts unseen first and seen last, so
         // a player who has exhausted the bank still gets a full game instead of a
         // 503 -- there is no pool size at which this can starve.
-        await client.query(
+        // Candidates first, then the pick -- rather than one INSERT ... SELECT.
+        //
+        // Which tier each slot should draw from is a design decision, and it now
+        // has a shape: a run opens on fundamentals and closes on a real-world
+        // question. Expressing that as SQL would put the curve in a ROW_NUMBER()
+        // window where it could be neither read as the rule it is nor tested
+        // without a database. dealSession owns it instead, and is unit-tested.
+        //
+        // No LIMIT here on purpose: the dealer needs the whole eligible bank to
+        // choose from, or it cannot find a tier-4 question that happened to sort
+        // past position ten. The ordering still matters and is still the point --
+        // unseen questions come first, randomised within that, and the dealer
+        // takes the first acceptable match so both properties survive.
+        const candidates = await client.query<{
+            id: string;
+            difficulty: number | null;
+            prompt: string;
+        }>(
             `WITH recent AS (
                  SELECT sq.question_id
                  FROM session_questions sq
                  WHERE sq.game_session_id IN (
                      SELECT gs.id
                      FROM game_sessions gs
-                     WHERE gs.user_id = $3
-                       AND gs.game_id = (SELECT id FROM games WHERE slug = $4)
+                     WHERE gs.user_id = $2
+                       AND gs.game_id = (SELECT id FROM games WHERE slug = $3)
                        AND gs.id <> $1
                      ORDER BY gs.started_at DESC
                      LIMIT ${RECENT_SESSIONS_AVOIDED}
                  )
              )
-             INSERT INTO session_questions
-                 (game_session_id, question_id, display_order, prompt_text, status)
-             SELECT $1,
-                    q.id,
-                    ROW_NUMBER() OVER (),
-                    q.prompt,
-                    'pending'
-             FROM (
-                 SELECT q.id, q.prompt
-                 FROM questions q
-                 WHERE ${ELIGIBLE_QUESTION_PREDICATE}
-                 ORDER BY (q.id IN (SELECT question_id FROM recent)) ASC, RANDOM()
-                 LIMIT $2
-             ) AS q`,
-            [sessionId, QUESTIONS_PER_SESSION, userId, CODE_BLITZ]
+             SELECT q.id, q.difficulty, q.prompt
+             FROM questions q
+             WHERE ${ELIGIBLE_QUESTION_PREDICATE}
+             ORDER BY (q.id IN (SELECT question_id FROM recent)) ASC, RANDOM()`,
+            [sessionId, userId, CODE_BLITZ]
         );
+
+        const dealt = dealSession(candidates.rows, QUESTIONS_PER_SESSION);
+
+        for (const [index, question] of dealt.entries()) {
+            await client.query(
+                `INSERT INTO session_questions
+                     (game_session_id, question_id, display_order, prompt_text, status)
+                 VALUES ($1, $2, $3, $4, 'pending')`,
+                [sessionId, question.id, index + 1, question.prompt]
+            );
+        }
 
         await client.query("COMMIT");
 

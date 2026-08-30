@@ -84,12 +84,34 @@ describe("question selection resists memorisation", () => {
         // A NOT IN would make a player who has exhausted the bank unable to start
         // a game at all. Ordering degrades instead: unseen first, seen after.
         expect(insert).not.toMatch(/NOT IN \(SELECT question_id FROM recent\)/);
-        expect(insert).toMatch(/LIMIT \$2/);
+        expect(insert).toMatch(/ORDER BY \(q\.id IN \(SELECT question_id FROM recent\)\) ASC, RANDOM\(\)/);
+    });
+
+    it("hands the dealer the whole eligible bank, not the first ten rows", () => {
+        // The candidate query deliberately carries no LIMIT. Truncating to ten
+        // before the curve runs would mean a tier-4 question that happened to
+        // sort past position ten could never be dealt, and the last slot of
+        // every run would quietly fall back to whatever was near the top.
+        // Only the candidate SELECT itself -- the `recent` CTE above it has its
+        // own LIMIT, which bounds the lookback window and is meant to be there.
+        const candidateSelect = insert.slice(
+            insert.indexOf("SELECT q.id, q.difficulty, q.prompt"),
+            insert.indexOf("const dealt")
+        );
+
+        expect(candidateSelect).not.toMatch(/LIMIT/);
+        expect(insert).toMatch(/dealSession\(candidates\.rows, QUESTIONS_PER_SESSION\)/);
+    });
+
+    it("deals one question per slot, in the order the curve produced", () => {
+        expect(insert).toMatch(/for \(const \[index, question\] of dealt\.entries\(\)\)/);
+        expect(insert).toMatch(/display_order/);
+        expect(insert).toMatch(/index \+ 1/);
     });
 
     it("scopes the lookback to this player and this game", () => {
-        expect(insert).toMatch(/gs\.user_id = \$3/);
-        expect(insert).toMatch(/gs\.game_id = \(SELECT id FROM games WHERE slug = \$4\)/);
+        expect(insert).toMatch(/gs\.user_id = \$2/);
+        expect(insert).toMatch(/gs\.game_id = \(SELECT id FROM games WHERE slug = \$3\)/);
     });
 
     it("excludes the session being created from its own lookback", () => {
