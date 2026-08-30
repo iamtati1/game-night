@@ -30,7 +30,27 @@ DECLARE
     v_option JSONB;
     v_pos INTEGER := 0;
 BEGIN
+    -- Already present? Bring its metadata up to date and stop.
+    --
+    -- This used to RETURN and change nothing, and that is what broke the seed
+    -- run. An earlier version of this file inserted 92 questions before the
+    -- topic column existed. When topic arrived and every question here gained
+    -- one, those 92 rows were skipped on the re-run -- so they kept a NULL topic
+    -- and the constraint rejected them, naming no reason anyone could act on.
+    --
+    -- "Safe to re-run" has to mean CONVERGES, not "does nothing the second
+    -- time". A seed that freezes whatever landed first can never carry a
+    -- correction to content that already exists, which is the main reason to
+    -- re-run one.
+    --
+    -- Metadata only. Options are left alone because they are keyed by position
+    -- and rewriting them would orphan any session_questions row citing one, and
+    -- is_active is left alone so a question retired by seed 009 stays retired.
     IF EXISTS (SELECT 1 FROM questions WHERE prompt = p_prompt) THEN
+        UPDATE questions
+        SET difficulty = p_difficulty, topic = p_topic, explanation = p_explanation
+        WHERE prompt = p_prompt;
+
         RETURN;
     END IF;
 

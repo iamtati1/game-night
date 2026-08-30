@@ -175,3 +175,77 @@ describe("seed files stand on their own", () => {
         }
     });
 });
+
+/**
+ * A re-runnable seed has to CONVERGE, not merely avoid duplicating.
+ *
+ * This is the defect that broke the seed run. An earlier version of seed 008
+ * inserted 92 questions before the topic column existed. When topic arrived and
+ * every question in that file gained one, the helper skipped all 92 rows because
+ * their prompts were already present -- so they kept a NULL topic, and the
+ * constraint rejected them with "violated by some row" and nothing to act on.
+ *
+ * "Safe to re-run" meaning "does nothing the second time" freezes whatever
+ * landed first, which makes it impossible to correct content that already
+ * exists -- the main reason to re-run a seed at all.
+ */
+describe("content seeds converge on their content", () => {
+    /** Seeds whose helper inserts rows that later seeds or columns may improve. */
+    const CONTENT_SEEDS = SEEDS.filter((f) =>
+        /008_code_blitz|010_code_blitz/.test(f.name)
+    );
+
+    it("found the content seeds", () => {
+        expect(CONTENT_SEEDS).toHaveLength(2);
+    });
+
+    it("updates an existing row rather than returning without doing anything", () => {
+        for (const file of CONTENT_SEEDS) {
+            // A bare `IF EXISTS ... RETURN` with no UPDATE before it is the bug.
+            const guard = /IF EXISTS \(SELECT 1 FROM questions WHERE prompt = p_prompt\) THEN([\s\S]*?)END IF;/.exec(
+                file.sql
+            );
+
+            expect(guard, `${file.name} has no existing-row guard`).not.toBeNull();
+            expect(
+                guard![1],
+                `${file.name} skips an existing question instead of updating it, so a ` +
+                    `later correction can never reach rows that are already there`
+            ).toMatch(/UPDATE questions/);
+        }
+    });
+
+    it("carries every field the question is seeded with", () => {
+        for (const file of CONTENT_SEEDS) {
+            for (const column of ["difficulty", "topic", "explanation"]) {
+                expect(
+                    file.sql,
+                    `${file.name} does not refresh ${column} on an existing row`
+                ).toMatch(new RegExp(`SET[\\s\\S]{0,120}${column} = p_${column}`));
+            }
+        }
+    });
+
+    it("never reactivates a question on re-run", () => {
+        // Seed 009 retires 21 questions. If the content seeds touched is_active
+        // they would undo that every time they ran, silently returning trivia to
+        // the bank.
+        for (const file of CONTENT_SEEDS) {
+            expect(file.sql, `${file.name} writes is_active`).not.toMatch(/is_active\s*=/);
+        }
+    });
+
+    it("leaves options alone, since they are keyed by position", () => {
+        // Rewriting options on a re-run would orphan any session_questions row
+        // citing one. The update is metadata only.
+        for (const file of CONTENT_SEEDS) {
+            const guard = /IF EXISTS \(SELECT 1 FROM questions WHERE prompt = p_prompt\) THEN([\s\S]*?)END IF;/.exec(
+                file.sql
+            )!;
+
+            expect(guard[1], `${file.name} touches options on re-run`).not.toMatch(
+                /question_options/
+            );
+        }
+    });
+});
