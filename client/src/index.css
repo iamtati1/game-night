@@ -5573,6 +5573,22 @@ pre {
         padding-bottom: 0;
     }
 
+    /* The pool dims with the floor, for the same reason.
+       On desktop the light works because its bright centre is hidden UNDER the
+       floor's opaque surface -- only the perimeter is ever visible, at roughly
+       2-4%. Here that surface is gone, so nothing covers the middle and the full
+       12% reads directly behind the card list: the ambient light ends up more
+       dominant on a phone than on a 1440px display, which is backwards.
+       Halving the peaks puts the mobile centre at about the brightness the
+       desktop EDGE has, so the room stays felt without the floor to shade it. */
+    .landing::before {
+        background:
+            radial-gradient(ellipse 58% 68% at 50% 52%,
+                color-mix(in srgb, var(--jolt) 6%, transparent) 0%,
+                color-mix(in srgb, var(--accent) 4%, transparent) 42%,
+                transparent 80%);
+    }
+
     /* Memory is just the last card again. */
     .game-card:nth-child(5):last-child {
         grid-column: auto;
@@ -5709,4 +5725,201 @@ pre {
    and where :has() is unsupported the page simply keeps the narrower column. */
 .app:has(.game.flush) {
     max-width: 1080px;
+}
+
+/* ---------- the world ----------
+
+   Everything above this point lights the floor. This is what the floor stands
+   IN: objects at a distance, which is the thing light alone could never supply.
+   A wash behind a page reads as a vignette; a wash with something far away in it
+   reads as a place.
+
+   Depth order, back to front:
+
+       sky (z-index -2)   stars, then a planet nearer than they are
+       pool (z-index -1)  the existing .landing::before ambient light
+       floor              the game floor and its stations
+
+   The ambient light sitting BETWEEN the sky and the floor is what ties the two
+   together: the room's light is in front of the sky and behind the floor, so the
+   floor reads as lit from within a space rather than pasted over a picture. */
+
+.sky {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Fixed, so the sky holds still while the page scrolls past it. That difference
+   in behaviour IS the parallax: content moves, the distance does not. Discrete
+   points can do this safely where a gradient could not -- the seam that made the
+   old background look like it was peeling away needed a continuous edge to be
+   visible on, and a star has none. */
+.sky-stars {
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+}
+
+/* Irregular by hand. Anything generated from a loop or a repeating tile lands on
+   a lattice, and the eye finds a lattice immediately -- that is the difference
+   between a sky and starfield wallpaper. A few carry --jolt or --accent so the
+   sky belongs to Jolt rather than to a stock background. */
+.sky-stars-far {
+    opacity: 0.62;
+    background-image:
+        radial-gradient(1px 1px at 15% 34%, rgba(255, 255, 255, 0.32), transparent),
+        radial-gradient(1px 1px at 52% 18%, rgba(255, 255, 255, 0.38), transparent),
+        radial-gradient(1px 1px at 74% 68%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 26% 84%, rgba(255, 255, 255, 0.32), transparent),
+        radial-gradient(1px 1px at 88% 8%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 41% 52%, rgba(255, 255, 255, 0.26), transparent),
+        radial-gradient(1px 1px at 7% 14%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1px 1px at 23% 8%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 38% 22%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 61% 6%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 79% 17%, rgba(255, 255, 255, 0.45), transparent),
+        radial-gradient(1px 1px at 91% 31%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 12% 43%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 84% 57%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 33% 71%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 68% 83%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 47% 92%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 4% 66%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 96% 74%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 55% 38%, rgba(255, 255, 255, 0.28), transparent);
+}
+
+.sky-stars-near {
+    opacity: 0.72;
+    background-image:
+        radial-gradient(1.6px 1.6px at 17% 27%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1.6px 1.6px at 72% 12%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(2px 2px at 88% 44%, color-mix(in srgb, var(--jolt) 70%, white), transparent),
+        radial-gradient(1.6px 1.6px at 29% 58%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1.6px 1.6px at 58% 76%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(2px 2px at 9% 88%, color-mix(in srgb, var(--accent) 60%, white), transparent),
+        radial-gradient(1.6px 1.6px at 43% 4%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1.6px 1.6px at 94% 63%, rgba(255, 255, 255, 0.45), transparent);
+}
+
+/* A body, not a circle on the page.
+   Three quarters of it sits outside the viewport corner, so what you see is an
+   arc. The lit edge faces up and inward, toward the same top-of-page halo that
+   already exists on the root element -- the sky and the room agree about where
+   the light is coming from, which is most of what makes it read as real.
+   Alphas are barely above the background on purpose: it should be something you
+   notice on the second look, not an illustration. */
+.sky-planet {
+    position: absolute;
+    left: -13rem;
+    bottom: -17rem;
+    width: 34rem;
+    height: 34rem;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 68% 22%,
+            rgba(255, 255, 255, 0.05) 0%,
+            rgba(120, 130, 190, 0.035) 34%,
+            rgba(10, 12, 20, 0.5) 68%,
+            rgba(8, 9, 13, 0.6) 100%);
+    box-shadow: inset 0 2px 0 color-mix(in srgb, var(--jolt) 9%, transparent);
+}
+
+/* Sparse on purpose.
+   The whole animation is one long wait with a short streak at the end of it, so
+   the odds are you are looking somewhere else when it happens -- which is the
+   point. Catching one should feel like catching one, not like watching a loop.
+   Periods are 31s and 47s: no common factor worth speaking of, so the two never
+   settle into a pattern together.
+   transform and opacity only. Both are compositor properties, so this costs no
+   layout and no paint while it runs. */
+.sky-shot {
+    position: absolute;
+    width: 9rem;
+    height: 1px;
+    opacity: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+    /* The head, which is what actually reads at this size. */
+    box-shadow: 0 0 3px 0 rgba(255, 255, 255, 0.5);
+}
+
+.sky-shot-a {
+    top: 12%;
+    left: 58%;
+    animation: sky-shoot 31s linear infinite;
+}
+
+.sky-shot-b {
+    top: 34%;
+    left: 22%;
+    animation: sky-shoot 47s linear 19s infinite;
+}
+
+/* 2.6% of the cycle is lit. At 31s that is roughly eight tenths of a second of
+   streak followed by half a minute of nothing. */
+@keyframes sky-shoot {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) rotate(14deg) scaleX(0.3);
+    }
+
+    0.4% {
+        opacity: 0.9;
+    }
+
+    2.6% {
+        opacity: 0;
+        transform: translate3d(19rem, 5rem, 0) rotate(14deg) scaleX(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate3d(19rem, 5rem, 0) rotate(14deg) scaleX(1);
+    }
+}
+
+/* Stars and the planet stay -- they are objects in the room, not motion. Only
+   the thing that moves stops moving. */
+@media (prefers-reduced-motion: reduce) {
+    .sky-shot {
+        display: none;
+    }
+}
+
+/* Tablet: the same world, with the body pulled further out of frame so it does
+   not crowd a narrower floor. */
+@media (max-width: 1100px) {
+    .sky-planet {
+        left: -17rem;
+        bottom: -20rem;
+        width: 28rem;
+        height: 28rem;
+    }
+}
+
+/* Mobile: fewer objects, not smaller ones.
+   The near star layer and both shooting stars go. On a phone the games fill the
+   viewport, so anything else in it is competing rather than surrounding -- and
+   the sky is the part that should give way, since the floor is the destination.
+   What is left is the far layer and a sliver of the planet, which is enough to
+   say "this is somewhere" without asking for attention. */
+@media (max-width: 780px) {
+    .sky-stars-near,
+    .sky-shot {
+        display: none;
+    }
+
+    .sky-stars-far {
+        opacity: 0.38;
+    }
+
+    .sky-planet {
+        left: -14rem;
+        bottom: -16rem;
+        width: 21rem;
+        height: 21rem;
+    }
 }
