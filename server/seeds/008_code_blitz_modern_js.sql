@@ -102,10 +102,10 @@ SELECT seed_js_question(
     1,
     'Template literals interpolate any expression inside ${}, so 2 + 3 is evaluated first.',
     $j$[
-      {"text": "Hi Ada, you have 5 messages", "correct": true},
-      {"text": "Hi Ada, you have 2 + 3 messages", "correct": false},
-      {"text": "Hi ${name}, you have ${2 + 3} messages", "correct": false},
-      {"text": "Hi Ada, you have 23 messages", "correct": false}
+      {"text": "\"Hi Ada, you have 5 messages\"", "correct": true},
+      {"text": "\"Hi Ada, you have 2 + 3 messages\"", "correct": false},
+      {"text": "\"Hi ${name}, you have ${2 + 3} messages\"", "correct": false},
+      {"text": "\"Hi Ada, you have 23 messages\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -135,10 +135,10 @@ SELECT seed_js_question(
     1,
     'Methods run left to right: uppercase first, then take characters 0 up to (not including) 4.',
     $j$[
-      {"text": "JAVA", "correct": true},
-      {"text": "JAVAS", "correct": false},
-      {"text": "java", "correct": false},
-      {"text": "AVAS", "correct": false}
+      {"text": "\"JAVA\"", "correct": true},
+      {"text": "\"JAVAS\"", "correct": false},
+      {"text": "\"java\"", "correct": false},
+      {"text": "\"AVAS\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -168,9 +168,9 @@ SELECT seed_js_question(
     1,
     'A default parameter is used when the argument is undefined -- including when it is left out entirely.',
     $j$[
-      {"text": "Hi friend", "correct": true},
-      {"text": "Hi undefined", "correct": false},
-      {"text": "Hi ", "correct": false},
+      {"text": "\"Hi friend\"", "correct": true},
+      {"text": "\"Hi undefined\"", "correct": false},
+      {"text": "\"Hi \"", "correct": false},
       {"text": "TypeError", "correct": false}
     ]$j$::JSONB);
 
@@ -223,8 +223,8 @@ SELECT seed_js_question(
     1,
     'Object destructuring matches by property NAME, not position, so order in the object does not matter.',
     $j$[
-      {"text": "London", "correct": true},
-      {"text": "Ada", "correct": false},
+      {"text": "\"London\"", "correct": true},
+      {"text": "\"Ada\"", "correct": false},
       {"text": "undefined", "correct": false},
       {"text": "{ city: \"London\" }", "correct": false}
     ]$j$::JSONB);
@@ -234,10 +234,10 @@ SELECT seed_js_question(
     1,
     'typeof returns a string naming the type. Quotes make it a string no matter what is inside them.',
     $j$[
-      {"text": "string number", "correct": true},
-      {"text": "number number", "correct": false},
-      {"text": "string string", "correct": false},
-      {"text": "String Number", "correct": false}
+      {"text": "\"string\" \"number\"", "correct": true},
+      {"text": "\"number\" \"number\"", "correct": false},
+      {"text": "\"string\" \"string\"", "correct": false},
+      {"text": "\"String\" \"Number\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -256,10 +256,10 @@ SELECT seed_js_question(
     1,
     'Strings index like arrays, and at(-1) counts from the end -- much clearer than length - 1.',
     $j$[
-      {"text": "h o", "correct": true},
-      {"text": "h l", "correct": false},
-      {"text": "hello o", "correct": false},
-      {"text": "undefined o", "correct": false}
+      {"text": "\"h\" \"o\"", "correct": true},
+      {"text": "\"h\" \"l\"", "correct": false},
+      {"text": "\"hello\" \"o\"", "correct": false},
+      {"text": "undefined \"o\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -333,7 +333,7 @@ SELECT seed_js_question(
     $j$[
       {"text": "{ name: \"Sam\" }", "correct": true},
       {"text": "[{ name: \"Sam\" }]", "correct": false},
-      {"text": "Sam", "correct": false},
+      {"text": "\"Sam\"", "correct": false},
       {"text": "1", "correct": false}
     ]$j$::JSONB);
 
@@ -375,10 +375,10 @@ SELECT seed_js_question(
     2,
     '|| falls back on any falsy value, so 0 triggers it. ?? only falls back on null or undefined, which is usually what you meant.',
     $j$[
-      {"text": "none 0", "correct": true},
+      {"text": "\"none\" 0", "correct": true},
       {"text": "0 0", "correct": false},
-      {"text": "none none", "correct": false},
-      {"text": "0 none", "correct": false}
+      {"text": "\"none\" \"none\"", "correct": false},
+      {"text": "0 \"none\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -408,10 +408,10 @@ SELECT seed_js_question(
     2,
     'A destructuring default fills in when the property is missing or undefined. Handy for options objects.',
     $j$[
-      {"text": "Ada user", "correct": true},
-      {"text": "Ada undefined", "correct": false},
-      {"text": "Ada null", "correct": false},
-      {"text": "undefined user", "correct": false}
+      {"text": "\"Ada\" \"user\"", "correct": true},
+      {"text": "\"Ada\" undefined", "correct": false},
+      {"text": "\"Ada\" null", "correct": false},
+      {"text": "undefined \"user\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -430,9 +430,9 @@ SELECT seed_js_question(
     2,
     'map() produces [3, 3], then join() makes a string. Chaining like this reads top to bottom as one pipeline.',
     $j$[
-      {"text": "3-3", "correct": true},
+      {"text": "\"3-3\"", "correct": true},
       {"text": "[3, 3]", "correct": false},
-      {"text": "cat-dog", "correct": false},
+      {"text": "\"cat-dog\"", "correct": false},
       {"text": "6", "correct": false}
     ]$j$::JSONB);
 
@@ -507,8 +507,8 @@ SELECT seed_js_question(
     2,
     'Spread makes a new object, so changing the copy leaves the original alone. This is a SHALLOW copy -- nested objects are still shared.',
     $j$[
-      {"text": "Ada", "correct": true},
-      {"text": "Sam", "correct": false},
+      {"text": "\"Ada\"", "correct": true},
+      {"text": "\"Sam\"", "correct": false},
       {"text": "undefined", "correct": false},
       {"text": "TypeError", "correct": false}
     ]$j$::JSONB);
@@ -683,10 +683,10 @@ SELECT seed_js_question(
     3,
     'In a method call, this is whatever came before the dot. Pull start() out into a bare variable and that link is lost.',
     $j$[
-      {"text": "run", "correct": true},
+      {"text": "\"run\"", "correct": true},
       {"text": "undefined", "correct": false},
       {"text": "TypeError", "correct": false},
-      {"text": "timer", "correct": false}
+      {"text": "\"timer\"", "correct": false}
     ]$j$::JSONB);
 
 SELECT seed_js_question(
@@ -790,13 +790,13 @@ SELECT seed_js_question(
     ]$j$::JSONB);
 
 SELECT seed_js_question(
-    E'What does this log?\n\nasync function run() {\n  try {\n    await Promise.reject(new Error("nope"));\n  } catch (err) {\n    console.log("caught:", err.message);\n  }\n}\nrun();',
+    E'What does this log?\n\nasync function run() {\n  try {\n    await Promise.reject(new Error("nope"));\n  } catch (err) {\n    console.log(err.message);\n  }\n}\nrun();',
     4,
     'await turns a rejected promise into a thrown error, so try/catch works on async code exactly as it does on synchronous code.',
     $j$[
-      {"text": "caught: nope", "correct": true},
-      {"text": "caught: Error", "correct": false},
-      {"text": "nope", "correct": false},
+      {"text": "\"nope\"", "correct": true},
+      {"text": "\"Error: nope\"", "correct": false},
+      {"text": "undefined", "correct": false},
       {"text": "Nothing -- the rejection is unhandled", "correct": false}
     ]$j$::JSONB);
 
@@ -849,9 +849,9 @@ SELECT seed_js_question(
     4,
     'finally runs on both paths, and it runs BEFORE the value is returned to the caller -- so "done" is logged first.',
     $j$[
-      {"text": "done\nnull", "correct": true},
-      {"text": "null\ndone", "correct": false},
-      {"text": "done\nundefined", "correct": false},
+      {"text": "\"done\"\nnull", "correct": true},
+      {"text": "null\n\"done\"", "correct": false},
+      {"text": "\"done\"\nundefined", "correct": false},
       {"text": "SyntaxError", "correct": false}
     ]$j$::JSONB);
 
@@ -919,6 +919,216 @@ SELECT seed_js_question(
       {"text": "2", "correct": false},
       {"text": "0", "correct": false},
       {"text": "TypeError", "correct": false}
+    ]$j$::JSONB);
+
+
+
+-- ---------------------------------------------------------------------------
+-- TIER 4, second pass.
+--
+-- Tier 4 was the thinnest tier at fifteen, which matters more than the raw
+-- number suggests: the curve wants a tier-4 question for the last slot of every
+-- run, so the hardest content repeats soonest. These are the same kind of
+-- question, not more of the same questions -- each one asks you to hold two or
+-- three familiar ideas at once, which is what tier 4 is for. None of them turn
+-- on a rule you would have to have memorised.
+
+SELECT seed_js_question(
+    E'What does this log?\n\nPromise.resolve(1)\n  .then((n) => Promise.resolve(n + 1))\n  .then((n) => console.log(n));',
+    4,
+    'Returning a promise from .then() makes the chain wait for it and hands on the value inside, rather than the promise itself. Chains flatten.',
+    $j$[
+      {"text": "2", "correct": true},
+      {"text": "1", "correct": false},
+      {"text": "3", "correct": false},
+      {"text": "undefined", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst delay = (ms, v) => new Promise((r) => setTimeout(() => r(v), ms));\nPromise.all([delay(20, "a"), delay(0, "b")]).then((vs) => console.log(vs));',
+    4,
+    'Promise.all resolves in the order you passed the promises in, not the order they finished. "b" settles first but still lands second.',
+    $j$[
+      {"text": "[\"a\", \"b\"]", "correct": true},
+      {"text": "[\"b\", \"a\"]", "correct": false},
+      {"text": "[\"a\"]", "correct": false},
+      {"text": "\"ab\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nasync function save() {\n  try {\n    return Promise.reject(new Error("boom"));\n  } catch {\n    return "caught";\n  }\n}\nsave().catch((e) => console.log(e.message));',
+    4,
+    'The promise is returned, not awaited, so it settles after the try block has already been left -- the catch never sees it. `return await` inside the try would fix it.',
+    $j$[
+      {"text": "\"boom\"", "correct": true},
+      {"text": "\"caught\"", "correct": false},
+      {"text": "undefined", "correct": false},
+      {"text": "Nothing is logged", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'In what order does this log?\n\nfor (var i = 1; i <= 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}',
+    4,
+    'var gives one binding for the whole loop, and the timers all run after it finishes -- by then i is 4. Changing var to let fixes it.',
+    $j$[
+      {"text": "4, 4, 4", "correct": true},
+      {"text": "1, 2, 3", "correct": false},
+      {"text": "3, 3, 3", "correct": false},
+      {"text": "0, 1, 2", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst api = {\n  name: "users",\n  paths: ["a", "b"],\n  list() {\n    return this.paths.map(function (p) {\n      return this.name + "/" + p;\n    });\n  }\n};\nconsole.log(api.list());',
+    4,
+    'A plain function gets its own this, which is undefined here, so reading .name throws. An arrow function would have inherited this from list().',
+    $j$[
+      {"text": "TypeError", "correct": true},
+      {"text": "[\"users/a\", \"users/b\"]", "correct": false},
+      {"text": "[\"undefined/a\", \"undefined/b\"]", "correct": false},
+      {"text": "[]", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst items = [1, 2, 3, 4];\nfor (const n of items) {\n  if (n % 2 === 0) items.splice(items.indexOf(n), 1);\n}\nconsole.log(items);',
+    4,
+    'Removing items while iterating shifts everything left, so the loop skips the element after each removal. Iterate a copy, or use filter().',
+    $j$[
+      {"text": "[1, 3]", "correct": true},
+      {"text": "[1, 3, 4]", "correct": false},
+      {"text": "[1, 2, 3, 4]", "correct": false},
+      {"text": "[1]", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nPromise.allSettled([Promise.resolve(1), Promise.reject(new Error("x"))])\n  .then((rs) => console.log(rs.map((r) => r.status)));',
+    4,
+    'allSettled waits for every promise and never rejects -- you get a status for each. Promise.all would have rejected on the first failure.',
+    $j$[
+      {"text": "[\"fulfilled\", \"rejected\"]", "correct": true},
+      {"text": "[\"fulfilled\"]", "correct": false},
+      {"text": "[1, \"x\"]", "correct": false},
+      {"text": "TypeError", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'In what order does this log?\n\nPromise.reject(new Error("a"))\n  .then(() => console.log("then"))\n  .catch((e) => console.log(e.message))\n  .then(() => console.log("after"));',
+    4,
+    'A rejection skips .then() handlers until a .catch(). The catch handles it, and the chain carries on normally from there.',
+    $j$[
+      {"text": "a, after", "correct": true},
+      {"text": "then, a, after", "correct": false},
+      {"text": "a", "correct": false},
+      {"text": "after, a", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst config = { handlers: { onSave: null } };\nconsole.log(config.handlers?.onSave?.() ?? "no handler");',
+    4,
+    '?.() calls only if there is something to call, giving undefined otherwise -- and ?? then supplies the fallback. Three guards, no if statement.',
+    $j$[
+      {"text": "\"no handler\"", "correct": true},
+      {"text": "undefined", "correct": false},
+      {"text": "null", "correct": false},
+      {"text": "TypeError", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst people = [\n  { name: "a", team: "x" },\n  { name: "b", team: "x" },\n  { name: "c", team: "y" }\n];\nconst grouped = people.reduce((acc, p) => {\n  (acc[p.team] ??= []).push(p.name);\n  return acc;\n}, {});\nconsole.log(grouped);',
+    4,
+    'reduce() builds an object here rather than a number. ??= creates the array the first time a team is seen, so each key collects its own names.',
+    $j$[
+      {"text": "{ x: [\"a\", \"b\"], y: [\"c\"] }", "correct": true},
+      {"text": "{ x: [\"b\"], y: [\"c\"] }", "correct": false},
+      {"text": "{ x: \"ab\", y: \"c\" }", "correct": false},
+      {"text": "[[\"a\", \"b\"], [\"c\"]]", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst counts = new Map();\ncounts.set("a", 1);\nconsole.log(counts.a, counts.get("a"));',
+    4,
+    'A Map is not a plain object -- its entries live behind get() and set(), so dot access finds nothing. That separation is why any key type works.',
+    $j$[
+      {"text": "undefined 1", "correct": true},
+      {"text": "1 1", "correct": false},
+      {"text": "undefined undefined", "correct": false},
+      {"text": "TypeError", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nconst scores = [\n  { name: "a", score: 2 },\n  { name: "b", score: 2 },\n  { name: "c", score: 1 }\n];\nconst best = Math.max(...scores.map((s) => s.score));\nconsole.log(scores.filter((s) => s.score === best).map((s) => s.name));',
+    4,
+    'Find the maximum first, then keep everything that matches it -- which is how you get ties. Sorting and taking the first would have dropped one.',
+    $j$[
+      {"text": "[\"a\", \"b\"]", "correct": true},
+      {"text": "[\"a\"]", "correct": false},
+      {"text": "[\"a\", \"b\", \"c\"]", "correct": false},
+      {"text": "2", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction once(fn) {\n  let called = false;\n  let result;\n  return (...args) => {\n    if (!called) {\n      called = true;\n      result = fn(...args);\n    }\n    return result;\n  };\n}\nconst init = once((n) => n * 2);\ninit(5);\nconsole.log(init(100));',
+    4,
+    'The closure remembers both the flag and the first result, so later calls return the cached value and the argument is ignored.',
+    $j$[
+      {"text": "10", "correct": true},
+      {"text": "200", "correct": false},
+      {"text": "undefined", "correct": false},
+      {"text": "100", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does main.js log?\n\n// counter.js\nexport let count = 0;\nexport function increment() { count += 1; }\n\n// main.js\nimport { count, increment } from "./counter.js";\nincrement();\nconsole.log(count);',
+    4,
+    'An import is a live binding, not a copy taken at import time. When the module updates the variable, every importer sees the new value.',
+    $j$[
+      {"text": "1", "correct": true},
+      {"text": "0", "correct": false},
+      {"text": "undefined", "correct": false},
+      {"text": "An error -- count is read-only", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What is the bug in this code?\n\nasync function total(ids) {\n  let sum = 0;\n  ids.forEach(async (id) => {\n    sum += await lookup(id);\n  });\n  return sum;\n}',
+    4,
+    'forEach does not wait for an async callback, so total returns 0 before any lookup finishes. A for...of loop with await inside would work.',
+    $j$[
+      {"text": "forEach does not await the callbacks, so it returns 0", "correct": true},
+      {"text": "sum should be declared with const", "correct": false},
+      {"text": "await cannot be used inside an arrow function", "correct": false},
+      {"text": "total does not need to be async", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What is the bug in this code?\n\nfunction createTimer() {\n  let seconds = 0;\n  setInterval(() => { seconds += 1; }, 1000);\n  return seconds;\n}\nconst elapsed = createTimer();',
+    4,
+    'seconds is read once and returned as a number, so elapsed is 0 forever. Return a function that reads it, and the closure stays live.',
+    $j$[
+      {"text": "It returns the value once, so elapsed never changes", "correct": true},
+      {"text": "setInterval should be setTimeout", "correct": false},
+      {"text": "seconds must be declared with var to be captured", "correct": false},
+      {"text": "The interval callback cannot modify seconds", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What is the bug in this code?\n\nlet cache = null;\nasync function load() {\n  if (cache) return cache;\n  cache = await fetchData();\n  return cache;\n}\nPromise.all([load(), load()]);',
+    4,
+    'Both calls check the empty cache before either finishes, so the fetch happens twice. Caching the PROMISE rather than the result fixes it.',
+    $j$[
+      {"text": "Two concurrent calls both fetch, because neither has filled the cache yet", "correct": true},
+      {"text": "cache should be declared with const", "correct": false},
+      {"text": "Promise.all cannot take the same function twice", "correct": false},
+      {"text": "await cannot be assigned directly to a variable", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'Which approach waits for every request and keeps going if one fails?\n\nconst urls = ["/a", "/b", "/c"];',
+    4,
+    'allSettled never rejects: you get a status for each entry. Promise.all rejects on the first failure and abandons the rest of the results.',
+    $j$[
+      {"text": "await Promise.allSettled(urls.map(fetch))", "correct": true},
+      {"text": "await Promise.all(urls.map(fetch))", "correct": false},
+      {"text": "await Promise.race(urls.map(fetch))", "correct": false},
+      {"text": "urls.forEach(async (u) => await fetch(u))", "correct": false}
     ]$j$::JSONB);
 
 

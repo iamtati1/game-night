@@ -12,6 +12,10 @@
  * connection from one place removes that entire class of mistake.
  *
  * Pass --dry-run to list what would be applied without touching anything.
+ *
+ * Pass --baseline <name> to adopt a database that was built before this runner
+ * existed: it records every migration up to and including <name> as applied,
+ * without running any of them. See the note on baseline() below.
  */
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -44,6 +48,73 @@ const LEDGER = `
 `;
 
 const dryRun = process.argv.includes("--dry-run");
+const baselineAt = (() => {
+    const i = process.argv.indexOf("--baseline");
+
+    return i === -1 ? null : process.argv[i + 1] ?? null;
+})();
+
+/**
+ * Adopts a database that already has the schema, without re-running it.
+ *
+ * The development database was built by applying fifteen files by hand, long
+ * before there was a ledger to record it in. Starting the ledger empty would
+ * make every one of those look pending, and the first thing the runner would do
+ * is CREATE TABLE users against a table that already exists -- which fails
+ * safely, and leaves you no way forward.
+ *
+ * So this writes the ledger rows for work already done, and runs nothing. The
+ * checksums are computed from the files exactly as a real run would, so the
+ * drift check keeps working afterwards.
+ *
+ * Deliberately refuses when the ledger already has rows. Baselining a database
+ * whose state is partly recorded would paper over the disagreement rather than
+ * resolve it, and that is precisely the situation where guessing is worst.
+ */
+async function baseline(
+    client: import("pg").PoolClient,
+    files: ReturnType<typeof readSqlDirectory>,
+    upTo: string
+): Promise<number> {
+    const cutoff = files.findIndex((f) => f.name === upTo || f.name.startsWith(upTo));
+
+    if (cutoff === -1) {
+        console.error(`\n  No migration matches "${upTo}".`);
+        console.error(`  Expected one of:\n${files.map((f) => `    ${f.name}`).join("\n")}\n`);
+        return 1;
+    }
+
+    const existing = await client.query<{ n: string }>(
+        "SELECT COUNT(*)::text AS n FROM schema_migrations"
+    );
+
+    if (Number(existing.rows[0]!.n) > 0) {
+        console.error("\n  This database already has migration history.");
+        console.error("  Baselining now would record work that may not match what ran.");
+        console.error("  Run without --baseline to apply what is pending.\n");
+        return 1;
+    }
+
+    const adopted = files.slice(0, cutoff + 1);
+
+    await client.query("BEGIN");
+
+    for (const file of adopted) {
+        await client.query("INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)", [
+            file.name,
+            file.checksum
+        ]);
+    }
+
+    await client.query("COMMIT");
+
+    console.log(`\n  Recorded ${adopted.length} migration(s) as already applied:\n`);
+    for (const f of adopted) console.log(`    ${f.name}`);
+    console.log(`\n  Nothing was run. ${files.length - adopted.length} migration(s) now pending.`);
+    console.log("  Run `npm run migrate` to apply them.\n");
+
+    return 0;
+}
 
 async function main(): Promise<number> {
     const files = readSqlDirectory(MIGRATIONS_DIR);
@@ -62,6 +133,10 @@ async function main(): Promise<number> {
 
     try {
         await client.query(LEDGER);
+
+        if (baselineAt) {
+            return await baseline(client, files, baselineAt);
+        }
 
         const applied = new Map(
             (

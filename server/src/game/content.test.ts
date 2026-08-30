@@ -74,12 +74,18 @@ const QUESTIONS = parseSeed();
 /**
  * Renders a value the way the options are written.
  *
+ * Strings are quoted, including at the top level. That is the convention the
+ * original bank used and it is the right one, because for a whole class of
+ * question the quotes ARE the answer: `1 + "1"` gives `"11"` and `1 + 1` gives
+ * `2`, and an option written as a bare 11 cannot tell those apart -- which is
+ * the entire point of asking. It also matches what a JavaScript REPL shows.
+ *
  * Deliberately not util.inspect: Node prints `[ 1, 2, 3 ]` with padding, and an
  * option that read that way would look wrong to a player. The options use the
  * spacing people actually write, so the comparison has to as well.
  */
-function render(value: unknown): string {
-    if (typeof value === "string") return value;
+function render(value: unknown, quoteStrings = true): string {
+    if (typeof value === "string") return quoteStrings ? `"${value}"` : value;
     if (Array.isArray(value)) return `[${value.map(renderInner).join(", ")}]`;
     if (value === null) return "null";
     if (typeof value === "object") {
@@ -93,10 +99,8 @@ function render(value: unknown): string {
     return String(value);
 }
 
-/** Inside an array or object, strings are quoted -- as console.log shows them. */
-function renderInner(value: unknown): string {
-    return typeof value === "string" ? `"${value}"` : render(value);
-}
+/** Inside an array or object a string is always quoted, whatever the top level does. */
+const renderInner = (value: unknown): string => render(value, true);
 
 /**
  * Runs a snippet and returns what it logged, or the name of what it threw.
@@ -106,9 +110,10 @@ function renderInner(value: unknown): string {
  * synchronous part finished would silently drop exactly the lines those
  * questions are about, and every one of them would look wrong.
  */
-async function run(code: string, joinWith = "\n"): Promise<string> {
+async function run(code: string, joinWith = "\n", quoteStrings = true): Promise<string> {
     const logged: string[] = [];
-    const capture = (...args: unknown[]) => logged.push(args.map(render).join(" "));
+    const capture = (...args: unknown[]) =>
+        logged.push(args.map((a) => render(a, quoteStrings)).join(" "));
 
     try {
         // eslint-disable-next-line no-new-func
@@ -138,7 +143,17 @@ const PREDICTIVE = QUESTIONS.filter((q) =>
     /^(What does this log\?|In what order does this log\?)/.test(q.prompt)
 ).map((q) => ({
     ...q,
-    joinWith: q.prompt.startsWith("In what order") ? ", " : "\n"
+    joinWith: q.prompt.startsWith("In what order") ? ", " : "\n",
+    /**
+     * Order questions do not quote their strings.
+     *
+     * "What does this log?" is often asking what TYPE came out, so `"11"` and
+     * `11` have to look different. "In what order does this log?" is asking
+     * about sequence, and its logged values are labels rather than results --
+     * `A, D, C, B` is the answer, and `"A", "D", "C", "B"` is the same answer
+     * with punctuation in the way.
+     */
+    quoteStrings: !q.prompt.startsWith("In what order")
 }));
 
 describe("the bank is worth playing", () => {
@@ -233,7 +248,7 @@ describe("every predicted output is the real output", () => {
 
         for (const q of PREDICTIVE) {
             const expected = q.options.find((o) => o.correct)!.text;
-            const actual = await run(q.code, q.joinWith);
+            const actual = await run(q.code, q.joinWith, q.quoteStrings);
 
             if (actual !== expected) {
                 wrong.push(`\n  ${q.code.replace(/\n/g, " ⏎ ")}\n    declared: ${expected}\n    actual:   ${actual}`);
@@ -246,7 +261,7 @@ describe("every predicted output is the real output", () => {
     it("offers no distractor that is also what the code does", async () => {
         // A distractor equal to the real output would make two options correct.
         for (const q of PREDICTIVE) {
-            const actual = await run(q.code, q.joinWith);
+            const actual = await run(q.code, q.joinWith, q.quoteStrings);
 
             for (const option of q.options.filter((o) => !o.correct)) {
                 expect(
