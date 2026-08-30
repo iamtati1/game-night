@@ -15,7 +15,53 @@
 -- deliberately swapped order and a deliberately leaking distractor both fail it
 -- -- so a clean run means something.
 --
--- Depends on seed_flush() from 002_flush_snippets.sql. Safe to re-run.
+-- Self-contained, and it has to be. This file used to say it depended on
+-- seed_flush() from 002, but 002 drops that function on its last line -- so by
+-- the time this file ran, the helper it named had already been destroyed by the
+-- file it named. Running the seeds by hand hid it: the function survived if you
+-- happened to run this one before 002 finished, or re-created it yourself.
+-- Running them in order, as the seed runner does, does not.
+--
+-- The Bug Hunt seeds already do it this way: 005 and 006 each create their own
+-- helper and each drop it again, so neither depends on the other having been
+-- run. Safe to re-run.
+
+CREATE OR REPLACE FUNCTION seed_flush(
+    p_prompt TEXT,
+    -- INTEGER, not SMALLINT: a bare SQL literal like `1` is typed integer, and
+    -- PostgreSQL will not implicitly narrow it to smallint during function
+    -- overload resolution -- a SMALLINT parameter makes every call site fail
+    -- with "function does not exist". The INSERT assignment-casts to the
+    -- smallint column, which is allowed.
+    p_difficulty INTEGER,
+    p_outputs TEXT[],
+    p_distractors TEXT[] DEFAULT '{}'
+) RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE
+    v_id BIGINT;
+    v_text TEXT;
+    v_pos INTEGER := 0;
+BEGIN
+    IF EXISTS (SELECT 1 FROM flush_snippets WHERE prompt = p_prompt) THEN
+        RETURN;
+    END IF;
+
+    INSERT INTO flush_snippets (prompt, difficulty)
+    VALUES (p_prompt, p_difficulty)
+    RETURNING id INTO v_id;
+
+    FOREACH v_text IN ARRAY p_outputs LOOP
+        v_pos := v_pos + 1;
+        INSERT INTO flush_outputs (snippet_id, output_text, position)
+        VALUES (v_id, v_text, v_pos);
+    END LOOP;
+
+    FOREACH v_text IN ARRAY p_distractors LOOP
+        INSERT INTO flush_outputs (snippet_id, output_text, position, is_distractor)
+        VALUES (v_id, v_text, NULL, TRUE);
+    END LOOP;
+END;
+$$;
 
 -- 1 (difficulty 1)
 SELECT seed_flush(
@@ -143,3 +189,5 @@ SELECT seed_flush(
 SELECT seed_flush(
     E'console.log("start");\n\nsetTimeout(() => console.log("macro 1"), 0);\n\nPromise.resolve()\n    .then(() => console.log("micro 1"))\n    .then(() => console.log("micro 2"));\n\nsetTimeout(() => console.log("macro 2"), 0);\n\nconsole.log("end");',
     5, ARRAY['start', 'end', 'micro 1', 'micro 2', 'macro 1', 'macro 2']);
+
+DROP FUNCTION seed_flush(TEXT, INTEGER, TEXT[], TEXT[]);

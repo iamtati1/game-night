@@ -121,3 +121,57 @@ describe("checksums", () => {
         expect(readSqlDirectory(join(HERE, "..", "migrations"))[0]!.checksum).toBe(a!.checksum);
     });
 });
+
+/**
+ * Every seed file must define the helpers it calls.
+ *
+ * 004_flush_expansion.sql called seed_flush() and said in a comment that it came
+ * from 002 -- but 002 drops that function on its last line, so by the time 004
+ * ran the helper it named had already been destroyed by the file it named.
+ * Applying the seeds by hand hid it for months; applying them in order, which is
+ * the entire point of the runner, surfaced it immediately as
+ * "function seed_flush(unknown, integer, text[]) does not exist".
+ *
+ * A comment claiming a dependency is not a dependency. This checks the real one.
+ */
+describe("seed files stand on their own", () => {
+    const DEFINES = /CREATE OR REPLACE FUNCTION\s+(\w+)\s*\(/g;
+    const CALLS = /SELECT\s+(\w+)\s*\(/g;
+
+    /** Every helper any seed defines -- the names worth policing. */
+    const helpers = new Set(
+        SEEDS.flatMap((f) => [...f.sql.matchAll(DEFINES)].map((m) => m[1]!))
+    );
+
+    it("found the helpers to check", () => {
+        expect(helpers.size).toBeGreaterThan(0);
+    });
+
+    it("never calls a helper the same file did not define", () => {
+        for (const file of SEEDS) {
+            const defined = new Set([...file.sql.matchAll(DEFINES)].map((m) => m[1]!));
+            const called = new Set(
+                [...file.sql.matchAll(CALLS)].map((m) => m[1]!).filter((n) => helpers.has(n))
+            );
+
+            for (const name of called) {
+                expect(
+                    defined.has(name),
+                    `${file.name} calls ${name}() but never defines it -- ` +
+                        `another seed's copy may have been dropped before this file runs`
+                ).toBe(true);
+            }
+        }
+    });
+
+    it("drops every helper it defines, so none outlive the seed run", () => {
+        for (const file of SEEDS) {
+            for (const m of file.sql.matchAll(DEFINES)) {
+                expect(
+                    file.sql.includes(`DROP FUNCTION ${m[1]}`),
+                    `${file.name} defines ${m[1]}() but never drops it`
+                ).toBe(true);
+            }
+        }
+    });
+});

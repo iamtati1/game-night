@@ -13,7 +13,33 @@
 -- Re-runnable: seed_question skips any prompt that already exists, so this is
 -- safe to apply on top of 001 and safe to apply twice.
 --
--- Depends on seed_question() from 001_code_blitz_questions.sql.
+-- Self-contained. This file used to name seed_question() from 001 as a
+-- dependency, and that worked only because 001 never dropped it -- the helper
+-- leaked into the database and was still lying around. The Flush pair had the
+-- same arrangement with the cleanup actually present, and failed the moment the
+-- seeds were applied in order. Every seed now defines and drops its own helper.
+
+CREATE OR REPLACE FUNCTION seed_question(
+    p_prompt TEXT,
+    p_a TEXT, p_b TEXT, p_c TEXT, p_d TEXT,
+    p_correct INTEGER
+) RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE
+    v_question_id BIGINT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM questions WHERE prompt = p_prompt) THEN
+        RETURN;
+    END IF;
+
+    INSERT INTO questions (prompt) VALUES (p_prompt) RETURNING id INTO v_question_id;
+
+    INSERT INTO question_options (question_id, option_text, display_order, is_correct)
+    VALUES (v_question_id, p_a, 1, p_correct = 1),
+           (v_question_id, p_b, 2, p_correct = 2),
+           (v_question_id, p_c, 3, p_correct = 3),
+           (v_question_id, p_d, 4, p_correct = 4);
+END;
+$$;
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log([10, 9, 1].sort());',
@@ -246,3 +272,5 @@ SELECT seed_question(
     'cat',
     2
 );
+
+DROP FUNCTION seed_question(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER);
