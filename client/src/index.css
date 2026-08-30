@@ -5923,3 +5923,15 @@ pre {
         height: 21rem;
     }
 }
+
+/* The line that turns a wrong answer into something learned.
+   Sits under the verdict tag, quieter than it: the verdict is the score, this
+   is the reason. Kept to the feedback strip's existing rhythm so no layout
+   moves when a question happens not to carry one. */
+.feedback-why {
+    max-width: 62ch;
+    margin: 0.4rem 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}

@@ -40,6 +40,8 @@ const EXIT_MS = 170;
 interface Feedback {
     outcome: "correct" | "incorrect" | "timed_out";
     correctOption: string;
+    /** Why, in one line. Absent on older questions and on a lapse. */
+    explanation: string | null;
     pointsAwarded: number;
     selectedOptionId: string | null;
 }
@@ -363,6 +365,7 @@ export function GamePage() {
             setFeedback({
                 outcome: result.outcome,
                 correctOption: result.correctOption,
+                explanation: result.explanation,
                 pointsAwarded: result.pointsAwarded,
                 selectedOptionId: optionId
             });
@@ -417,6 +420,7 @@ export function GamePage() {
             setFeedback({
                 outcome: "timed_out",
                 correctOption: "",
+                explanation: null,
                 pointsAwarded: 0,
                 selectedOptionId: null
             });
@@ -639,6 +643,12 @@ export function GamePage() {
                     the expired question's answer. Naming one would mean inventing it. */}
                 {feedback?.outcome === "timed_out" && (
                     <p className="tag timeout lapsed-tag">Time&rsquo;s up</p>
+                )}
+                {/* The reason, when the question carries one. This is the whole
+                    point of the bank: a player who got it wrong should leave the
+                    round knowing something they did not know going in. */}
+                {feedback?.explanation && (
+                    <p className="feedback-why">{feedback.explanation}</p>
                 )}
             </div>
         </section>

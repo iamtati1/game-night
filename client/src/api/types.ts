@@ -82,6 +82,8 @@ export interface AnswerResponse {
     scoreSoFar: number;
     responseTimeMs?: number;
     correctOption: string;
+    /** One line on why. Null for questions written before explanations existed. */
+    explanation: string | null;
     complete: boolean;
     question: ServedQuestion | null;
     session: SessionSummary | null;

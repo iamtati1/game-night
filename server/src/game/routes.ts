@@ -406,6 +406,9 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
     }
 
     const correctOptionText = (await db.findCorrectOptionText(question.question_id)) ?? "(unavailable)";
+    // Null for questions written before explanations existed; the client simply
+    // shows nothing extra for those rather than an empty panel.
+    const explanation = await db.findExplanation(question.question_id);
 
     // The deadline is enforced here, against the server's own served_at. A late
     // answer is refused outright, not merely scored zero.
@@ -420,6 +423,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
             pointsAwarded: 0,
             scoreSoFar: await db.scoreSoFar(session.id),
             correctOption: correctOptionText,
+            explanation,
             complete: !remaining,
             // The next question is deliberately not served here. serveQuestion
             // stamps served_at, which starts the deadline -- bundling it into this
@@ -461,6 +465,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         scoreSoFar: await db.scoreSoFar(session.id),
         responseTimeMs: elapsedMs,
         correctOption: correctOptionText,
+        explanation,
         complete: !remaining,
         // Not served here -- see the note in the timeout branch above.
         question: null,

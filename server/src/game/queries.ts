@@ -263,6 +263,23 @@ export async function findOption(
     return row ? { id: row.id, optionText: row.option_text, isCorrect: row.is_correct } : null;
 }
 
+/**
+ * The one-line explanation shown after the question is over.
+ *
+ * Read on the answer path rather than served with the question, for the same
+ * reason correct_option_text is: anything that gives the answer away must not be
+ * in the payload the player is looking at while they decide. Null for the older
+ * questions, which predate the column.
+ */
+export async function findExplanation(questionId: string): Promise<string | null> {
+    const result = await pool.query<{ explanation: string | null }>(
+        `SELECT explanation FROM questions WHERE id = $1`,
+        [questionId]
+    );
+
+    return result.rows[0]?.explanation ?? null;
+}
+
 export async function findCorrectOptionText(questionId: string): Promise<string | null> {
     const result = await pool.query<{ option_text: string }>(
         `SELECT option_text
