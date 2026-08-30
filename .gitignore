@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# A live session cookie, saved by client/scripts/auth.mjs for the screenshot run.
+client/.auth/
