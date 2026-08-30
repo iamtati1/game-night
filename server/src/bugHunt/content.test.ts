@@ -11,7 +11,11 @@ import {
 } from "./scoring.js";
 
 /** Both seeds. The bank is the sum of them, not whichever file came first. */
-const SEED_FILES = ["005_bug_hunt_incidents.sql", "006_bug_hunt_easy_tier.sql"] as const;
+const SEED_FILES = [
+    "005_bug_hunt_incidents.sql",
+    "006_bug_hunt_easy_tier.sql",
+    "011_bug_hunt_debugging_curriculum.sql"
+] as const;
 
 const SEED = SEED_FILES.map((name) =>
     readFileSync(new URL(`../../seeds/${name}`, import.meta.url), "utf8")
@@ -142,7 +146,10 @@ const named = (i: SeedIncident) => i.slug;
 
 describe("the incident bank is big enough to play", () => {
     it("holds enough incidents for a ten-hunt run to vary", () => {
-        expect(INCIDENTS).toHaveLength(32);
+        // A floor rather than an exact count. Pinning the total meant every
+        // content addition failed a test that was never about the number --
+        // what matters is that a run of ten has room to vary.
+        expect(INCIDENTS.length).toBeGreaterThanOrEqual(32);
     });
 
     it("has more than one session's worth, so runs are not identical", () => {

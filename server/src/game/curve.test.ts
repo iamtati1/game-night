@@ -49,15 +49,15 @@ const bank = (spec: Record<number, number>): Dealable[] =>
     );
 
 /**
- * The real shape of the active bank, counted from the seeds: 199 questions,
- * 76/71/34/18 across the four tiers -- weighted toward fundamentals, with the
+ * The real shape of the active bank, counted from the seeds: 210 questions,
+ * 76/76/40/18 across the four tiers -- weighted toward fundamentals, with the
  * hardest tier the smallest.
  *
  * Modelled exactly rather than approximately, because the tier the curve leans
  * on hardest -- tier 4, wanted for the last slot of every run -- is the one
  * whose depth decides how soon the hardest questions start repeating.
  */
-const REAL_BANK = bank({ 1: 76, 2: 71, 3: 34, 4: 18 });
+const REAL_BANK = bank({ 1: 76, 2: 76, 3: 40, 4: 18 });
 
 describe("the curve climbs", () => {
     it("opens on tier 1 however the dice fall", () => {

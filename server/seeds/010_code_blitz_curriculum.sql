@@ -647,6 +647,143 @@ SELECT seed_js_question(
       {"text": "TypeError", "correct": false}
     ]$j$::JSONB);
 
+
+-- ===========================================================================
+-- RETURN VERSUS LOG, continued.
+--
+-- Four questions on this earlier were not enough for something beginners get
+-- wrong for months. These carry the same idea forward: what happens when the
+-- value is stored, passed on, or expected somewhere further away from the
+-- function that failed to return it.
+-- ===========================================================================
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction getName() {\n  console.log("Ada");\n}\n\nconst name = getName();\nconsole.log("Name is " + name);',
+    2, 'functions',
+    'The function prints Ada, then returns nothing -- so name is undefined and joins into the string as the text "undefined".',
+    $j$[
+      {"text": "\"Ada\"\n\"Name is undefined\"", "correct": true},
+      {"text": "\"Ada\"\n\"Name is Ada\"", "correct": false},
+      {"text": "\"Name is Ada\"", "correct": false},
+      {"text": "\"Ada\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction addOne(n) {\n  return n + 1;\n}\n\nfunction addTwo(n) {\n  return addOne(addOne(n));\n}\n\nconsole.log(addTwo(5));',
+    2, 'functions',
+    'The inner call is replaced by its returned value before the outer one runs, so 5 becomes 6 and then 7. Only returning makes this nesting possible.',
+    $j$[
+      {"text": "7", "correct": true},
+      {"text": "6", "correct": false},
+      {"text": "5", "correct": false},
+      {"text": "undefined", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction shout(word) {\n  console.log(word.toUpperCase());\n}\n\nfunction announce(word) {\n  return "** " + shout(word) + " **";\n}\n\nconsole.log(announce("hi"));',
+    2, 'functions',
+    'shout logs but returns undefined, so the wrapper joins undefined into its string. A missing return travels: the damage shows up in the caller.',
+    $j$[
+      {"text": "\"HI\"\n\"** undefined **\"", "correct": true},
+      {"text": "\"** HI **\"", "correct": false},
+      {"text": "\"HI\"\n\"** HI **\"", "correct": false},
+      {"text": "\"** **\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction double(n) {\n  return n * 2;\n}\n\nconst numbers = [1, 2, 3];\nconsole.log(numbers.map(double));',
+    2, 'functions',
+    'map hands each item to double and collects what it RETURNS. A function that logged instead would give [undefined, undefined, undefined].',
+    $j$[
+      {"text": "[2, 4, 6]", "correct": true},
+      {"text": "[1, 2, 3]", "correct": false},
+      {"text": "[undefined, undefined, undefined]", "correct": false},
+      {"text": "6", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction double(n) {\n  console.log(n * 2);\n}\n\nconsole.log([1, 2].map(double));',
+    3, 'functions',
+    'The callback logs each doubled value and returns nothing, so map collects undefined for every item. This is the return-versus-log mistake inside an array method.',
+    $j$[
+      {"text": "2\n4\n[undefined, undefined]", "correct": true},
+      {"text": "[2, 4]", "correct": false},
+      {"text": "2\n4\n[2, 4]", "correct": false},
+      {"text": "[undefined, undefined]", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction sum(numbers) {\n  let total = 0;\n  for (const n of numbers) {\n    total += n;\n  }\n  console.log(total);\n}\n\nconst answer = sum([1, 2, 3]);\nconsole.log(answer);',
+    2, 'functions',
+    'The loop is right and the total is printed, but nothing is returned -- so answer is undefined. The bug is one missing word, and the console makes it look fine.',
+    $j$[
+      {"text": "6\nundefined", "correct": true},
+      {"text": "6\n6", "correct": false},
+      {"text": "undefined\n6", "correct": false},
+      {"text": "6", "correct": false}
+    ]$j$::JSONB);
+
+
+-- ===========================================================================
+-- ASYNC, continued -- the rest of the on-ramp before any ordering question.
+-- ===========================================================================
+
+SELECT seed_js_question(
+    E'What does this log?\n\nfunction normal() {\n  return "value";\n}\n\nasync function wrapped() {\n  return "value";\n}\n\nconsole.log(normal() === "value", wrapped() === "value");',
+    3, 'async',
+    'A normal function hands back the value itself; an async one wraps it in a Promise, which is not equal to the value. This is the whole difference in one line.',
+    $j$[
+      {"text": "true false", "correct": true},
+      {"text": "true true", "correct": false},
+      {"text": "false false", "correct": false},
+      {"text": "false true", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nasync function getTotal() {\n  return 42;\n}\n\nasync function main() {\n  const total = await getTotal();\n  console.log(total + 8);\n}\n\nmain();',
+    3, 'async',
+    'await unwraps the Promise, so total is the number 42 and arithmetic works normally. Without await you would be adding 8 to a Promise.',
+    $j$[
+      {"text": "50", "correct": true},
+      {"text": "42", "correct": false},
+      {"text": "NaN", "correct": false},
+      {"text": "\"[object Promise]8\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nasync function getTotal() {\n  return 42;\n}\n\nasync function main() {\n  const total = getTotal();\n  console.log(typeof total);\n}\n\nmain();',
+    3, 'async',
+    'Without await, total holds the Promise rather than the number -- and a Promise is an object. This is the commonest async mistake there is.',
+    $j$[
+      {"text": "\"object\"", "correct": true},
+      {"text": "\"number\"", "correct": false},
+      {"text": "\"promise\"", "correct": false},
+      {"text": "\"undefined\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nasync function load() {\n  throw new Error("offline");\n}\n\nasync function main() {\n  try {\n    await load();\n  } catch (err) {\n    console.log("caught");\n  }\n}\n\nmain();',
+    3, 'async',
+    'A throw inside an async function rejects its Promise, and await turns that rejection back into a throw -- so ordinary try/catch handles it.',
+    $j$[
+      {"text": "\"caught\"", "correct": true},
+      {"text": "\"offline\"", "correct": false},
+      {"text": "Nothing is logged", "correct": false},
+      {"text": "\"Error: offline\"", "correct": false}
+    ]$j$::JSONB);
+
+SELECT seed_js_question(
+    E'What does this log?\n\nasync function one() {\n  return 1;\n}\n\nasync function main() {\n  const a = await one();\n  const b = await one();\n  console.log(a + b);\n}\n\nmain();',
+    3, 'async',
+    'Each await waits for its own result before the next line runs, so the code reads top to bottom exactly like synchronous code.',
+    $j$[
+      {"text": "2", "correct": true},
+      {"text": "1", "correct": false},
+      {"text": "NaN", "correct": false},
+      {"text": "\"11\"", "correct": false}
+    ]$j$::JSONB);
+
+
 DROP FUNCTION seed_js_question(TEXT, INTEGER, TEXT, TEXT, JSONB);
 
 COMMIT;
