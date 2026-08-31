@@ -1,0 +1,50 @@
+# Render Blueprint for Jolt.
+#
+# One web service and one database. Express serves both the built Vite client and
+# /api, so the browser talks to a single origin -- which is what allows a normal
+# SameSite=Lax session cookie. A split Static Site + Web Service would put the
+# site and the API on two *.onrender.com subdomains; because onrender.com is on
+# the Public Suffix List those are different SITES, the cookie becomes
+# third-party, and Safari blocks it by default.
+#
+# Optional: if the service is created by hand in the dashboard this file is not
+# read. It is here so the deployment is described in the repository.
+services:
+  - type: web
+    name: jolt
+    runtime: node
+    plan: free
+    # Repo root, not server/: the build has to reach both workspaces.
+    rootDir: .
+    # Client first -- the server serves client/dist, so it must already exist.
+    # --include=dev on the server because TypeScript is a devDependency and npm
+    # omits those when NODE_ENV=production, which it is below.
+    buildCommand: >-
+      npm ci --prefix client &&
+      npm run build --prefix client &&
+      npm ci --include=dev --prefix server &&
+      npm run build --prefix server
+    startCommand: npm start --prefix server
+    # Deliberately the one endpoint mounted before the session middleware, so
+    # liveness never depends on PostgreSQL being reachable.
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jolt-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # Not set on purpose:
+      #   CLIENT_ORIGIN / COOKIE_SAMESITE - no cross-origin request exists here.
+      #   VITE_API_URL                    - unset means relative /api, same origin.
+      #   DATABASE_SSL                    - the internal database URL needs no TLS.
+      #   PORT                            - Render assigns it; the server reads it.
+      # The conditional CORS block in app.ts stays dormant while CLIENT_ORIGIN is
+      # unset, so splitting the client out later is two env vars, not a rewrite.
+
+databases:
+  - name: jolt-db
+    plan: free

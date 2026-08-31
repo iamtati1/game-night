@@ -1,4 +1,5 @@
 import type { CookieOptions } from "express";
+import { cookieSameSite, isProduction } from "../config.js";
 
 /**
  * The session cookie's identity and attributes, in one place.
@@ -22,9 +23,11 @@ export const SESSION_COOKIE_OPTIONS: CookieOptions = {
     // Unreadable from JavaScript, so an XSS bug cannot exfiltrate it.
     httpOnly: true,
     // HTTPS only in production; local dev is plain HTTP.
-    secure: process.env.NODE_ENV === "production",
-    // Primary CSRF mitigation, which is the exposure cookies bring.
-    sameSite: "lax",
+    secure: isProduction,
+    // Primary CSRF mitigation, which is the exposure cookies bring. `lax` unless
+    // the deployment puts the site and the API on different sites, which two
+    // *.onrender.com subdomains do -- see COOKIE_SAMESITE in config.ts.
+    sameSite: cookieSameSite,
     // Explicit rather than relying on both defaults being "/", which is the
     // whole point of this module.
     path: "/",

@@ -144,3 +144,10 @@ vite.config.ts.timestamp-*
 
 # A live session cookie, saved by client/scripts/auth.mjs for the screenshot run.
 client/.auth/
+
+# QA capture output from client/scripts/capture.mjs: intro, results and game
+# floor frames. Kept locally for reference, never committed and never built --
+# it sits outside client/public/, so Vite does not copy it into the bundle.
+# The five frames the Game Floor actually shows live in client/public/screenshots/
+# and ARE committed, because the app serves them.
+client/docs/

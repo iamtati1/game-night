@@ -7,13 +7,15 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsc",
-    "start": "node --env-file=.env dist/server.js",
+    "start": "node --env-file-if-exists=.env dist/server.js",
     "migrate": "tsx --env-file=.env scripts/migrate.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "import:questions": "tsx --env-file=.env scripts/import-questions.ts"
+    "import:questions": "tsx --env-file=.env scripts/import-questions.ts",
+    "migrate:prod": "tsx scripts/migrate.ts",
+    "seed:prod": "tsx scripts/seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
   "dependencies": {
     "argon2": "^0.45.1",
     "connect-pg-simple": "^10.0.0",
+    "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
     "express-session": "^1.19.0",
@@ -29,6 +32,7 @@
   },
   "devDependencies": {
     "@types/connect-pg-simple": "^7.0.3",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
     "@types/node": "^26.2.0",
@@ -38,5 +42,8 @@
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=22.9.0"
   }
 }
