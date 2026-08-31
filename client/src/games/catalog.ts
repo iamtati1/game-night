@@ -54,6 +54,17 @@ export interface GameEntry {
      *  it is what the player is being asked to be good at. */
     instinct: string;
     motif: GameMotif;
+    /**
+     * A real screenshot of this game mid-play, shown on its card.
+     *
+     * Absent means the card falls back to its hand-drawn preview, which is what
+     * Flush does: the capture run reached its briefing but not its board, so
+     * there is no honest gameplay frame to show yet. An abstraction is a better
+     * answer than the wrong picture.
+     *
+     * Captured by `npm run screenshots` -- see client/scripts/capture.mjs.
+     */
+    screenshot?: string;
 }
 
 /* Order is the landing page's spatial composition, not an accident of when each
@@ -73,7 +84,8 @@ export const GAMES: GameEntry[] = [
         intensity: 3,
         instinct: "Technical recall, fast",
         unit: "Question",
-        motif: "blitz"
+        motif: "blitz",
+        screenshot: "/screenshots/jolt-code-blitz-gameplay.png"
     },
     {
 
@@ -88,7 +100,8 @@ export const GAMES: GameEntry[] = [
         intensity: 2,
         instinct: "Prediction and sequencing",
         unit: "Round",
-        motif: "flush"
+        motif: "flush",
+        screenshot: "/screenshots/jolt-flush-gameplay.png"
     },
     {
 
@@ -105,7 +118,8 @@ export const GAMES: GameEntry[] = [
         intensity: 3,
         instinct: "Reading code under pressure",
         unit: "Incident",
-        motif: "bughunt"
+        motif: "bughunt",
+        screenshot: "/screenshots/jolt-bug-hunt-gameplay.png"
     },
     {
 
@@ -122,7 +136,8 @@ export const GAMES: GameEntry[] = [
         intensity: 1,
         instinct: "Reaction speed and impulse control",
         unit: "Round",
-        motif: "reaction"
+        motif: "reaction",
+        screenshot: "/screenshots/jolt-reaction-gameplay.png"
     },
     {
 
@@ -139,7 +154,8 @@ export const GAMES: GameEntry[] = [
         intensity: 2,
         instinct: "Working memory and recall",
         unit: "Round",
-        motif: "memory"
+        motif: "memory",
+        screenshot: "/screenshots/jolt-memory-gameplay.png"
     }
 ];
 

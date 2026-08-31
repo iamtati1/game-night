@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { GameEntry } from "../games/catalog.js";
 
@@ -43,6 +44,34 @@ function PreviewHud({ fill = 62 }: { fill?: number }) {
  * the HUD strip above and nothing else, so a change to a game's screen cannot
  * silently break its card.
  */
+/**
+ * A real frame of the game, with the drawn preview behind it.
+ *
+ * The station shows what is actually inside it rather than a diagram of it. The
+ * drawn preview is not deleted: it is the fallback, and it still renders for any
+ * game with no capture yet -- Flush today -- and for anyone whose browser fails
+ * to load the image. A card with a hole in it would be worse than a card with an
+ * abstraction in it.
+ *
+ * Cropped from the top, because every capture is a full 1440x900 page: the
+ * gameplay sits in the upper two thirds and the lower third is empty floor. The
+ * frame is the existing preview box, so the card's dimensions, radius and
+ * hierarchy are untouched -- only what fills the box has changed.
+ */
+function Shot({ game }: { game: GameEntry }) {
+    const [failed, setFailed] = useState(false);
+
+    if (!game.screenshot || failed) {
+        return <Preview motif={game.motif} />;
+    }
+
+    return (
+        <div className={`preview preview-shot preview-shot-${game.motif}`} aria-hidden="true">
+            <img src={game.screenshot} alt="" loading="lazy" onError={() => setFailed(true)} />
+        </div>
+    );
+}
+
 function Preview({ motif }: { motif: GameEntry["motif"] }) {
     if (motif === "blitz") {
         // Reading fast against a clock: a stack of answers, one of them taken.
@@ -136,7 +165,7 @@ export function GameCard({ game, resumable }: GameCardProps) {
                 </span>
             </div>
 
-            <Preview motif={game.motif} />
+            <Shot game={game} />
 
             <h3 className="card-name">{game.name}</h3>
             <p className="card-hook">{game.hook}</p>

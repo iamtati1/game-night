@@ -164,10 +164,23 @@ body {
        document scroller, and the wheel had to fill body's scroll range before
        chaining to html. That handoff is what read as jumpy.
 
-       It is also redundant: html { overflow-x: clip } above already prevents the
-       glows from producing a horizontal scrollbar, and `clip` deliberately does
-       NOT create a scroll container. Verified: body is no longer a scroller and
-       no horizontal scrollbar returns. */
+       `clip` is the one value that does NOT do that: it clips without creating a
+       scroll container, so the wheel still goes straight to the document.
+
+       It has to be here rather than only on html. This rule previously said the
+       html-level clip was enough; it is not, and that claim was measured wrong.
+       At 1440 the .landing::before pool is 155% of a 1120px column -- 1736px --
+       centred by translateX(-50%), so it runs -148px to 1588px and the right
+       half of that overhang was 148px of real horizontal scroll. Clipping at
+       html did not contain it; clipping at body does, because body's box is
+       exactly the viewport.
+
+       Clipping here and not on .landing is deliberate: .landing is the 1120px
+       column, so clipping there would cut the glow at the column edge and give
+       it a hard vertical seam. body's edge is the viewport edge, where the
+       gradient is already transparent, so nothing visible is lost -- the pool
+       keeps its full 1736px width and its soft bleed. */
+    overflow-x: clip;
 }
 
 /* Ambient light sources.
@@ -5934,4 +5947,111 @@ pre {
     color: var(--muted);
     font-size: 0.9rem;
     line-height: 1.45;
+}
+
+/* ---------- the station's window ----------
+
+   A real frame of the game inside the existing preview box. Everything about
+   the box -- its size, its radius, its border, its place in the card -- comes
+   from .preview above and is untouched; this only says what fills it.
+
+   The framing needs explaining, because object-fit alone gets it wrong. Each
+   capture is a whole 1440x900 page, and Jolt centres its content in a column
+   with dark floor either side. `cover` on a box this wide scales the image to
+   fit the WIDTH, so the card ends up showing mostly empty margin with a thin
+   strip of game in the middle -- which is what it did on the first attempt.
+   Sizing the image well past the box and pulling it left instead zooms past the
+   margins onto the column itself, which is the part worth showing.
+
+   --shot-y is the only per-game value: they do not all put their content in the
+   same place vertically, so each card says where its own game lives. */
+.preview-shot {
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+}
+
+.preview-shot img {
+    position: absolute;
+    top: 0;
+    /* --shot-x is the horizontal twin of --shot-y, and it exists for the same
+       reason: the games do not all put their panel in the same place. At the
+       shared -42% Flush lost the first two characters of every line -- the card
+       read "nsole.log" and "ait null", which looks like a broken image rather
+       than a tight crop. */
+    left: var(--shot-x, -42%);
+    /* --shot-w trades text size against how much page fits. The card window is
+       ~487x132 -- 3.7:1 -- so at 184% only ~213px of page height lands in it.
+       Games whose story needs more than that (a question AND its answers) zoom
+       out a little; games whose story fits stay at 184% and keep the larger
+       text. Keep --shot-x at -(w - 100)/2 to stay centred. */
+    width: var(--shot-w, 184%);
+    height: auto;
+    /* translateY rather than `top`, because a percentage on `top` resolves
+       against the CONTAINER -- 132px -- and moves the image barely at all. A
+       percentage on transform resolves against the element's own height, which
+       is what "show the part of the page a third of the way down" needs. */
+    transform: translateY(var(--shot-y, -30%));
+    /* Slightly cool and dimmed, so a bright gameplay frame sits in the card's
+       lighting rather than punching a hole in it. The card is a station in a
+       dark room; the screen inside it should read as lit, not as a sticker. */
+    filter: saturate(0.94) brightness(0.9);
+    transition: filter var(--t-surface) var(--ease-control);
+}
+
+/* Where each game's story sits in its own capture, measured from the frame
+   rather than guessed. The numbers are tied to the specific PNG in
+   public/screenshots -- re-running scripts/recapture.mjs can land on a different
+   incident or question and shift them, so re-check the crop if you recapture. */
+
+/* Code, the first answer row in full, and the edge of the next -- enough to read
+   as a list of choices without cutting any text in half.
+
+   This one cannot zoom out. At 184% the window is ~786 source px, which is what
+   Code Blitz's question card actually measures; any wider and the window is
+   wider than the card, so the page background shows as black bars down both
+   sides. Flush can afford 151% only because its stage panel is ~1038px wide and
+   still fills the frame. So the question headline above the code is what gets
+   sacrificed here -- the card's own line, "Read the code. Call the output. Beat
+   the clock.", already says what the headline would. */
+.preview-shot-blitz {
+    --shot-y: -35%;
+}
+
+/* The board (code beside the predicted output) plus the stake line, so the card
+   carries the round's banked score and multiplier. The rack sits 65px lower and
+   including it would cost another 20% of text size. */
+.preview-shot-flush {
+    --shot-w: 151%;
+    --shot-x: -25.5%;
+    --shot-y: -41%;
+}
+
+/* The red ReferenceError, "LOCATE THE FAULT", and all three numbered lines --
+   187px of page, so this one keeps the full 184% and the largest text of the
+   five. The incident title above it is the part sacrificed to do that. */
+.preview-shot-bughunt {
+    --shot-y: -30.5%;
+}
+
+.preview-shot-reaction {
+    --shot-y: -32%;
+}
+
+.preview-shot-memory {
+    --shot-y: -28%;
+}
+
+/* The screen wakes with the rest of the machine, matching what the drawn
+   preview already does on hover -- so a card with a screenshot and a card with
+   a drawing behave identically. */
+a.card-body:hover .preview-shot img,
+a.card-body:focus-visible .preview-shot img {
+    filter: saturate(1) brightness(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .preview-shot img {
+        transition: none;
+    }
 }

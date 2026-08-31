@@ -12,17 +12,22 @@
  *
  * Every game is wrapped so one failure does not lose the rest of the run. What
  * could not be captured is reported at the end rather than silently missing.
+ *
+ * Everything here lands in docs/screenshots/, which is NOT inside public/ and so
+ * is never built. These are the evidence for a QA report, not site assets. The
+ * five frames the Game Floor actually shows are produced by recapture.mjs, which
+ * is the only script allowed to write into public/.
  */
 import { chromium } from "playwright";
 import { existsSync, mkdirSync } from "node:fs";
-import { AUTH_STATE, BASE_URL, SHOTS_DIR, VIEWPORT } from "./capture.config.mjs";
+import { AUTH_STATE, BASE_URL, QA_SHOTS_DIR, VIEWPORT } from "./capture.config.mjs";
 
 if (!existsSync(AUTH_STATE)) {
     console.error("\n  No saved session. Run `npm run screenshots:login` first.\n");
     process.exit(1);
 }
 
-mkdirSync(SHOTS_DIR, { recursive: true });
+mkdirSync(QA_SHOTS_DIR, { recursive: true });
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
@@ -42,7 +47,7 @@ page.on("console", (m) => {
 page.on("pageerror", (e) => report.console.push(`pageerror: ${String(e).slice(0, 160)}`));
 
 const shoot = async (name) => {
-    await page.screenshot({ path: `${SHOTS_DIR}${name}.png` });
+    await page.screenshot({ path: `${QA_SHOTS_DIR}${name}.png` });
     report.shots.push(name);
     console.log(`    captured ${name}.png`);
 };
@@ -268,7 +273,7 @@ await browser.close();
 
 // ------------------------------------------------------------------- report
 
-console.log(`\n  ${report.shots.length} screenshot(s) in client/public/screenshots/`);
+console.log(`\n  ${report.shots.length} screenshot(s) in client/docs/screenshots/ (not shipped)`);
 
 if (report.failures.length) {
     console.log(`\n  ${report.failures.length} game(s) did not complete:`);

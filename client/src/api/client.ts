@@ -25,19 +25,38 @@ export class ApiError extends Error {
     }
 }
 
-// Requests go to the same origin and are forwarded to the API by Vite's dev
-// proxy, so the session cookie is sent automatically -- no credentials option
-// and no CORS configuration needed.
+/**
+ * Where the API lives.
+ *
+ * Empty in development: Vite proxies /api to the Express server, so a relative
+ * path is same-origin and the session cookie rides along on its own.
+ *
+ * In production the client is a static site on its own origin and the API is a
+ * separate service, so VITE_API_URL carries the API's origin and every request
+ * becomes cross-origin. Vite inlines this at BUILD time -- it is baked into the
+ * bundle, so changing it means rebuilding, not restarting.
+ */
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let response: Response;
 
     try {
-        response = await fetch(path, {
+        response = await fetch(`${API_BASE}${path}`, {
             headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+            // Required the moment the API is on another origin: without it the
+            // browser sends no session cookie and every request looks logged out.
+            // Harmless same-origin, where it is already the effective behaviour.
+            credentials: "include",
             ...init
         });
     } catch {
-        throw new ApiError(0, "Could not reach the server. Is it running on port 3000?");
+        throw new ApiError(
+            0,
+            API_BASE
+                ? `Could not reach the API at ${API_BASE}.`
+                : "Could not reach the server. Is it running on port 3000?"
+        );
     }
 
     if (response.status === 204) {
