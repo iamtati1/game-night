@@ -22,5 +22,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* Tests that read source files off disk are Node programs, not browser code.
+     They are typechecked by tsconfig.node.json, which has the node types. */
+  "exclude": ["src/**/*.node.test.ts"]
 }

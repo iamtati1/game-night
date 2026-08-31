@@ -1,36 +1,176 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
+import { activeGameFrom } from "../api/types.js";
 import type {
     AnswerResponse,
     CurrentQuestionResponse,
+    ResumableResponse,
     ServedQuestion,
     StartSessionResponse
 } from "../api/types.js";
+import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
+import { GameIntro } from "../components/GameIntro.js";
+import { PausedRun } from "../components/PausedRun.js";
+import { GetReady } from "../components/GetReady.js";
+import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
+import { RoundProgress } from "../components/RoundProgress.js";
+import { splitPrompt } from "../games/prompt.js";
 
-const QUESTION_TIME_LIMIT_MS = 30_000;
-const FEEDBACK_MS = 1400;
+const QUESTION_TIME_LIMIT_MS = 35_000;
+/**
+ * How long the result stays on screen before the next question arrives.
+ *
+ * Deliberately not one number. Dwell should scale with how much there is to
+ * read: a correct answer carries no new information beyond "yes", so holding the
+ * player there is dead time in a game called Blitz. A wrong answer names the
+ * answer they missed, and that is the whole teaching moment -- cutting it short
+ * to hit a uniform budget would throw away the reason the reveal exists.
+ */
+const DWELL_MS: Record<Feedback["outcome"], number> = {
+    correct: 900,
+    incorrect: 1600,
+    timed_out: 1400
+};
+
+/** Exit animation. Short enough to read as one motion with the entrance. */
+const EXIT_MS = 170;
 
 interface Feedback {
     outcome: "correct" | "incorrect" | "timed_out";
     correctOption: string;
+    /** Why, in one line. Absent on older questions and on a lapse. */
+    explanation: string | null;
     pointsAwarded: number;
     selectedOptionId: string | null;
 }
 
+/**
+ * How one option should read once the answer is in.
+ *
+ * The distinction that matters is between `chosen-correct` and `revealed`: before
+ * this, both got the same `.correct` class, so "I knew that" and "that was the
+ * answer I missed" looked identical. A player could not tell their own success
+ * from the game correcting them, which is the single most important thing a
+ * feedback moment has to communicate.
+ */
+type OptionState = "chosen-correct" | "chosen-incorrect" | "revealed" | "muted" | "";
+
+function optionStateFor(
+    feedback: Feedback | null,
+    option: { id: string; text: string }
+): OptionState {
+    if (!feedback) {
+        return "";
+    }
+
+    const chosen = feedback.selectedOptionId === option.id;
+    // correctOption is empty when the countdown lapsed rather than the player
+    // answering: GET /api/sessions/current does not carry the answer to the
+    // question that just expired. Guarding on it keeps an empty string from
+    // matching an option and revealing the wrong row.
+    const isAnswer = feedback.correctOption !== "" && feedback.correctOption === option.text;
+
+    if (chosen && isAnswer) return "chosen-correct";
+    if (chosen) return "chosen-incorrect";
+    if (isAnswer) return "revealed";
+
+    return "muted";
+}
+
+/** Decorative only -- the banner below carries the same meaning as text. */
+const OPTION_GLYPH: Record<OptionState, string> = {
+    "chosen-correct": "\u2713",
+    "chosen-incorrect": "\u2715",
+    revealed: "\u2713",
+    muted: "",
+    "": ""
+};
+
 export function GamePage() {
     const navigate = useNavigate();
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [paused, setPaused] = useState(false);
+    /** Counting in after Resume. The session is only resumed once the count
+     *  finishes, so nothing is ticking while the numbers run. */
+    const [resuming, setResuming] = useState(false);
+    /** Where a paused run stopped. Set either from live state when the player
+     *  pauses, or from the server when they arrive back on a paused run. */
+    const [pausedInfo, setPausedInfo] = useState<{
+        unit: string;
+        current: number;
+        total: number;
+        score: number;
+    } | null>(null);
     const [question, setQuestion] = useState<ServedQuestion | null>(null);
+    /**
+     * False until the player has actually chosen to begin.
+     *
+     * The page used to POST /api/sessions on mount, so arriving on the route WAS
+     * starting a run -- question one was already on screen with its clock going
+     * before the player had read anything. The entrance gates that.
+     */
+    const [entered, setEntered] = useState(false);
+    /**
+     * Between pressing Start and the session existing.
+     *
+     * The countdown has to run BEFORE the POST, not after: POST /api/sessions
+     * serves the first question, and serving is what stamps served_at and starts
+     * the 35-second clock. A countdown on the other side of that request would
+     * be spending the player's own time.
+     */
+    const [countingIn, setCountingIn] = useState(false);
+    const [beginning, setBeginning] = useState(false);
+    /**
+     * Consecutive correct answers in this run.
+     *
+     * The value already existed -- results reports "best streak" -- but only once
+     * the run was over, which is exactly when it can no longer change how anyone
+     * plays. Tracked here so it is visible while there is still something to
+     * protect. Client-side only; the server keeps deriving the authoritative
+     * figure from the stored answers.
+     */
+    const [streak, setStreak] = useState(0);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
     const [runningScore, setRunningScore] = useState(0);
+    const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
+    /** Bumped after abandoning, to re-run the start effect. */
+    const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    /** Bumped once per adjudicated question. Used purely as a React key so the
+     *  award and score animations replay on a repeat of the same value -- two
+     *  correct answers worth +130 in a row must animate twice, not once. */
+    const [beat, setBeat] = useState(0);
 
     // Guards against the countdown firing while an answer is already in flight
     // or feedback is on screen.
     const settling = useRef(false);
+
+    /** True while the current question is animating out. */
+    const [leaving, setLeaving] = useState(false);
+
+    /**
+     * Every pending timeout, so unmounting cannot leave one running.
+     *
+     * This matters more than tidiness: the sequencing timers call navigate() when
+     * a game ends, so one surviving an unmount would redirect a player who had
+     * already left the page.
+     */
+    const timers = useRef<number[]>([]);
+
+    const later = useCallback((fn: () => void, ms: number) => {
+        timers.current.push(window.setTimeout(fn, ms));
+    }, []);
+
+    useEffect(
+        () => () => {
+            timers.current.forEach(window.clearTimeout);
+            timers.current = [];
+        },
+        []
+    );
 
     const finish = useCallback(
         (id: string) => {
@@ -39,48 +179,185 @@ export function GamePage() {
         [navigate]
     );
 
-    // Start (or resume) a game on mount.
+    async function handlePause() {
+        if (!sessionId || busy) return;
+
+        setBusy(true);
+
+        try {
+            await api.post("/api/me/sessions/code-blitz/pause");
+
+            if (question) {
+                setPausedInfo({
+                    unit: gameBySlug(CODE_BLITZ)?.unit ?? "Question",
+                    current: question.questionNumber,
+                    total: question.totalQuestions,
+                    score: runningScore
+                });
+            }
+
+            setPaused(true);
+        } catch (err) {
+            setError(
+                err instanceof ApiError
+                    ? err.detailText
+                    : "Could not pause the game"
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function handleResume() {
+        setError(null);
+        setBusy(true);
+
+        try {
+            const data = await api.post<StartSessionResponse>("/api/sessions");
+
+            setSessionId(data.sessionId ?? null);
+            setQuestion(data.question ?? null);
+            setRunningScore(data.scoreSoFar ?? 0);
+            setPausedInfo(null);
+            setPaused(false);
+            setResuming(false);
+        } catch (err) {
+            // Drop out of the countdown, or the player is stranded watching "Go"
+            // with no way back to the paused screen.
+            setResuming(false);
+            setError(
+                err instanceof ApiError
+                    ? err.detailText
+                    : "Could not resume the game"
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    // Start, resume, or -- if the player paused this run -- stop and ask.
     useEffect(() => {
         let active = true;
 
-        api.post<StartSessionResponse>("/api/sessions")
-            .then((data) => {
+        void (async () => {
+            // POST /api/sessions means "start or resume", so arriving on a paused
+            // run silently un-paused it and restarted the clock. A pause is a
+            // decision; only the player gets to undo it.
+            try {
+                const open = await api.get<ResumableResponse>("/api/me/sessions/resumable");
+                const heldRun = open.sessions.find(
+                    (s) => s.game.slug === CODE_BLITZ && s.status === "paused"
+                );
+
                 if (!active) return;
 
-                if (data.session) {
-                    finish(data.session.id);
+                if (heldRun) {
+                    setPausedInfo({
+                        unit: gameBySlug(CODE_BLITZ)?.unit ?? "Question",
+                        current: Math.min(heldRun.unitsDone + 1, heldRun.unitsTotal),
+                        total: heldRun.unitsTotal,
+                        score: heldRun.score
+                    });
+                    setPaused(true);
+                    return;
+                }
+            } catch {
+                // A failed probe must never stop someone playing: fall through and
+                // start the run the way this page always did.
+            }
+
+            if (!active) return;
+
+            // Is a run already going? GET /sessions/current says so without
+            // creating one -- it 404s when there is nothing in progress. A player
+            // who refreshes mid-run goes straight back to their question; a
+            // player arriving fresh gets the entrance.
+            try {
+                const current = await api.get<CurrentQuestionResponse>("/api/sessions/current");
+
+                if (!active) return;
+
+                if (current.complete && current.session) {
+                    finish(current.session.id);
                     return;
                 }
 
-                setSessionId(data.sessionId ?? null);
-                setQuestion(data.question ?? null);
-                // Resuming mid-game restores the real banked score rather than
-                // restarting a local tally at zero.
-                setRunningScore(data.scoreSoFar ?? 0);
-            })
-            .catch((err) => {
-                if (active) {
-                    setError(err instanceof ApiError ? err.detailText : "Could not start a game");
+                if (current.question) {
+                    setQuestion(current.question);
+                    setRunningScore(current.scoreSoFar ?? 0);
+                    setEntered(true);
+                    return;
                 }
-            });
+            } catch {
+                // 404 means no run in progress, which is the normal first arrival.
+            }
+        })();
 
         return () => {
             active = false;
         };
-    }, [finish]);
+    }, [finish, attempt]);
 
-    const advance = useCallback(
-        (next: ServedQuestion | null, complete: boolean, id: string | null) => {
-            if (complete && id) {
-                finish(id);
+    /** Starts the run. Only ever called by the entrance's button. */
+    const begin = useCallback(async () => {
+        setBeginning(true);
+
+        try {
+            const data = await api.post<StartSessionResponse>("/api/sessions");
+
+            if (data.session) {
+                finish(data.session.id);
                 return;
             }
 
-            setQuestion(next);
+            setSessionId(data.sessionId ?? null);
+            setQuestion(data.question ?? null);
+            setRunningScore(data.scoreSoFar ?? 0);
+            setEntered(true);
+        } catch (err) {
+            // 409 is not a failure: another game holds the single active session
+            // slot, and the player gets to choose what happens.
+            const conflicting = err instanceof ApiError ? activeGameFrom(err.body) : null;
+
+            if (conflicting) {
+                setConflict(conflicting);
+                return;
+            }
+
+            setError(err instanceof ApiError ? err.detailText : "Could not start a game");
+        } finally {
+            setBeginning(false);
+            // Cleared either way. On success `entered` takes over the render; on
+            // failure the conflict and error gates above this one do.
+            setCountingIn(false);
+        }
+    }, [finish]);
+
+    /**
+     * Fetches the next question and starts its clock.
+     *
+     * GET /sessions/current is the endpoint that serves -- and therefore stamps
+     * served_at on -- the next pending question. Calling it at the moment the
+     * client is ready to render means the deadline the player is given is the
+     * deadline they actually get.
+     */
+    const advanceToNext = useCallback(async () => {
+        try {
+            const data = await api.get<CurrentQuestionResponse>("/api/sessions/current");
+
+            if (data.complete && data.session) {
+                finish(data.session.id);
+                return;
+            }
+
+            setQuestion(data.question ?? null);
+            setRunningScore(data.scoreSoFar ?? 0);
             settling.current = false;
-        },
-        [finish]
-    );
+        } catch (err) {
+            settling.current = false;
+            setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
+        }
+    }, [finish]);
 
     async function submit(optionId: string) {
         if (!sessionId || !question || settling.current) return;
@@ -95,17 +372,37 @@ export function GamePage() {
             });
 
             setRunningScore(result.scoreSoFar);
+            setBeat((n) => n + 1);
+            setStreak((n) => (result.outcome === "correct" ? n + 1 : 0));
             setFeedback({
                 outcome: result.outcome,
                 correctOption: result.correctOption,
+                explanation: result.explanation,
                 pointsAwarded: result.pointsAwarded,
                 selectedOptionId: optionId
             });
 
-            setTimeout(() => {
-                setFeedback(null);
-                advance(result.question, result.complete, result.session?.id ?? sessionId);
-            }, FEEDBACK_MS);
+            // Hold the result, animate the question out, then fetch the next one.
+            //
+            // The next question is requested here rather than read off this
+            // response, because asking for it is what starts its clock. Bundling
+            // it in would hand the player a question whose 35s began while they
+            // were still reading why the last one was wrong.
+            later(() => {
+                setLeaving(true);
+
+                later(() => {
+                    setLeaving(false);
+                    setFeedback(null);
+
+                    if (result.complete) {
+                        finish(result.session?.id ?? sessionId);
+                        return;
+                    }
+
+                    void advanceToNext();
+                }, EXIT_MS);
+            }, DWELL_MS[result.outcome]);
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Could not submit your answer");
@@ -130,18 +427,26 @@ export function GamePage() {
             }
 
             setRunningScore(data.scoreSoFar ?? 0);
+            setBeat((n) => n + 1);
+            setStreak(0);
             setFeedback({
                 outcome: "timed_out",
                 correctOption: "",
+                explanation: null,
                 pointsAwarded: 0,
                 selectedOptionId: null
             });
 
-            setTimeout(() => {
-                setFeedback(null);
-                setQuestion(data.question ?? null);
-                settling.current = false;
-            }, FEEDBACK_MS);
+            later(() => {
+                setLeaving(true);
+
+                later(() => {
+                    setLeaving(false);
+                    setFeedback(null);
+                    setQuestion(data.question ?? null);
+                    settling.current = false;
+                }, EXIT_MS);
+            }, DWELL_MS.timed_out);
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
@@ -164,6 +469,19 @@ export function GamePage() {
         return () => window.removeEventListener("keydown", onKey);
     });
 
+    if (conflict) {
+        return (
+            <ActiveGameConflict
+                activeGame={conflict}
+                wantedGame="Code Blitz"
+                onAbandoned={() => {
+                    setConflict(null);
+                    setAttempt((n) => n + 1);
+                }}
+            />
+        );
+    }
+
     if (error) {
         return (
             <section className="panel narrow">
@@ -178,20 +496,104 @@ export function GamePage() {
         );
     }
 
+    if (resuming) {
+        return <GetReady onDone={() => void handleResume()} />;
+    }
+
+    if (paused) {
+        return (
+            <PausedRun
+                slug={CODE_BLITZ}
+                progress={pausedInfo}
+                score={pausedInfo?.score ?? runningScore}
+                busy={busy}
+                onResume={() => setResuming(true)}
+            />
+        );
+    }
+
+    /* The entrance. Sits after the paused/conflict/error gates so a held run or a
+       blocked start still wins -- those are answers to "why can I not play", and
+       the intro is only for "you have not started yet". */
+    if (!entered) {
+        if (countingIn) {
+            return <GetReady label="Code Blitz" onDone={() => void begin()} />;
+        }
+
+        return (
+            <GameIntro
+                eyebrow="Code Blitz"
+                title="Read it. Call it."
+                lede={
+                    <>
+                        A snippet of JavaScript appears. Work out what it logs,
+                        <br />
+                        then pick the answer before the clock runs out.
+                        <br />
+                        Questions start on the fundamentals and get harder as you go.
+                    </>
+                }
+                shape="10 questions · 35s each · difficulty climbs"
+                busy={beginning}
+                onStart={() => setCountingIn(true)}
+                startLabel="Start blitz"
+            />
+        );
+    }
+
     if (!question) {
         return <p className="muted center">Dealing your questions…</p>;
     }
 
     return (
-        <section className="game">
-            <header className="game-bar">
-                <span className="progress">
-                    Question {question.questionNumber} of {question.totalQuestions}
+        <section className="game blitz">
+            {/* Names the game, reports the score, offers the exit. Three things,
+                so the player always knows where they are and how to leave. */}
+            <header className="hud">
+                <span className="hud-left">
+                    <span className="hud-title">Code Blitz</span>
+
+                    {/* Only from two. A streak of one is just an answer, and a
+                        badge that is always on screen stops meaning anything. */}
+                    {streak > 1 && (
+                        <span className={`blitz-streak${streak >= 4 ? " hot" : ""}`}>
+                            <span aria-hidden="true">🔥</span>
+                            <span key={`k${streak}`} className="blitz-streak-n">
+                                {streak}
+                            </span>
+                        </span>
+                    )}
                 </span>
-                <span className="score" aria-live="polite">
-                    {runningScore} pts
+
+                {/* The award floats out of the score rather than sitting beside it,
+                    so the number the player watches is the one that moves. */}
+                <span className="score-slot">
+                    <span className="hud-label">Score</span>
+                    <span className="score" aria-live="polite">
+                        <span key={`s${beat}`} className="score-value">
+                            {runningScore}
+                        </span>
+                    </span>
+                    {feedback?.outcome === "correct" && feedback.pointsAwarded > 0 && (
+                        <span key={`a${beat}`} className="score-award" aria-hidden="true">
+                            +{feedback.pointsAwarded}
+                        </span>
+                    )}
                 </span>
+
+                <button
+                    className="button ghost small"
+                    onClick={() => void handlePause()}
+                    disabled={busy || feedback !== null}
+                >
+                    Pause
+                </button>
             </header>
+
+            <RoundProgress
+                current={question.questionNumber}
+                total={question.totalQuestions}
+            />
 
             <Countdown
                 deadlineAt={question.deadlineAt}
@@ -199,34 +601,53 @@ export function GamePage() {
                 onExpire={onExpire}
             />
 
-            <pre className="prompt">{question.prompt}</pre>
-
-            <ul className="options">
-                {question.options.map((option, index) => {
-                    const chosen = feedback?.selectedOptionId === option.id;
-                    const isAnswer =
-                        feedback !== null && feedback.correctOption === option.text;
-
-                    let state = "";
-                    if (feedback) {
-                        if (isAnswer) state = " correct";
-                        else if (chosen) state = " incorrect";
-                    }
+            {/* Keyed on the question, so React remounts it and the entrance
+                animation replays without any state to reset. `leaving` drives the
+                exit. Only opacity and transform move, so neither can reflow the
+                page mid-answer. */}
+            <div
+                key={question.sessionQuestionId}
+                className={`play-stage${leaving ? " leaving" : ""}`}
+            >
+                {(() => {
+                    const { question: ask, code } = splitPrompt(question.prompt);
 
                     return (
-                        <li key={option.id}>
-                            <button
-                                className={`option${state}`}
-                                onClick={() => void submit(option.id)}
-                                disabled={busy || feedback !== null}
-                            >
-                                <kbd>{index + 1}</kbd>
-                                <span>{option.text}</span>
-                            </button>
-                        </li>
+                        <>
+                            {/* The question is a question. It reads in the UI face,
+                                at reading size -- monospace was making prose look
+                                like output the player had to parse. */}
+                            <h1 className="ask">{ask}</h1>
+                            {code && <pre className="prompt">{code}</pre>}
+                        </>
                     );
-                })}
-            </ul>
+                })()}
+
+                <ul className={`options${feedback?.outcome === "timed_out" ? " lapsed" : ""}`}>
+                    {question.options.map((option, index) => {
+                        const state = optionStateFor(feedback, option);
+                        const glyph = OPTION_GLYPH[state];
+
+                        return (
+                            <li key={option.id}>
+                                <button
+                                    className={`option${state ? ` ${state}` : ""}`}
+                                    onClick={() => void submit(option.id)}
+                                    disabled={busy || feedback !== null}
+                                >
+                                    <kbd>{index + 1}</kbd>
+                                    <span className="option-text">{option.text}</span>
+                                    {glyph && (
+                                        <span className="option-glyph" aria-hidden="true">
+                                            {glyph}
+                                        </span>
+                                    )}
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
 
             <div className="feedback" role="status">
                 {feedback?.outcome === "correct" && (
@@ -235,7 +656,18 @@ export function GamePage() {
                 {feedback?.outcome === "incorrect" && (
                     <p className="tag incorrect">Not quite — {feedback.correctOption}</p>
                 )}
-                {feedback?.outcome === "timed_out" && <p className="tag timeout">Out of time</p>}
+                {/* No answer is named here on purpose: the timeout path learns of the
+                    lapse from GET /api/sessions/current, whose response does not carry
+                    the expired question's answer. Naming one would mean inventing it. */}
+                {feedback?.outcome === "timed_out" && (
+                    <p className="tag timeout lapsed-tag">Time&rsquo;s up</p>
+                )}
+                {/* The reason, when the question carries one. This is the whole
+                    point of the bank: a player who got it wrong should leave the
+                    round knowing something they did not know going in. */}
+                {feedback?.explanation && (
+                    <p className="feedback-why">{feedback.explanation}</p>
+                )}
             </div>
         </section>
     );

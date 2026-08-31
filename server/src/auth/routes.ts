@@ -1,5 +1,6 @@
 import argon2 from "argon2";
 import { Router, type Request, type Response } from "express";
+import { SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "./cookie.js";
 import { requireAuth } from "./middleware.js";
 import { loginRateLimiter } from "./rateLimit.js";
 import { findActiveUserByEmail, findActiveUserById, insertUser } from "./queries.js";
@@ -109,6 +110,19 @@ authRouter.post("/login", loginRateLimiter, async (req: Request, res: Response) 
     res.status(200).json({ user });
 });
 
+/**
+ * Deliberately not behind requireAuth: logging out has to work even when the
+ * session is already gone, so a client that has lost its cookie can still reach
+ * a clean state instead of a 401 it cannot act on. Destroying an empty session
+ * is a no-op, which makes this idempotent.
+ *
+ * Order matters. destroy() removes the row from the session store first -- that
+ * is what actually ends the session, and it is what makes a replayed cookie
+ * useless even if the browser hangs on to it. Clearing the cookie is the second
+ * line of defence, not the first. If destroy() fails the response is a 500 and
+ * the cookie is deliberately left alone: telling the browser to forget a session
+ * the server still honours would hide a live session rather than end it.
+ */
 authRouter.post("/logout", (req: Request, res: Response) => {
     req.session.destroy((err) => {
         if (err) {
@@ -116,7 +130,7 @@ authRouter.post("/logout", (req: Request, res: Response) => {
             return;
         }
 
-        res.clearCookie("gn.sid");
+        res.clearCookie(SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS);
         res.status(204).end();
     });
 });

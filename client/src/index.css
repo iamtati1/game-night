@@ -1,21 +1,99 @@
 :root {
-    --bg: #0d0f16;
-    --surface: #161a24;
-    --surface-2: #1d2230;
-    --border: #262d3d;
+    --bg: #08090d;
+    --surface: #11131a;
+    --surface-2: #191c26;
+    --border: #2a2e3a;
+
     --text: #e7e9ef;
     --muted: #98a2b6;
     --accent: #8b5cf6;
     --accent-soft: #8b5cf633;
+
+    /* Jolt's own colour, distinct from either game's. Violet already means Code
+       Blitz and amber already means Flush, so the umbrella brand needed a third
+       identity rather than borrowing one of its games'. Electric cyan reads as
+       the name and holds contrast on the dark base. */
+    --jolt: #22d3ee;
+    --jolt-2: #f472b6;
+
+    /* Per-game accents, named so the landing page can reference a game's identity
+       without repeating hex values that live in the catalog. */
+    --blitz: #8b5cf6;
+    --flush: #f0a94a;
+    --reaction: #22d3ee;
+    --memory: #a78bfa;
+    --bughunt: #f97316;
     --correct: #34d399;
     --incorrect: #f87171;
     --warn: #fbbf24;
     --radius: 12px;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
+    /* ---------- Layer 1: the scales the rest of the system can build on ----------
+
+       These name what the stylesheet was already doing with literals. Nothing
+       below is rewritten to use them -- 3,000 lines of working values are not
+       worth churning -- but the shared primitives adopt them, so Layers 2-5 have
+       one vocabulary to reach for instead of inventing a fourth radius. */
+
+    /* Radii. 9, 10, 12 and 20 were all in use; these are those, named. */
+    --radius-sm: 9px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    /* Spacing. A 4px base, because every ad-hoc value already in the sheet
+       rounds to it. */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+
+    /* Elevation, as a ladder rather than four unrelated rgba() literals.
+       background -> surface -> elevated -> active is the hierarchy these exist
+       to express, and each step is a shadow plus the inset highlight that makes
+       a dark surface read as lit from above rather than as a lighter rectangle. */
+    --lift: 0 1px 0 rgba(255, 255, 255, 0.035) inset;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.22);
+    --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.28);
+    /* Contact, not elevation. The ladder above casts light-grey shadows meant
+       for a light surface; on the floor (about rgb(10,11,15)) a 25%-black
+       2px shadow moves the pixels underneath by two units and vanishes. These
+       are dark and tight on purpose: the near part is the occlusion where an
+       object meets a surface, the far part is the soft pool it casts. Together
+       they are what makes a station read as SET DOWN on the floor rather than
+       drawn on it. --contact-raised is the same shadow after the object has
+       lifted: looser, weaker, because contact is what you lose by rising. */
+    --contact: 0 2px 3px rgba(0, 0, 0, 0.5), 0 8px 18px -8px rgba(0, 0, 0, 0.6);
+    --contact-raised: 0 4px 6px rgba(0, 0, 0, 0.38);
+
+    /* ---------- Layer 3: the interaction vocabulary ----------
+
+       Three new tokens, because the alternative is repeating the same three
+       magic numbers across six controls and having them drift apart. Jolt's
+       controls should agree on how far a press travels and how fast a surface
+       responds, or the platform feels assembled from different products.
+
+       The timing is arcade timing, not website timing: hover resolves before
+       you finish moving onto the control, and the press has no transition at
+       all -- a button that eases into being pressed feels laggy, because the
+       finger is already down. */
+    --press-y: 1px;
+    --t-hover: 140ms;
+    --t-surface: 190ms;
+    --ease-control: cubic-bezier(0.2, 0, 0, 1);
+
+    /* Text tones. --text and --muted covered two levels; the sheet had quietly
+       grown four, spelled as raw hex in a dozen places. Naming the other two
+       gives tertiary information somewhere to sit without inventing a colour. */
+    --muted-2: #6b7492;
+    --faint: #4b5470;
+
     color-scheme: dark;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    line-height: 1.55;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
 }
 
 * {
@@ -24,25 +102,409 @@
 
 body {
     margin: 0;
-    background: radial-gradient(1100px 500px at 50% -10%, #1b1533 0%, var(--bg) 60%);
+    /* No background here on purpose. The environment belongs to the root element
+       -- see the html rule below for why putting it on body breaks continuity. */
     color: var(--text);
+    /* 100vh is the height of the viewport with mobile browser chrome HIDDEN, so
+       on a phone the ambient gradient below gets cut off by the address bar and
+       the page can scroll a few pixels for no reason. dvh follows the visible
+       viewport. The vh line stays as the fallback for anything without dvh. */
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .app {
+    position: relative;
     max-width: 820px;
     margin: 0 auto;
-    padding: 0 1.25rem 4rem;
+    padding: 0 1.25rem 2rem;
+}
+
+/* ---------- Jolt: spatial atmosphere ---------- */
+
+/* The ambient glows below are fixed and deliberately hang off both edges, which
+   on a 375px viewport pushed the document to 394px and produced a horizontal
+   scrollbar over nothing. `overflow-x: hidden` on body does not catch it,
+   because the scroll container is the root element, not body.
+   `clip` rather than `hidden`: hidden would make the root a scroll container and
+   break `position: sticky` for anything that later wants it. */
+html {
+    overflow-x: clip;
+
+    /* ---------- the continuous environment ----------
+
+       This is one background for the whole document, and the COLOUR is the half
+       that makes it continuous.
+
+       It used to live on body as a lone gradient image with no background
+       colour. Two things followed from that. Body's background propagates to the
+       canvas, but a propagated image is sized to the ROOT element's box rather
+       than to the scrollable document -- and background-repeat defaults to
+       `repeat`. So anything that scrolled past the root box tiled the image and
+       replayed the halo from the top of the page as a seam near the bottom. That
+       is the "different black underneath": not a second background, the same one
+       starting over.
+
+       A background-colour has no edge to reach and nothing to tile, so it covers
+       the canvas at any scroll position. The halo is layered on top of it as an
+       image, fading to `transparent` rather than to --bg so the colour below
+       shows through as the single source of the black. */
+    background-color: var(--bg);
+    background-image: radial-gradient(1100px 500px at 50% -10%,
+            #1b1533 0%,
+            transparent 60%);
+    background-repeat: no-repeat;
+}
+
+body {
+    position: relative;
+    /* `overflow-x: hidden` was here and it made scrolling feel stiff.
+       Per spec, setting one axis to anything but `visible` forces the other to
+       compute as `auto` -- so body became a scroll container nested inside the
+       document scroller, and the wheel had to fill body's scroll range before
+       chaining to html. That handoff is what read as jumpy.
+
+       `clip` is the one value that does NOT do that: it clips without creating a
+       scroll container, so the wheel still goes straight to the document.
+
+       It has to be here rather than only on html. This rule previously said the
+       html-level clip was enough; it is not, and that claim was measured wrong.
+       At 1440 the .landing::before pool is 155% of a 1120px column -- 1736px --
+       centred by translateX(-50%), so it runs -148px to 1588px and the right
+       half of that overhang was 148px of real horizontal scroll. Clipping at
+       html did not contain it; clipping at body does, because body's box is
+       exactly the viewport.
+
+       Clipping here and not on .landing is deliberate: .landing is the 1120px
+       column, so clipping there would cut the glow at the column edge and give
+       it a hard vertical seam. body's edge is the viewport edge, where the
+       gradient is already transparent, so nothing visible is lost -- the pool
+       keeps its full 1736px width and its soft bleed. */
+    overflow-x: clip;
+}
+
+/* Ambient light sources.
+   They should be felt more than seen. */
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+}
+
+body::before {
+    width: 700px;
+    height: 700px;
+    top: -300px;
+    left: -250px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            color-mix(in srgb, var(--jolt) 9%, transparent) 0%,
+            transparent 68%);
+    filter: blur(20px);
+}
+
+body::after {
+    width: 650px;
+    height: 650px;
+    right: -280px;
+    bottom: -250px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            color-mix(in srgb, var(--accent) 8%, transparent) 0%,
+            transparent 68%);
+    filter: blur(25px);
+}
+
+/* ---------- Jolt: spatial game surface ---------- */
+
+/* The gameplay area becomes a physical-feeling surface. */
+.bh-incident {
+    position: relative;
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+    border-radius: 20px;
+
+    background:
+        linear-gradient(145deg,
+            color-mix(in srgb, var(--surface) 94%, var(--accent)),
+            var(--surface));
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.035) inset,
+        0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+/* A very subtle "table lighting" effect. */
+.bh-incident::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+
+    background:
+        radial-gradient(circle at 50% 0%,
+            color-mix(in srgb, var(--accent) 7%, transparent),
+            transparent 55%);
+
+    opacity: 0.8;
+}
+
+/* Keep the actual game content above the atmospheric layer. */
+.bh-incident>* {
+    position: relative;
+    z-index: 1;
+}
+
+/* Code becomes the centerpiece sitting on the surface. */
+.bh-code {
+    border-color: color-mix(in srgb, var(--border) 85%, var(--accent));
+    background: #0b0e17;
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.03) inset,
+        0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Active selectable rows feel slightly embedded into the game surface. */
+.bh-line.selectable .bh-line-label {
+    border-left-color: color-mix(in srgb,
+            var(--accent) 20%,
+            transparent);
+}
+
+.bh-line.selectable:hover .bh-line-label {
+    background:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--accent) 10%, transparent),
+            transparent 75%);
+}
+
+/* The selected answer gets a stronger sense of being "locked in". */
+.bh-line.selected .bh-line-label {
+    box-shadow:
+        inset 3px 0 0 var(--accent),
+        0 0 20px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+/* Layer 3: targeting a line should feel like pressing it. The rail thickens and
+   the row seats for the duration of the click -- the only feedback this control
+   had was the hover wash, so a click and a hover were indistinguishable.
+   Deliberately no transform: the code listing is being read, and shifting a
+   line of code sideways under the cursor makes it harder to read, not easier. */
+.bh-line.selectable:active .bh-line-label {
+    background:
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--accent) 18%, transparent),
+            transparent 75%);
+    box-shadow: inset 4px 0 0 var(--accent);
+    transition: none;
+}
+
+/* ---------- station framing ---------- */
+
+.bh-systembar {
+    background: #0b0f18;
+    border-color: #20283a;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.025) inset,
+        0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* Make the game HUD feel attached to the surface. */
+.bh-systembar,
+.bh-services {
+    position: relative;
+    z-index: 2;
+}
+
+/* ---------- subtle edge lighting ---------- */
+
+.bh-incident {
+    isolation: isolate;
+}
+
+.bh-incident::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+
+    background: linear-gradient(135deg,
+            color-mix(in srgb, var(--accent) 30%, transparent),
+            transparent 35%,
+            transparent 70%,
+            color-mix(in srgb, var(--accent) 8%, transparent));
+
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+
+    pointer-events: none;
+    opacity: 0.65;
+}
+
+/* The application becomes the "room" inside the background. */
+
+.app {
+    position: relative;
+}
+
+/* A subtle central atmosphere behind gameplay. */
+
+.app::before {
+    content: "";
+    position: absolute;
+    top: 4rem;
+    left: 50%;
+    width: min(760px, 110vw);
+    height: 520px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: radial-gradient(ellipse,
+            color-mix(in srgb, var(--accent) 5%, transparent),
+            transparent 70%);
+    filter: blur(35px);
+    z-index: -1;
+}
+
+/* Give major gameplay areas a sense of elevation. */
+
+.bh-incident,
+.bh-results {
+    position: relative;
+}
+
+/* Soft environmental glow around the active game. */
+
+.bh-incident::before,
+.bh-results::before {
+    content: "";
+    position: absolute;
+    inset: -2rem -3rem;
+    pointer-events: none;
+    z-index: -1;
+    border-radius: 32px;
+    background: radial-gradient(ellipse at center,
+            color-mix(in srgb, var(--accent) 4%, transparent),
+            transparent 70%);
+    filter: blur(20px);
+}
+
+/* Active surfaces should feel slightly lifted. */
+
+.bh-systembar,
+.bh-diagnostic,
+.bh-feedback,
+.bh-results-stats {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.025) inset,
+        0 12px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* The code panel is the "table" the game is played on. */
+
+.bh-code {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.025) inset,
+        0 18px 45px rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- header ---------- */
 
+/* Layer 2: the header is the way into Jolt, so it gets a floor rather than
+   ending in nothing. A fading hairline, not a bar -- a solid rule across the top
+   of a dark page reads as a document header, which is the opposite of the goal. */
 .site-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 1.5rem 0 2.5rem;
+    padding: 1.25rem 0 1.75rem;
+}
+
+.site-header::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+            transparent,
+            color-mix(in srgb, var(--border) 90%, var(--jolt)) 22%,
+            color-mix(in srgb, var(--border) 90%, var(--jolt)) 78%,
+            transparent);
+}
+
+/* Both the brand and the buttons were breaking into two lines around 790px.
+   Nothing here is long enough to deserve wrapping -- it was only wrapping
+   because flex let it. */
+.site-header .brand,
+.site-header nav a,
+.site-header .button {
+    white-space: nowrap;
+}
+
+/* Layer 3: navigation gets a state, not a costume. These are links into the
+   platform, not arcade controls -- the tactile language belongs around gameplay.
+   So: a colour lift on hover, the global focus ring untouched, and a press that
+   acknowledges the click without moving the header around. */
+.site-header nav a {
+    text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    text-underline-offset: 3px;
+    transition: color var(--t-hover) var(--ease-control),
+        text-decoration-color var(--t-hover) var(--ease-control);
+}
+
+.site-header nav a:hover {
+    color: color-mix(in srgb, var(--accent) 80%, #fff);
+    text-decoration-color: currentColor;
+}
+
+.site-header nav a:active {
+    opacity: 0.75;
+    transition: none;
+}
+
+/* Inline rather than a banner: logout failing is a small, recoverable problem,
+   and the nav it sits in is the evidence that the player is still signed in. */
+.logout-error {
+    color: #fca5a5;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.site-header nav {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+/* The username is the first thing worth losing: the player knows who they are,
+   and History and Log out are actions. */
+@media (max-width: 620px) {
+    .site-header nav .muted {
+        display: none;
+    }
+}
+
+/* Below this the wordmark goes too, leaving the GN badge. nowrap stops the
+   header breaking onto two lines, but on its own it just converts wrapping into
+   horizontal overflow -- measured at 280px, Log out ran 16px past the viewport.
+   Something has to actually give up space, and the brand is the one element
+   that is decoration rather than navigation. */
+@media (max-width: 420px) {
+    .brand-word {
+        display: none;
+    }
 }
 
 .brand {
@@ -79,7 +541,7 @@ body {
 h1 {
     font-size: clamp(1.9rem, 5vw, 2.9rem);
     line-height: 1.1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.035em;
     margin: 0 0 0.75rem;
 }
 
@@ -144,8 +606,17 @@ a {
     background: #262c3c;
 }
 
+/* Layer 3: every button gets the pressed state, not just .primary.
+   The primary button gained a real seated-and-dimmed press in Layer 2 and the
+   others kept a bare 1px nudge, which made the same gesture feel like two
+   different controls depending on which one you hit. */
 .button:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: translateY(var(--press-y));
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.button.ghost:active:not(:disabled) {
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.22);
 }
 
 .button.primary {
@@ -154,7 +625,21 @@ a {
 }
 
 .button.primary:hover:not(:disabled) {
-    background: #7c4ef0;
+    /* brightness, not a hardcoded violet: this button is recoloured by --accent in
+       Flush and on the auth pages, and a fixed hex undid the swap on hover. */
+    filter: brightness(1.1);
+    /* Layer 2: the accent halo appears on hover and only on hover. A button that
+       glows at rest stops meaning "press me" and starts meaning "decoration". */
+    box-shadow: var(--lift), var(--shadow-2),
+        0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Pressed should feel like the control went down and the light went with it.
+   The shared .button:active already moves it 1px; this removes the lift so the
+   surface reads as seated rather than floating one pixel lower. */
+.button.primary:active:not(:disabled) {
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+    filter: brightness(0.97);
 }
 
 .button.ghost {
@@ -215,11 +700,16 @@ a {
 
 /* ---------- panels / forms ---------- */
 
+/* The shared surface primitive, given the same lit-from-above treatment the
+   gameplay surface already uses. It was a flat rectangle with a border, which
+   read as a region rather than as a thing sitting on the background. Same
+   language as .bh-incident, one step quieter. */
 .panel {
     padding: 1.75rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-md);
     background: var(--surface);
+    box-shadow: var(--lift), var(--shadow-2);
 }
 
 .narrow {
@@ -245,8 +735,15 @@ input {
     font: inherit;
 }
 
+/* `outline: none` here was overriding the global :focus-visible ring for every
+   input in Jolt -- so a keyboard user tabbing through the login form got a 1px
+   border tint where every other control gives them a 2px ring. Mouse users keep
+   the quieter border-only treatment; keyboard users get the ring back. */
 input:focus {
     border-color: var(--accent);
+}
+
+input:focus:not(:focus-visible) {
     outline: none;
 }
 
@@ -274,21 +771,101 @@ input:focus {
     color: var(--muted);
 }
 
+/* Stacked label over value, so the number reads as a readout rather than a
+   sentence. position: relative is load-bearing -- .score-award is absolutely
+   positioned and would otherwise resolve against a distant ancestor. */
+.score-slot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+}
+
+/* Deliberately NOT var(--mono): Menlo and SF Mono draw a slashed zero, which at
+   HUD size reads as a damaged glyph rather than a number. tabular-nums gives the
+   fixed-width digits the mono font was wanted for, without the slash. */
 .score {
     font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+/* Keyed on the question counter, so remounting restarts the animation. A pure
+   class toggle would need a timer to remove it and would skip when two answers
+   land close together -- which, in a game called Blitz, is the normal case. */
+.score-value {
+    display: inline-block;
+    animation: score-bump 380ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+@keyframes score-bump {
+    0% {
+        transform: scale(1);
+        color: var(--text);
+    }
+
+    28% {
+        transform: scale(1.28);
+        color: var(--correct);
+    }
+
+    100% {
+        transform: scale(1);
+        color: var(--text);
+    }
+}
+
+/* Rises out of the score and fades. Absolutely positioned so it cannot reflow
+   the bar -- a shifting header during feedback would be worse than no animation. */
+.score-award {
+    position: absolute;
+    right: 0;
+    bottom: 100%;
+    color: var(--correct);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
     font-weight: 650;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: award-float 900ms ease-out forwards;
+}
+
+@keyframes award-float {
+    0% {
+        opacity: 0;
+        transform: translateY(4px) scale(0.9);
+    }
+
+    22% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.06);
+    }
+
+    70% {
+        opacity: 1;
+        transform: translateY(-9px) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-15px) scale(1);
+    }
 }
 
 .countdown {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    gap: 0.9rem;
+    /* Sits directly above the question rather than floating near the header, so
+       the clock and the thing being timed read as one unit. */
+    margin-bottom: 1.1rem;
 }
 
 .countdown-track {
     flex: 1;
-    height: 6px;
+    height: 10px;
     border-radius: 999px;
     background: var(--surface-2);
     overflow: hidden;
@@ -306,11 +883,15 @@ input:focus {
 }
 
 .countdown-value {
-    min-width: 3ch;
+    min-width: 4ch;
     color: var(--muted);
+    font-family: var(--mono);
     font-variant-numeric: tabular-nums;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
+    font-weight: 650;
     text-align: right;
+    /* Fixed width plus tabular figures: the number changes every second and must
+       not shove the bar sideways as it goes from 10s to 9s. */
 }
 
 .countdown-value.urgent {
@@ -327,10 +908,15 @@ input:focus {
     background: var(--surface);
     color: var(--text);
     font-family: var(--mono);
-    font-size: 0.95rem;
-    line-height: 1.6;
-    white-space: pre-wrap;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    /* `pre`, not `pre-wrap`. Wrapping broke expressions mid-token -- `n > 1).length`
+       split across two lines, which is unreadable in a game about reading code
+       quickly. The block scrolls inside itself instead, so a long line never makes
+       the page scroll sideways. */
+    white-space: pre;
     overflow-x: auto;
+    tab-size: 2;
 }
 
 .prompt.small {
@@ -341,7 +927,7 @@ input:focus {
 
 .options {
     display: grid;
-    gap: 0.6rem;
+    gap: 0.55rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -352,26 +938,68 @@ input:focus {
     align-items: center;
     gap: 0.85rem;
     width: 100%;
-    padding: 0.9rem 1rem;
+    padding: 1.15rem;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--surface);
     color: var(--text);
     font: inherit;
     font-family: var(--mono);
-    font-size: 0.92rem;
+    font-size: 0.98rem;
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    /* Layer 3: transform and shadow join the transition. This control had only
+       border and background, so answering a question felt like ticking a form
+       row rather than pressing anything. It is the most-clicked surface in
+       Jolt and it was the least tactile. */
+    transition:
+        border-color var(--t-hover) var(--ease-control),
+        background var(--t-hover) var(--ease-control),
+        transform var(--t-hover) var(--ease-control),
+        box-shadow var(--t-hover) var(--ease-control);
 }
 
 .option:hover:not(:disabled) {
     border-color: var(--accent);
     background: var(--surface-2);
+    /* One pixel, not four. An answer list is a column of adjacent controls, and
+       a big lift on one of five rows shoves the others around. */
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-1);
 }
 
+/* Pressed: seated, with the light gone out from under it. No transition on the
+   way down -- see the note on --t-hover. */
+.option:active:not(:disabled) {
+    transform: translateY(var(--press-y));
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28);
+    transition: none;
+}
+
+/* Every hover and press rule above is :not(:disabled), which is what keeps the
+   interaction layer off the gameplay states. Once an answer is submitted the
+   options are disabled, so .chosen-correct, .chosen-incorrect and .revealed own
+   the surface uncontested -- exactly as they did before Layer 3. */
+/* Left without a transform reset on purpose. The hover and active rules above
+   are already :not(:disabled), so a disabled option cannot pick either up, and
+   adding `transform: none` here would put a normal declaration in the way of
+   the reveal-in and option-pop animations that the gameplay states run. It only
+   loses that race today because of source order, which is not a thing to rely
+   on. */
 .option:disabled {
     cursor: default;
+}
+
+.option-text {
+    flex: 1;
+}
+
+/* Decorative tick or cross. The banner under the list carries the same meaning
+   as text, which is why this is aria-hidden. */
+.option-glyph {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    line-height: 1;
 }
 
 .option kbd {
@@ -387,19 +1015,163 @@ input:focus {
     font-size: 0.74rem;
 }
 
-.option.correct {
+/* Four states, not two. `chosen-correct` and `revealed` are both "this is the
+   right answer", but only one of them is the player's win, and they must not look
+   the same: solid and celebratory versus outlined and instructive. */
+
+.option.chosen-correct {
     border-color: var(--correct);
-    background: #34d39922;
+    background: #34d39926;
+    animation: option-pop 260ms cubic-bezier(0.2, 1.4, 0.35, 1);
 }
 
-.option.incorrect {
+.option.chosen-correct .option-glyph,
+.option.revealed .option-glyph {
+    color: var(--correct);
+}
+
+@keyframes option-pop {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 #34d39900;
+    }
+
+    40% {
+        transform: scale(1.018);
+        box-shadow: 0 0 0 4px #34d39930;
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 #34d39900;
+    }
+}
+
+.option.chosen-incorrect {
     border-color: var(--incorrect);
     background: #f8717122;
+    animation: option-shake 300ms ease-in-out;
 }
 
+.option.chosen-incorrect .option-glyph {
+    color: var(--incorrect);
+}
+
+/* Small and horizontal. A large shake reads as an error dialog; this should read
+   as "no, the other one". */
+@keyframes option-shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-5px);
+    }
+
+    40% {
+        transform: translateX(4px);
+    }
+
+    60% {
+        transform: translateX(-3px);
+    }
+
+    80% {
+        transform: translateX(2px);
+    }
+}
+
+/* The answer the player missed: outlined rather than filled, and it arrives a
+   beat later so the eye reads "wrong" before it reads "this one". 120ms is enough
+   to sequence the two without the player waiting on the UI. */
+.option.revealed {
+    border-color: var(--correct);
+    border-style: dashed;
+    background: #34d3990f;
+    animation: reveal-in 220ms ease-out 120ms both;
+}
+
+@keyframes reveal-in {
+    from {
+        opacity: 0.5;
+        transform: translateY(-3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Options that took no part. Dimming them is what makes the two that matter
+   legible at a glance. */
+.option.muted {
+    opacity: 0.4;
+    transition: opacity 200ms ease-out;
+}
+
+/* Timeout owns its own state: nothing was chosen and nothing is revealed, so the
+   whole list recedes and the amber banner does the talking. */
+.options.lapsed .option {
+    opacity: 0.35;
+    border-color: var(--border);
+    transition: opacity 240ms ease-out;
+}
+
+.feedback .tag {
+    animation: feedback-in 200ms ease-out both;
+}
+
+@keyframes feedback-in {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Honour the OS setting: keep every colour and state change, drop the motion.
+   The states are load-bearing information, the movement is not. */
+@media (prefers-reduced-motion: reduce) {
+
+    .score-value,
+    .option.chosen-correct,
+    .option.chosen-incorrect,
+    .option.revealed,
+    .feedback .tag {
+        animation: none;
+    }
+
+    .score-award {
+        animation: award-fade 900ms ease-out forwards;
+    }
+
+    @keyframes award-fade {
+
+        0%,
+        70% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0;
+        }
+    }
+}
+
+/* Reserved height, so feedback arriving cannot push the answers down a beat
+   after the player has already clicked one. */
 .feedback {
-    min-height: 2.5rem;
-    margin-top: 1.1rem;
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-top: 0.9rem;
 }
 
 .tag {
@@ -490,5 +1262,4796 @@ input:focus {
     .prompt {
         padding: 1rem;
         font-size: 0.87rem;
+    }
+}
+
+/* ---------- game history ---------- */
+
+.breakdown.history li {
+    padding: 0;
+}
+
+/* The left rule is the game's own accent, so a page of runs is scannable by
+   colour before it is read. */
+.history-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 1rem 0.25rem;
+    border-left: 3px solid var(--game-accent, var(--border));
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.history-row:hover {
+    background: var(--surface);
+}
+
+.history-main {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-size: 0.9rem;
+}
+
+.history-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.tag.in-progress {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+@media (max-width: 560px) {
+    .history-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .history-stats {
+        gap: 0.6rem;
+    }
+}
+
+/* ---------- per-game identity ----------
+   One accent token per game, swapped by a slug class. Adding a game means
+   adding three lines here, not touching any component. */
+
+.game-chip {
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--game-accent, var(--border));
+    border-radius: 999px;
+    color: var(--game-accent, var(--muted));
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* Per-game chip accents, keyed by slug. HistoryPage renders `game-<slug>`, so
+   every game in the catalog needs a rule here or its chip silently falls back to
+   grey -- which is what happened to Flush when this block lost its second half. */
+.game-code-blitz {
+    --game-accent: var(--blitz);
+}
+
+.game-flush {
+    --game-accent: var(--flush);
+}
+
+/* Reaction, Memory and Bug Hunt were missing here, so their History chips had
+   been rendering grey since each one shipped -- precisely the failure the note
+   above describes. Adding a game means adding a line here. */
+.game-reaction {
+    --game-accent: var(--reaction);
+}
+
+.game-memory {
+    --game-accent: var(--memory);
+}
+
+.game-bug-hunt {
+    --game-accent: var(--bughunt);
+}
+
+/* ---------- Flush ----------
+   Amber, not violet. Code Blitz is a reflex game and reads cool and urgent;
+   Flush is a reasoning game and should read warmer and slower. The accent token
+   swaps, so shared components recolour without knowing which game they are in. */
+
+.game.flush,
+.results.flush {
+    --accent: #f0a94a;
+    --accent-soft: #f0a94a26;
+}
+
+
+/* The decision, stated where the player is looking. Banked sits left and reads
+   settled; the multiplier at risk sits right and reads live. */
+.stake {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 0.88rem;
+}
+
+.stake-safe {
+    color: var(--correct);
+    font-variant-numeric: tabular-nums;
+}
+
+.stake-risk {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* The reveal is the teaching moment, so it gets room rather than a toast. */
+.reveal {
+    margin-top: 0.5rem;
+}
+
+.mult {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.sequences {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.sequences>div>span {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.seq {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    line-height: 1.7;
+}
+
+.seq li.ok {
+    color: var(--correct);
+}
+
+.seq li.bad {
+    color: var(--incorrect);
+    font-weight: 600;
+}
+
+@media (max-width: 560px) {
+    .sequences {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .console-line,
+    .tile {
+        transition: none;
+        animation: none;
+    }
+}
+
+.cta-row.center-row {
+    justify-content: center;
+}
+
+/* ---------- Pass A: question transitions and timer urgency ---------- */
+
+/* The stage carries the whole question so it can move as one object. Only
+   opacity and transform animate -- anything affecting box size would reflow the
+   answer buttons under the player's cursor mid-click. */
+/* Layer 5: the stage.
+   .play-stage already wrapped the question and the answers -- it just carried an
+   animation and no surface, so the challenge floated on the page. Memory and
+   Reaction both put the challenge inside a bounded, slightly raised area, and
+   that is most of why they read as games rather than pages. Same treatment here,
+   no DOM change. */
+.play-stage {
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 70%, transparent),
+            color-mix(in srgb, var(--bg) 90%, var(--surface)));
+    box-shadow: var(--lift), var(--shadow-2);
+    animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The dead space between the timer and the question was ~140px of nothing --
+   the stage now starts where the eye expects it to. */
+.play-stage {
+    margin-top: 1.1rem;
+}
+
+.play-stage.leaving {
+    animation: stage-out 170ms ease-in forwards;
+}
+
+@keyframes stage-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes stage-out {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+/* Timer tiers. `calm` is deliberately unstyled beyond the base: the clock should
+   be quiet until it has something to say. */
+.countdown-fill.warn {
+    background: var(--warn);
+}
+
+.countdown-value.warn {
+    color: var(--warn);
+}
+
+.countdown.urgent .countdown-track {
+    animation: timer-pulse 1s ease-in-out infinite;
+}
+
+/* Opacity only, and a shallow range. A scale or colour flash at 1Hz across a
+   full-width bar is exactly the effect photosensitivity guidance warns about. */
+@keyframes timer-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.72;
+    }
+}
+
+/* Time ran out: the tag earns more weight than the inline pill it shares a class
+   with, because nothing else on screen explains why the question vanished. */
+.lapsed-tag {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .play-stage,
+    .play-stage.leaving {
+        animation: none;
+    }
+
+    /* The exit still has to hide the outgoing question, or it would sit on top of
+       the incoming one for a frame. Opacity without motion. */
+    .play-stage.leaving {
+        opacity: 0;
+    }
+
+    .countdown.urgent .countdown-track {
+        animation: none;
+    }
+}
+
+/* ---------- Pass B: game HUD and round progress ---------- */
+
+/* Three things, in reading order: which game, how am I doing, how do I leave.
+   `.game-bar` is left in place for Flush until its own pass. */
+.hud {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+/* Pause is pushed to the far edge so the score sits in the true centre of the
+   bar rather than wherever three flex children happen to land. */
+.hud>.button {
+    justify-self: end;
+}
+
+.hud-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+.hud-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* ---------- round progress ---------- */
+
+.round-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+/* Was small muted grey, indistinguishable from a caption. It is the answer to
+   "where am I", which is one of the five things the screen has to state. */
+.round-label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 650;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.round-label strong {
+    font-size: 1.15rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    color: var(--text);
+}
+
+.round-of {
+    letter-spacing: 0.06em;
+}
+
+.pips {
+    display: flex;
+    gap: 0.34rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pip {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    transition: background 200ms ease-out, transform 200ms ease-out;
+}
+
+.pip.done {
+    background: var(--muted);
+}
+
+.pip.current {
+    background: var(--accent);
+    transform: scale(1.5);
+}
+
+/* ---------- question and answers ---------- */
+
+.game.blitz .prompt {
+    margin-bottom: 1.1rem;
+}
+
+/* A pressed state, so a click is acknowledged before the network answers. */
+.option:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.option:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+    .score {
+        font-size: 1.25rem;
+    }
+
+    .game.blitz .prompt {
+        font-size: 0.92rem;
+    }
+
+    /* Ten pips at 7px plus gaps is fine; the label is what gives way first. */
+    .round-label {
+        font-size: 0.74rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .pip,
+    .option:active:not(:disabled) {
+        transition: none;
+        transform: none;
+    }
+
+    .pip.current {
+        /* Scale carried the "you are here" signal; without it the colour has to. */
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+    }
+}
+
+/* ---------- Pass B: vertical composition ---------- */
+
+/* The HUD, progress and clock pin to the top; the question and its feedback
+   float in the middle of whatever height is left. Without this the whole game sat
+   in the top two-thirds of a desktop window with a dead band underneath, which is
+   how a web page behaves, not a game.
+   
+   The auto margins are on the stage and the feedback rather than on a wrapper, so
+   the two stay adjacent -- the verdict has to appear next to the answers it is
+   about, not pushed to the bottom of the viewport. */
+.game {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Code Blitz only. Its composition is a short centred column -- one snippet and
+   four answers -- which leaves a dead band underneath unless it is centred.
+   
+   Flush is deliberately excluded: its board is tall enough to carry the viewport
+   on its own, it has no .feedback element to balance the auto margin against, and
+   forcing the same rule pushed the board down against the bottom edge. Same
+   system, different composition. */
+.game.blitz {
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+}
+
+.game.blitz .play-stage {
+    margin-top: auto;
+}
+
+.game.blitz .feedback {
+    margin-bottom: auto;
+}
+
+/* Flush centres its board in the leftover space instead. Stretching the panels to
+   fill would have added blank console rows, which would read as "more output to
+   place" and lie about the round -- so the board keeps its true height and is
+   simply placed well. margin-block: auto because, unlike Code Blitz, there is no
+   trailing feedback element to balance against. */
+.game.flush {
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+}
+
+.game.flush .play-stage {
+    margin-block: auto;
+}
+
+
+/* ---------- Pass C: the Flush board ----------
+
+   Flush asks one question: what does this code print, and in what order? So the
+   board states it spatially -- the code on one side, the output being assembled
+   on the other -- and the player's whole job is moving tiles from the rack into
+   that output. Code Blitz is a centred column of answers to read; this is a
+   workspace to manipulate, which is the difference the two games need. */
+
+/* Measured: a typical Flush snippet needs ~476px and an even split at the 820px
+   page width gave the code 335px, so the panel fell back to its horizontal
+   scroll and the player had to drag sideways to read code they were being timed
+   on. The code gets the larger share -- the output console holds short lines and
+   needs less room than the code does. Paired with the wider page below. */
+.board {
+    display: grid;
+    grid-template-columns: 1.35fr 0.65fr;
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+}
+
+.board-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.board-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* How many lines are still unplaced. It belongs on the Output label because that
+   is the panel it describes -- as a standalone sentence it was just more text. */
+.board-count {
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.board .prompt {
+    flex: 1;
+    margin: 0;
+}
+
+/* ---------- the output console ---------- */
+
+.console {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    list-style: none;
+}
+
+.console-line {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 2.1rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    transition: background 180ms ease-out, color 180ms ease-out;
+}
+
+/* An empty line is a slot still waiting, not an error. Dashed reads as "goes
+   here"; the gutter number tells the player which position they are choosing. */
+.console-line:not(.printed) {
+    border: 1px dashed var(--border);
+    padding: calc(0.3rem - 1px) calc(0.5rem - 1px);
+}
+
+.console-gutter {
+    flex: 0 0 auto;
+    width: 1.4rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.console-text {
+    min-width: 0;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.console-line.printed {
+    background: #34d39914;
+    color: var(--text);
+}
+
+.console-line.printed .console-gutter {
+    color: var(--correct);
+}
+
+/* The tile landing. Brief, and only on the line that just changed -- the whole
+   console flashing would say "everything happened" instead of "this happened". */
+.console-line.snap {
+    animation: line-snap 380ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes line-snap {
+    0% {
+        transform: translateX(-6px);
+        background: var(--accent-soft);
+    }
+
+    60% {
+        transform: translateX(0);
+        background: var(--accent-soft);
+    }
+
+    100% {
+        transform: none;
+        background: #34d39914;
+    }
+}
+
+/* ---------- the tile rack ---------- */
+
+/* Wrapping chips sized to their content, not a column of full-width rows. This
+   is the change that stops Flush reading as a form: a rack of differently-sized
+   objects invites picking one up, a stack of identical bars invites reading. */
+.rack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tile {
+    /* was width: 100% */
+    width: auto;
+    padding: 0.7rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    /* Comfortably past the 44px tap target once padding and line-height are in. */
+    min-height: 2.75rem;
+    cursor: pointer;
+    transition: transform 120ms ease-out, border-color 140ms, background 140ms,
+        box-shadow 140ms;
+}
+
+.tile:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface);
+    /* Lifting is the affordance: it says "this comes with you". */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px #0006;
+}
+
+.tile:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.tile:active:not(:disabled) {
+    transform: translateY(0) scale(0.97);
+    box-shadow: none;
+}
+
+.tile:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.tile.wrong {
+    border-color: var(--incorrect);
+    background: #f8717122;
+    animation: tile-reject 320ms ease-in-out;
+}
+
+/* Restrained on purpose: a wrong tile already costs the round's multiplier, so
+   the animation only has to say "not that one", not punish. */
+@keyframes tile-reject {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-4px);
+    }
+
+    50% {
+        transform: translateX(3px);
+    }
+
+    75% {
+        transform: translateX(-2px);
+    }
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 720px) {
+
+    /* Stacking beats shrinking: two half-width panels of monospace at 394px
+       would wrap the code and make both unreadable. */
+    .board {
+        grid-template-columns: 1fr;
+        gap: 0.7rem;
+    }
+
+    .console-line {
+        font-size: 0.82rem;
+    }
+
+    .tile {
+        font-size: 0.85rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .console-line.snap {
+        animation: none;
+        /* Movement carried "a tile just landed here", so an outline has to. */
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+    }
+
+    .tile.wrong {
+        animation: none;
+    }
+
+    .tile:hover:not(:disabled),
+    .tile:active:not(:disabled) {
+        transform: none;
+    }
+}
+
+/* ---------- Pass C: the question reads as a question ---------- */
+
+/* Prose in the UI face at reading size. Previously the whole prompt went into a
+   monospace code block, so "What does this log?" looked like program output and a
+   pure-prose question about time complexity looked like a snippet with no code in
+   it. The snippet below keeps the mono treatment; the question no longer borrows
+   it. */
+.ask {
+    margin: 0 0 0.85rem;
+    font-size: 1.35rem;
+    font-weight: 650;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+}
+
+@media (max-width: 620px) {
+    .ask {
+        font-size: 1.15rem;
+    }
+}
+
+/* ================= JOLT — landing ================= */
+
+/* The landing page breaks out of the 820px app column. That measure is right for
+   history tables and results, and wrong for a showcase -- a game platform that
+   lives in a reading measure looks like documentation.
+   
+   :has() on the container rather than a wrapper class on <main>, so no route
+   needs to know what it is being rendered inside. Where :has() is unsupported the
+   page simply keeps the narrower column, which is a degraded layout rather than a
+   broken one. */
+.app:has(.landing) {
+    max-width: 1160px;
+}
+
+.landing {
+    position: relative;
+    width: 100%;
+
+    /* ---------- room for the room ----------
+
+       Measured before changing anything: at 1440 the floor ran from y=352 to
+       y=1399 of a 1430px document -- 36px of space above it and 31px below.
+       The environment was not too subtle, it had nowhere to exist. No amount of
+       ambient treatment can read in 31px, which is why the pool of light below
+       was invisible: it was lying underneath the floor with nothing either side.
+
+       This opens the band. It is deliberately larger below than above, the way
+       more ground is visible in front of a thing than behind it. */
+    padding-bottom: 4rem;
+}
+
+/* ---------- the room the floor stands in ----------
+
+   The page already had atmosphere -- a gradient off the top and two corner
+   glows -- but every bit of it is position: fixed, so it is anchored to the
+   VIEWPORT while the floor is anchored to the DOCUMENT. Scroll and they slide
+   past each other. That is why the floor read as pasted onto a background
+   rather than as standing in a space: they were two unrelated planes.
+
+   This is the same idea, anchored to the page instead. A single wide pool of
+   light centred on the game floor, so the floor sits in something. It scrolls
+   with the floor, which is the entire point.
+
+   No border, no motion, no second effect. It should be felt rather than
+   noticed -- at these alphas you should only be able to prove it is there by
+   turning it off. */
+.landing::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 18%;
+    left: 50%;
+    /* Wider and taller than the floor on purpose. The floor's own surface is
+       lighter than the page, so a pool the same size as the floor is hidden
+       underneath it -- the only part that reads is the bleed around the edges,
+       and that needs room to happen.
+
+       First pass at 7%/4% with a 40px blur was invisible: screenshots with and
+       without it were indistinguishable. These values are the point where it
+       registers as light in the room without becoming a visible shape. */
+    width: 155%;
+    /* Anchored top and bottom rather than given a height. At `height: 92%` the
+       pool started at 18% and ended at 110% of the floor -- it hung 100px below
+       the layout, and because an absolutely-positioned box still contributes to
+       scrollable overflow, those 100px became real scroll into a region past the
+       end of the page. Ending it at the floor's own bottom edge removes the
+       phantom scroll without shrinking anything you can see: the gradient is
+       already fully transparent by 74%, so the part removed was empty.
+
+       The 26px blur still bleeds past this box. Blur is ink overflow, which does
+       not add scroll, so the glow keeps its soft edge. */
+    bottom: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+    /* Reshaped so the light actually reaches the ground.
+       At `48% at 50% 46%` the ellipse's transparent stop landed at normalised
+       distance 1.01 from the floor's bottom edge -- measured, not guessed -- so
+       the pool contributed exactly zero light to the band opened around the
+       floor. All of it was trapped under the floor's own surface.
+       Taller (68%) and centred slightly lower (52%) puts the fade across the
+       floor's edges instead of inside it: light now spills into the ground
+       below, past the sides, and just above the floor's top edge.
+       Peak alphas come DOWN as the lit area goes up -- 15/9 over a small ellipse
+       became 12/8 over a large one -- so the room gets bigger without getting
+       brighter. The black stays dominant; the centre is still hidden under the
+       floor and only the perimeter reads. */
+    background:
+        radial-gradient(ellipse 58% 68% at 50% 52%,
+            color-mix(in srgb, var(--jolt) 12%, transparent) 0%,
+            color-mix(in srgb, var(--accent) 8%, transparent) 42%,
+            transparent 80%);
+    filter: blur(26px);
+}
+
+.jolt-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--jolt);
+}
+
+/* Layer 2: the wordmark reads as a platform brand rather than nav text.
+   Deliberately not bigger -- the change is density. Heavier weight and slightly
+   tighter tracking make it feel set rather than typed, and the mark beside it
+   carries a trace of --jolt so the brand has a light source of its own. */
+.jolt-word {
+    color: var(--text);
+    font-size: 1.15rem;
+    font-weight: 850;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.jolt-logo svg {
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--jolt) 45%, transparent));
+}
+
+/* ---------- hero ---------- */
+
+
+/* Oversized and tight. The tagline is the loudest thing on the page because it
+   is the one line that explains the product. */
+
+
+.button.big {
+    padding: 0.85rem 1.5rem;
+    font-size: 1rem;
+}
+
+.button.primary.big {
+    background: var(--jolt);
+    border-color: var(--jolt);
+    color: #04222a;
+    font-weight: 700;
+}
+
+.button.primary.big:hover {
+    filter: brightness(1.08);
+}
+
+
+/* ---------- hero art ---------- */
+
+
+/* The one piece of pure decoration, and it earns its place: a score popping is
+   the thing every game on this platform has in common. */
+
+
+/* ---------- sections ---------- */
+
+
+/* ---------- game cards ---------- */
+
+.game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.game-card {
+    display: flex;
+}
+
+/* Layer 2: the card reads as a machine you could walk up to.
+   Three ingredients, and no more: a lit top edge in the game's colour, an
+   interior that darkens toward the base so the surface has a direction, and the
+   lowest rung of the elevation ladder so it sits ON the background rather than
+   in it. Everything stronger is held back for hover -- a grid of five cards all
+   glowing at rest is a menu with no focus. */
+.card-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 96%, var(--card-accent)) 0%,
+            var(--surface) 38%,
+            color-mix(in srgb, var(--surface) 92%, var(--bg)) 100%);
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow: var(--lift), var(--contact);
+    transition: transform 180ms ease-out, border-color 180ms, box-shadow 180ms;
+}
+
+/* The accent is the game's own, passed in per card, so Code Blitz stays violet
+   and Flush stays amber -- the colours they already have in play. */
+.card-body::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: var(--card-accent, var(--jolt));
+    /* Layer 2: the edge bleeds a little light into the card below it, so it
+       reads as illuminated rather than as a painted stripe. Kept to a few
+       pixels -- this is the recurring Jolt border language, and it only works
+       if it stays subtle enough to use on every surface that matters. */
+    box-shadow: 0 0 12px 0 color-mix(in srgb, var(--card-accent, var(--jolt)) 55%, transparent);
+}
+
+a.card-body:hover,
+a.card-body:focus-visible {
+    transform: translateY(-4px);
+    border-color: var(--card-accent);
+    /* Layer 2: elevation plus a thin ring of the game's own colour. The ring is
+       what turns "a card lifted" into "this machine is selected". */
+    box-shadow:
+        var(--lift),
+        var(--contact-raised),
+        var(--shadow-3),
+        0 0 0 1px color-mix(in srgb, var(--card-accent) 55%, transparent),
+        0 0 28px -6px color-mix(in srgb, var(--card-accent) 40%, transparent);
+}
+
+a.card-body:focus-visible {
+    outline: 2px solid var(--card-accent);
+    outline-offset: 3px;
+}
+
+/* Layer 3: selecting a machine, not clicking a link.
+   The card compresses out of its hover lift rather than from rest, so the
+   gesture reads as pushing something that was already raised toward you. */
+a.card-body:active {
+    transform: translateY(-1px) scale(0.995);
+    box-shadow:
+        var(--shadow-1),
+        0 0 0 1px color-mix(in srgb, var(--card-accent) 45%, transparent);
+    transition: none;
+}
+
+/* The screen wakes when the machine does. Brightness and border only -- the
+   content inside the preview stays still, because animating it is Layer 4. */
+.preview {
+    transition:
+        filter var(--t-surface) var(--ease-control),
+        border-color var(--t-surface) var(--ease-control);
+}
+
+a.card-body:hover .preview,
+a.card-body:focus-visible .preview {
+    filter: brightness(1.12);
+    border-color: color-mix(in srgb, var(--card-accent, var(--jolt)) 35%, var(--border));
+}
+
+/* The Play affordance is the thing the card is asking you to do, so it gets
+   brighter rather than staying at the same weight as the metadata beside it. */
+a.card-body:hover .card-play,
+a.card-body:focus-visible .card-play {
+    filter: brightness(1.15);
+}
+
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.card-category {
+    color: var(--card-accent);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+
+.card-intensity {
+    display: inline-flex;
+    gap: 3px;
+}
+
+.card-intensity i {
+    width: 14px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--surface-2);
+}
+
+.card-intensity i.on {
+    background: var(--card-accent);
+}
+
+.card-name {
+    margin: 0.15rem 0 0;
+    font-size: 1.4rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.card-hook {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
+}
+
+/* Layer 2: the run's shape is supporting information and was competing with
+   the Play affordance beside it. Dropped a tone so the accent wins the corner. */
+.card-shape {
+    color: var(--muted-2);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.card-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--card-accent);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+a.card-body:hover .card-play svg {
+    transform: translateX(3px);
+}
+
+.card-play svg {
+    transition: transform 180ms ease-out;
+}
+
+.card-resume {
+    margin: 0;
+    color: var(--card-accent);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- previews ---------- */
+
+/* Layer 2: the preview is the machine's screen, so it is recessed into the
+   card rather than laid on top of it. Inset shadow does the recessing; the
+   hairline of the game's accent at the top is the screen catching the same
+   light as the card's top edge. No new DOM, no illustration -- the existing
+   bars and lines inside are the picture. */
+.preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    height: 92px;
+    padding: 0.6rem;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--card-accent, var(--jolt)) 12%, var(--border));
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--bg) 92%, var(--card-accent, var(--jolt))) 0%,
+            var(--bg) 55%);
+    box-shadow:
+        inset 0 2px 10px rgba(0, 0, 0, 0.45),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.015);
+}
+
+.preview-bar {
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--card-accent) 55%, var(--surface-2) 55%);
+}
+
+.preview-row,
+.preview-line {
+    height: 15px;
+    border-radius: 5px;
+    background: var(--surface-2);
+}
+
+/* Transitions live with the rules they animate, so a hover state and the thing it
+   moves are not declared 400 lines apart. */
+.preview-bar,
+.preview-line {
+    transition: background 220ms ease-out, border-color 220ms ease-out;
+}
+
+.preview-row.is-hit {
+    background: #34d39930;
+    box-shadow: inset 0 0 0 1px var(--correct);
+}
+
+.preview-line {
+    border: 1px dashed var(--border);
+    background: transparent;
+}
+
+.preview-line.is-printed {
+    border: 1px solid transparent;
+    background: #34d39930;
+}
+
+.preview-chips {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: auto;
+}
+
+.preview-chips i {
+    width: 26px;
+    height: 12px;
+    border-radius: 4px;
+    background: var(--surface-2);
+}
+
+
+/* ---------- the loop ---------- */
+
+
+/* ---------- responsive ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    a.card-body:hover,
+    a.card-body:focus-visible {
+        transform: none;
+    }
+
+    a.card-body:hover .card-play svg {
+        transform: none;
+    }
+
+    /* Movement carried "this is playable"; the border and shadow have to carry it
+       instead, so hover and focus stay unmistakable without motion. */
+    a.card-body:hover {
+        border-color: var(--card-accent);
+        box-shadow: 0 0 0 1px var(--card-accent);
+    }
+}
+
+/* With only two live games the cards are wide, which is right -- they are the
+   product, not a directory listing. The preview grows with them so the card does
+   not read as a short band of colour above a lot of text. */
+@media (min-width: 861px) {
+    .game-grid .preview {
+        height: 132px;
+    }
+
+    .game-grid .card-name {
+        font-size: 1.6rem;
+    }
+}
+
+/* ================= JOLT — pass 2: personality ================= */
+
+/* ---------- the wordmark leads ---------- */
+
+/* Dramatically larger than everything else on the page. The name has to be the
+   thing you remember, and at the previous size the tagline was winning -- which
+   made the page memorable as "think fast" rather than as Jolt. */
+.hero-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12em;
+    margin: 0 0 0.35rem;
+    font-size: clamp(3.6rem, 11vw, 7rem);
+    font-weight: 800;
+    line-height: 0.86;
+    letter-spacing: -0.055em;
+}
+
+/* The bolt is cap-height and sits inside the word's rhythm rather than beside it
+   as an icon, so the mark and the name read as one object. */
+.hero-spark {
+    display: inline-flex;
+    color: var(--jolt);
+    transform: translateY(-0.04em);
+}
+
+.hero-spark .jolt-bolt {
+    width: 0.62em;
+    height: 0.62em;
+}
+
+/* ---------- your jolt ---------- */
+
+/* Reads as a readout, not a dashboard tile: a label in caps over tabular figures,
+   the same language the in-game score HUD uses. */
+
+
+/* A list with an accent rule per game, not a third grid of cards. Three card
+   grids stacked would make the page read as one module repeating. */
+
+
+/* Closes the loop: the last tile points back at the first instead of the list
+   simply stopping, which is the whole product in one shape. */
+
+
+/* ---------- coming soon ---------- */
+
+
+/* Chips, not cards -- roughly a fifth of a real game card's visual weight, so a
+   roadmap item can never be mistaken for something you can play. */
+
+
+/* ---------- card hover: the preview reacts ---------- */
+
+/* The clock ticks down and a line prints. Small, fast, and specific to each game:
+   the card previews what playing feels like rather than just lifting. */
+a.card-body:hover .preview-bar,
+a.card-body:focus-visible .preview-bar {
+    background: linear-gradient(90deg, var(--card-accent) 24%, var(--surface-2) 24%);
+}
+
+a.card-body:hover .preview-line:nth-of-type(2),
+a.card-body:focus-visible .preview-line:nth-of-type(2) {
+    border-color: transparent;
+    background: #34d39930;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .preview-bar,
+    .preview-line {
+        transition: none;
+    }
+}
+
+/* ================= JOLT — auth, results and history ================= */
+
+/* ---------- auth ---------- */
+
+/* Cyan is Jolt's own colour, so signing in reads as joining the platform rather
+   than entering one of its games. The whole surface is recoloured by swapping the
+   token -- the same mechanism Flush uses -- so inputs, focus rings and the primary
+   button follow without a single extra rule. */
+.auth {
+    --accent: var(--jolt);
+    --accent-soft: #22d3ee33;
+
+    max-width: 26rem;
+    margin: 0 auto;
+}
+
+.auth-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.auth-brand .jolt-word {
+    font-size: 1.6rem;
+}
+
+.auth-brand .jolt-bolt {
+    width: 26px;
+    height: 26px;
+}
+
+.auth-brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.auth h1 {
+    margin: 0 0 0.3rem;
+    font-size: 1.5rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.auth-sub {
+    margin: 0 0 1.4rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.auth .button.primary {
+    color: #04222a;
+    font-weight: 700;
+}
+
+.auth-alt {
+    margin: 1.1rem 0 0;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+/* ---------- run results ---------- */
+
+.run-eyebrow {
+    margin: 0 0 0.4rem;
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* Brand scale, because the score is what the player came back to see. Tabular so
+   a four-figure score does not jitter against a three-figure one. */
+.run-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0 0 1.75rem;
+}
+
+.run-score strong {
+    font-size: clamp(3rem, 9vw, 4.75rem);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.run-score span {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+
+
+/* ---------- history ---------- */
+
+.history-title {
+    margin: 0 0 1.5rem;
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth .button.primary {
+        transition: none;
+    }
+}
+
+/* The question in a results breakdown, in reading type. The snippet beneath keeps
+   .prompt small and stays monospace. */
+.review-ask {
+    margin: 0 0 0.5rem;
+    font-size: 0.98rem;
+    font-weight: 650;
+}
+
+/* History is platform chrome, not a game, so its eyebrow takes Jolt's cyan while
+   each row keeps the accent of the game it belongs to. */
+.runs {
+    --accent: var(--jolt);
+}
+
+/* ================= JOLT — paused run ================= */
+
+/* A held run, not an error state. The accent comes from the game, so pausing
+   Code Blitz looks like Code Blitz and pausing Flush looks like Flush -- the
+   player should never lose track of what they are in the middle of. */
+.paused {
+    max-width: 30rem;
+    margin: 2rem auto 0;
+    padding: 1.9rem;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 16px;
+    background: var(--surface);
+    text-align: center;
+}
+
+.paused-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.paused-game {
+    margin: 0 0 1.1rem;
+    font-size: clamp(1.9rem, 6vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+/* The evidence behind "your progress is saved": where the run actually stopped,
+   in the game's own units, with the score it had banked. */
+.paused-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin: 0 0 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.paused-progress strong {
+    color: var(--text);
+    font-size: 1.2rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.paused-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.paused-note {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.paused-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.paused-confirm p {
+    margin: 0 0 1rem;
+    color: var(--text);
+    font-size: 0.92rem;
+}
+
+/* Red only at the point of no return. Using it on the first Quit button would
+   make leaving look dangerous when it is merely a choice. */
+.button.danger {
+    border-color: var(--incorrect);
+    background: transparent;
+    color: var(--incorrect);
+    font-weight: 650;
+}
+
+.button.danger:hover:not(:disabled) {
+    background: #f8717118;
+}
+
+@media (max-width: 480px) {
+    .paused {
+        padding: 1.4rem;
+    }
+
+    .paused-actions .button {
+        flex: 1 1 auto;
+    }
+}
+
+/* ---------- masthead: name, four words, then the games ---------- */
+
+/* ---------- the entrance ----------
+
+   Centred, and that is the whole treatment.
+
+   The floor below is a centred 1120px surface; the masthead was left-aligned
+   against it. Two different axes on one page is what made this read as "site
+   header, then a grid" -- the heading belonged to the page, not to the room.
+   Sharing the floor's axis is what turns it into a sign hung over the entrance:
+   you read the name, then walk straight down into the space it names.
+
+   No new element, no rule, no accent. The alignment IS the idea, and anything
+   added on top of it would be decoration standing in for structure. */
+.masthead {
+    padding: 1.5rem 0 2rem;
+    text-align: center;
+}
+
+.masthead-tagline {
+    margin: 0.2rem 0 0;
+    color: var(--muted);
+    font-size: clamp(1.15rem, 3vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+.masthead-stats,
+.masthead-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    /* Pushed down from 1.1rem so the run count reads as the readout UNDER the
+       sign rather than a third line of it. The name and the four words are one
+       object; this is supporting information about the room. */
+    margin: 1.5rem 0 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+.masthead-stats strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.masthead-stats .dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+/* ---------- the game space ----------
+
+   This rule dates from when Jolt had two games: auto-fit with a 300px floor gave
+   two columns then, and quietly gave three once there were five. Fixed at two,
+   which is what the comment always meant, and what turns a row of cards into a
+   room with stations in it.
+
+   The <ul> IS the floor. No wrapper was added -- it already had the right shape,
+   the right children and the right place in the document, and a div around it
+   would have been a div that existed only to hold a background.
+
+   Deliberately no border. The boundary is a surface a shade above the page, a
+   hairline of light along the top edge and a shadow underneath, which reads as
+   a floor the cards sit on rather than as a box drawn around them. */
+.game-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.15rem;
+    padding: 1.5rem;
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 55%, transparent) 0%,
+            color-mix(in srgb, var(--bg) 92%, var(--surface)) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 24px 60px -30px rgba(0, 0, 0, 0.75);
+}
+
+/* The heading needs air between it and the space below it, or the room reads as
+   part of the masthead rather than as somewhere you walk into. */
+.landing .game-grid {
+    /* The gap that separates the entrance from the floor. The masthead reads as
+       the sign you pass under; the floor should start far enough below it to
+       feel like a separate plane rather than the next block down. */
+    margin-top: 3.5rem;
+}
+
+/* Memory closes the space, centred on its own row.
+   Scoped to :nth-child(5):last-child so it only applies to a five-card layout --
+   a sixth game would fill the row properly and this rule would stop matching
+   rather than stranding a card. The width matches one column exactly, so the
+   card is centred without being stretched. */
+.game-card:nth-child(5):last-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - 0.575rem);
+}
+
+/* ---------- run result ---------- */
+
+/* One line, at most one claim, and only when it is true. It sits between the
+   score and the figures because it is the reading of them. */
+.verdict {
+    margin: -1.1rem 0 1.5rem;
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.verdict.is-best {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #0b0d13;
+}
+
+/* Three figures at most, on one line, in the readout language the HUD uses. */
+.run-figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin: 0 0 1.25rem;
+    padding: 1rem 0 0;
+    /* Top rule only. The breakdown's first row draws its own, and two rules 32px
+       apart read as a band of dead space rather than a divider. */
+    border-top: 1px solid var(--border);
+}
+
+.run-figures div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.run-figures dt {
+    color: var(--muted);
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.run-figures dd {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+    .run-figures {
+        gap: 1.35rem;
+    }
+
+    .run-figures dd {
+        font-size: 1.35rem;
+    }
+}
+
+/* ---------- results breakdown ---------- */
+
+.review-head {
+    margin: 0 0 0.9rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.review-head .muted {
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+/* A perfect run should read as a reward, not as a missing section. */
+.clean-sweep {
+    margin: 0 0 1rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 10px;
+    border-left: 3px solid var(--correct);
+    background: #34d39914;
+    color: var(--correct);
+    font-weight: 650;
+}
+
+.review-n {
+    margin: 0 0 0.35rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the reward ---------- */
+
+/* Reads as something won, not a statistic: the game's accent, the number given
+   weight, and sitting directly under the score rather than filed with the
+   performance figures. */
+.xp-earned {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    margin: -1rem 0 1rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.xp-earned strong {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The verdict follows the reward, so the vertical rhythm stays tight. */
+.xp-earned+.verdict {
+    margin-top: 0;
+}
+
+/* ---------- resume countdown ---------- */
+
+.resume-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: calc(100vh - 14rem);
+    min-height: calc(100dvh - 14rem);
+    text-align: center;
+}
+
+.resume-label {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.resume-tick {
+    margin: 0;
+    color: var(--accent);
+    font-size: clamp(4rem, 18vw, 8rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    font-variant-numeric: tabular-nums;
+    animation: tick-in 320ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes tick-in {
+    from {
+        opacity: 0;
+        transform: scale(0.75);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .resume-tick {
+        animation: none;
+    }
+}
+
+/* ================= REACTION ================= */
+
+/* Cyan, and the only game that shares the brand's own colour: a jolt is exactly
+   what the signal is. */
+.game.reaction,
+.results.reaction {
+    --accent: var(--jolt);
+    --accent-soft: #22d3ee2b;
+}
+
+/* ---------- intro ---------- */
+
+.rx-intro {
+    align-items: center;
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+    justify-content: center;
+    text-align: center;
+}
+
+.rx-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.rx-title {
+    margin: 0 0 0.9rem;
+    font-size: clamp(2rem, 7vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1;
+}
+
+.rx-lede {
+    max-width: 34ch;
+    margin: 0 0 2rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* Concentric rings, breathing slowly. It is the only decoration on this screen
+   and it earns its place by showing what the player is about to watch for. */
+.rx-orb {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    margin: 0 0 2rem;
+}
+
+.rx-orb span {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--accent);
+    border-radius: 999px;
+    opacity: 0;
+    animation: rx-breathe 3.2s ease-out infinite;
+}
+
+.rx-orb span:nth-child(2) {
+    animation-delay: 1.05s;
+}
+
+.rx-orb span:nth-child(3) {
+    animation-delay: 2.1s;
+}
+
+@keyframes rx-breathe {
+    0% {
+        transform: scale(0.45);
+        opacity: 0;
+    }
+
+    40% {
+        opacity: 0.55;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
+}
+
+.rx-shape {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* ---------- arena ---------- */
+
+/* The arena IS the button: the whole area is the tap target, so a phone needs no
+   aiming and a desktop click never misses. */
+.rx-arena {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: min(58vh, 26rem);
+    padding: 2rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    transition: background 140ms ease-out, border-color 140ms ease-out;
+}
+
+.rx-arena:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.rx-state {
+    font-size: clamp(2.2rem, 9vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+
+.rx-hint {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+/* Waiting: calm. Deliberately not a red alert state -- anticipation, not threat. */
+.rx-arena.is-waiting {
+    background: var(--surface);
+}
+
+.rx-arena.is-waiting .rx-state {
+    color: var(--muted);
+    animation: rx-pulse 1.9s ease-in-out infinite;
+}
+
+@keyframes rx-pulse {
+
+    0%,
+    100% {
+        opacity: 0.55;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/*
+   The signal. Three things change at once and only one of them is colour:
+   the word, the size, and the ring. A player who cannot distinguish cyan from
+   grey still sees "Wait" become "Go" at double the size.
+*/
+.rx-arena.is-signal {
+    border-color: var(--accent);
+    background: #22d3ee1f;
+    animation: rx-snap 180ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+.rx-go {
+    color: var(--accent);
+    font-size: clamp(3.6rem, 16vw, 6.5rem);
+    text-transform: uppercase;
+}
+
+@keyframes rx-snap {
+    from {
+        transform: scale(0.985);
+    }
+
+    to {
+        transform: none;
+    }
+}
+
+/* ---------- round result ---------- */
+
+.rx-ms {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    font-size: clamp(3rem, 13vw, 5rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    animation: rx-land 300ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.rx-ms i {
+    font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+@keyframes rx-land {
+    from {
+        opacity: 0;
+        transform: scale(0.82);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.rx-tier,
+.rx-verdict {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.rx-verdict {
+    margin: -0.5rem 0 1.5rem;
+}
+
+/* Tier colours run cool-to-warm, but every tier also has its own word, so the
+   scale never depends on colour alone. */
+.tier-lightning {
+    color: #22d3ee;
+}
+
+.tier-incredible {
+    color: #34d399;
+}
+
+.tier-fast {
+    color: #a3e635;
+}
+
+.tier-solid {
+    color: #fbbf24;
+}
+
+.tier-sharp {
+    color: var(--muted);
+}
+
+.rx-points {
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A false start is amber and apologetic, not red and accusing. */
+.rx-arena.is-falseStart {
+    border-color: var(--warn);
+    background: #fbbf2414;
+}
+
+.rx-early {
+    color: var(--warn);
+    font-size: clamp(2rem, 8vw, 3rem);
+}
+
+/* ---------- results strip ---------- */
+
+.rx-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 2rem;
+    padding: 0;
+    list-style: none;
+}
+
+.rx-strip li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    min-width: 4.25rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.rx-strip-n {
+    color: var(--muted);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+}
+
+.rx-strip-v {
+    font-size: 1.15rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+.rx-strip li.early {
+    border-color: var(--warn);
+}
+
+.rx-strip li.early .rx-strip-v {
+    color: var(--warn);
+    font-size: 0.85rem;
+}
+
+.rx-strip li.unplayed {
+    opacity: 0.45;
+}
+
+.run-figures .unit {
+    margin-left: 0.15rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* .button.primary.big is the landing page's hero CTA and hardcodes var(--jolt),
+   the brand cyan. That is right on the landing page and wrong inside a game: it
+   made the single button the player is about to press the only element on screen
+   not wearing Bug Hunt's colour. Size kept, colour handed back to the token --
+   the same fix .button.primary:hover needed for the same reason. */
+.bh-briefing .button.primary.big,
+.bh-results .button.primary.big {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #24120a;
+}
+
+/* The primary action spends most of the incident disabled, waiting for a
+   selection. The inherited disabled style put muted grey text on the accent,
+   which read as broken rather than as not-yet-available. Dimmed as a whole
+   instead, so it stays legible and obviously the same button. */
+.bh-incident .button.primary:disabled {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    border-color: transparent;
+    color: #c9cee0;
+    opacity: 1;
+}
+
+/* ---------- card preview ---------- */
+
+.preview-reaction {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-ring {
+    position: absolute;
+    width: 54px;
+    height: 54px;
+    border: 2px solid var(--card-accent);
+    border-radius: 999px;
+    opacity: 0.4;
+    transition: transform 260ms ease-out, opacity 260ms ease-out;
+}
+
+.preview-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--card-accent);
+    transition: transform 220ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+/* Hovering the card fires the signal in miniature. */
+a.card-body:hover .preview-ring,
+a.card-body:focus-visible .preview-ring {
+    transform: scale(1.35);
+    opacity: 0.85;
+}
+
+a.card-body:hover .preview-dot,
+a.card-body:focus-visible .preview-dot {
+    transform: scale(1.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .rx-orb span,
+    .rx-arena.is-waiting .rx-state,
+    .rx-arena.is-signal,
+    .rx-ms,
+    .preview-ring,
+    .preview-dot {
+        animation: none;
+        transition: none;
+    }
+
+    /* The signal must still be unmistakable without the snap: a thicker ring
+       carries what the movement did. */
+    .rx-arena.is-signal {
+        box-shadow: inset 0 0 0 3px var(--accent);
+    }
+}
+
+/* ================= MEMORY ================= */
+
+/* Soft violet. The one game that asks you to slow down and hold something, so it
+   reads calmer than Reaction's electric cyan. */
+.game.memory,
+.results.memory {
+    --accent: #a78bfa;
+    --accent-soft: #a78bfa2b;
+}
+
+/* Each symbol keeps its own hue, set inline by SymbolGlyph. Shape carries the
+   identity; colour only reinforces it. */
+.glyph {
+    width: 100%;
+    height: 100%;
+    fill: var(--glyph, var(--text));
+}
+
+/* ---------- intro ---------- */
+
+.mem-intro {
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 11rem);
+    min-height: calc(100dvh - 11rem);
+    text-align: center;
+}
+
+.mem-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.mem-title {
+    margin: 0 0 0.9rem;
+    font-size: clamp(2rem, 7vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1;
+}
+
+.mem-lede {
+    max-width: 36ch;
+    margin: 0 0 2rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* The mechanic in miniature: three symbols caught mid-fade. */
+.mem-trace {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.mem-trace .glyph {
+    width: 48px;
+    height: 48px;
+    animation: mem-fade 3.4s ease-in-out infinite;
+}
+
+.mem-trace .glyph:nth-child(2) {
+    animation-delay: 0.45s;
+}
+
+.mem-trace .glyph:nth-child(3) {
+    animation-delay: 0.9s;
+}
+
+@keyframes mem-fade {
+
+    0%,
+    20% {
+        opacity: 1;
+        transform: none;
+    }
+
+    60% {
+        opacity: 0.12;
+        transform: translateY(-6px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.mem-shape {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* ---------- stage ---------- */
+
+.mem-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: min(46vh, 20rem);
+    padding: 1.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+}
+
+.mem-state {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.mem-recall-cue {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: var(--accent);
+}
+
+.mem-count {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+}
+
+/* ---------- the sequence ---------- */
+
+.mem-sequence,
+.mem-slots,
+.mem-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mem-sequence li {
+    display: grid;
+    place-items: center;
+    width: clamp(48px, 13vw, 68px);
+    height: clamp(48px, 13vw, 68px);
+    padding: 0.55rem;
+    border-radius: 14px;
+    background: var(--bg);
+}
+
+/* Each symbol lands rather than appears -- a sequence with rhythm is a sequence
+   you can actually hold. */
+.mem-shown {
+    animation: mem-land 260ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+@keyframes mem-land {
+    from {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------- recall slots ---------- */
+
+.mem-slot {
+    display: grid;
+    place-items: center;
+    width: clamp(44px, 12vw, 60px);
+    height: clamp(44px, 12vw, 60px);
+    padding: 0.5rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    transition: border-color 160ms, background 160ms;
+}
+
+.mem-slot.filled {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    animation: mem-land 220ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+.mem-slot-n {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- symbol bank ---------- */
+
+.mem-controls {
+    margin-top: 1.25rem;
+}
+
+.mem-bank {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.55rem;
+    margin: 0 0 1.1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.mem-key {
+    display: grid;
+    place-items: center;
+    /* Comfortably past a 44px tap target at every size. */
+    width: clamp(52px, 14vw, 66px);
+    height: clamp(52px, 14vw, 66px);
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: transform 120ms ease-out, border-color 140ms, background 140ms;
+}
+
+.mem-key:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--surface);
+    transform: translateY(-2px);
+}
+
+.mem-key:active:not(:disabled) {
+    transform: translateY(0) scale(0.94);
+}
+
+.mem-key:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* A used symbol dims rather than vanishing: the bank keeps its shape, so the
+   player's spatial memory of where a symbol sits stays usable. */
+.mem-key.used,
+.mem-key:disabled {
+    opacity: 0.28;
+    cursor: default;
+    transform: none;
+}
+
+.mem-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+/* ---------- feedback ---------- */
+
+.mem-feedback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    animation: mem-reveal 260ms ease-out;
+}
+
+@keyframes mem-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.mem-verdict {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+.mem-verdict.is-perfect {
+    color: var(--correct);
+}
+
+.mem-compare {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: center;
+}
+
+.mem-compare-label {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.mem-row li {
+    display: grid;
+    place-items: center;
+    width: clamp(36px, 9vw, 46px);
+    height: clamp(36px, 9vw, 46px);
+    padding: 0.4rem;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--bg);
+}
+
+/* Right position, wrong position, and nothing played each read differently
+   without depending on colour: the border style changes too. */
+.mem-row li.hit {
+    border-color: var(--correct);
+    background: #34d39918;
+}
+
+.mem-row li.miss {
+    border-style: dashed;
+    border-color: var(--incorrect);
+    background: #f8717114;
+}
+
+.mem-row li.missing {
+    border-style: dotted;
+    border-color: var(--border);
+    color: var(--muted);
+}
+
+.mem-row.is-answer li {
+    border-color: var(--border);
+}
+
+.mem-points {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- results review ---------- */
+
+.mem-review {
+    display: grid;
+    gap: 1.25rem;
+    margin: 0 0 2rem;
+    padding: 0;
+    list-style: none;
+}
+
+.mem-review>li {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- card preview ---------- */
+
+.preview-memory {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.preview-chip {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: var(--card-accent);
+    transition: opacity 260ms ease-out;
+}
+
+.preview-chip.is-fading {
+    opacity: 0.45;
+}
+
+.preview-chip.is-gone {
+    opacity: 0.14;
+}
+
+/* Hovering restores the faded ones: the card previews remembering. */
+a.card-body:hover .preview-chip,
+a.card-body:focus-visible .preview-chip {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .mem-trace .glyph,
+    .mem-shown,
+    .mem-slot.filled,
+    .mem-feedback {
+        animation: none;
+    }
+
+    .mem-key:hover:not(:disabled),
+    .mem-key:active:not(:disabled) {
+        transform: none;
+    }
+
+    .preview-chip {
+        transition: none;
+    }
+}
+
+/* The settling beat before a wait begins. Deliberately quiet -- it is the
+   moment the player collects themselves, not a state that demands anything. */
+.rx-arena.is-ready .rx-state {
+    color: var(--muted);
+    opacity: 0.75;
+}
+
+/* ---------- Bug Hunt ----------
+   A control room, not a hacker film. The atmosphere is carried by one alert
+   colour, generous spacing and a monospace listing -- because the code is the
+   thing the player has to actually read, and anything that competes with it for
+   attention is working against the game. No scanlines, no rain, no green-on-
+   black: the snippet keeps the same contrast it has everywhere else in Jolt. */
+
+.bh-briefing,
+.bh-incident,
+.bh-results,
+.bh-restored {
+    --accent: var(--bughunt);
+}
+
+/* Used for real radio inputs that are visually replaced by the line or patch
+   they sit on. Not display:none -- that would take them out of the tab order and
+   hide them from screen readers, which is the entire reason they are here. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- briefing ---------- */
+
+.bh-briefing {
+    max-width: 40rem;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.bh-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-alert-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: bh-pulse 2s ease-in-out infinite;
+}
+
+/* Slow and low-contrast on purpose. A fast blink on a landing screen is the
+   difference between "something needs attention" and "something is wrong with
+   your monitor". */
+@keyframes bh-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.bh-title {
+    margin: 0;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    letter-spacing: -0.03em;
+}
+
+.bh-tagline {
+    margin: 0.5rem 0 2rem;
+    color: var(--muted);
+    font-size: 1.05rem;
+}
+
+.bh-brief-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin: 0 0 2rem;
+    flex-wrap: wrap;
+}
+
+.bh-brief-stats div {
+    text-align: center;
+}
+
+.bh-brief-stats dt {
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.bh-brief-stats dd {
+    margin: 0.3rem 0 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-rules {
+    max-width: 30rem;
+    margin: 0 auto 2rem;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+.bh-rules li {
+    display: flex;
+    gap: 0.7rem;
+    counter-increment: bh-rule;
+}
+
+.bh-rules li::before {
+    content: counter(bh-rule);
+    flex: none;
+    width: 1.4rem;
+    height: 1.4rem;
+    margin-top: 0.15rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.4rem;
+}
+
+.bh-rules {
+    counter-reset: bh-rule;
+}
+
+/* ---------- incident ---------- */
+
+.bh-incident {
+    max-width: 46rem;
+    margin: 0 auto;
+}
+
+.bh-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.bh-head-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bh-critical {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.bh-score {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+}
+
+.bh-score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-streak {
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* ---------- integrity ---------- */
+
+.bh-integrity {
+    min-width: 8rem;
+}
+
+.bh-integrity-track {
+    height: 5px;
+    border-radius: 999px;
+    background: #1e2334;
+    overflow: hidden;
+}
+
+.bh-integrity-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #4ade80;
+    transition: width 500ms ease, background 500ms ease;
+}
+
+.bh-integrity.degraded .bh-integrity-fill {
+    background: #fbbf24;
+}
+
+.bh-integrity.critical .bh-integrity-fill {
+    background: #f87171;
+}
+
+.bh-integrity-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0.3rem 0 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bh-integrity-word {
+    color: var(--muted);
+}
+
+.bh-integrity.degraded .bh-integrity-word {
+    color: #fbbf24;
+}
+
+.bh-integrity.critical .bh-integrity-word {
+    color: #f87171;
+}
+
+.bh-integrity-value {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the report ---------- */
+
+.bh-report {
+    margin: 1.5rem 0 1.25rem;
+}
+
+.bh-theme {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.bh-incident-title {
+    margin: 0.35rem 0 0.5rem;
+    font-size: 1.5rem;
+    line-height: 1.25;
+}
+
+.bh-bug-report {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.bh-error-log {
+    margin: 1rem 0 0;
+    padding: 0.75rem 0.9rem;
+    border-left: 3px solid #f87171;
+    border-radius: 0 8px 8px 0;
+    background: #7f1d1d1f;
+    color: #fca5a5;
+    font-size: 0.85rem;
+    overflow-x: auto;
+}
+
+/* ---------- code ---------- */
+
+.bh-code-fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.bh-code {
+    margin: 0;
+    padding: 0.6rem 0;
+    list-style: none;
+    border: 1px solid #232a3d;
+    border-radius: 12px;
+    background: #0f1320;
+    overflow-x: auto;
+}
+
+.bh-code.readonly {
+    padding: 0.9rem 1rem;
+    white-space: pre;
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.bh-line {
+    display: flex;
+    align-items: stretch;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.bh-line-no {
+    flex: none;
+    width: 2.6rem;
+    padding-right: 0.8rem;
+    color: #3f4760;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+}
+
+.bh-line-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex: 1;
+    padding: 0 0.9rem 0 0.5rem;
+    white-space: pre;
+}
+
+/* Only the lines that are actually choosable look choosable. A snippet where
+   every line highlights would be inviting the player to pick the closing brace. */
+/* A resting affordance, not just a hover one. Without it the snippet reads as a
+   listing and nothing says the lines ARE the answer -- the player sees code, not
+   a control. The rail is faint enough to stay out of the way of reading and
+   present enough to say "these are choosable, that closing brace is not". */
+.bh-line.selectable .bh-line-label {
+    cursor: pointer;
+    border-left: 2px solid #2b3348;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.bh-line.selectable:hover .bh-line-label {
+    background: #171d2e;
+    border-left-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.bh-line.selected .bh-line-label {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-left-color: var(--accent);
+}
+
+.bh-line.selected code {
+    color: #fff;
+}
+
+.bh-line-mark {
+    flex: none;
+    width: 1ch;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* The real radio is visually hidden, so its focus ring has to be borrowed by the
+   row -- otherwise keyboard users get no indication of where they are. */
+.bh-line-label:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.bh-line.inert .bh-line-label {
+    color: #6b7492;
+}
+
+/* ---------- patches ---------- */
+
+.bh-patches {
+    display: grid;
+    gap: 0.6rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.bh-patches-legend {
+    padding: 0;
+    margin-bottom: 0.6rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-patch {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid #232a3d;
+    border-radius: 10px;
+    background: #0f1320;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+}
+
+.bh-patch code {
+    font-size: 0.87rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.bh-patch:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: #141a29;
+}
+
+.bh-patch.selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.bh-patch:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.bh-patch-mark {
+    flex: none;
+    width: 1ch;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* ---------- hints ---------- */
+
+.bh-hints {
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.bh-hints li {
+    padding: 0.7rem 0.9rem;
+    border-left: 3px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    border-radius: 0 8px 8px 0;
+    background: #141a29;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.bh-hint-tag {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--accent);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* ---------- feedback ---------- */
+
+.bh-feedback {
+    margin: 1.25rem 0 0;
+    padding: 1rem 1.1rem;
+    border-radius: 12px;
+    border: 1px solid #232a3d;
+    background: #0f1320;
+    animation: bh-rise 220ms ease-out;
+}
+
+@keyframes bh-rise {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.bh-feedback.resolved {
+    border-color: #16653480;
+    background: #052e1633;
+}
+
+.bh-feedback.retry {
+    border-color: #92400e80;
+    background: #45200733;
+}
+
+.bh-feedback.failed {
+    border-color: #7f1d1d80;
+    background: #45090933;
+}
+
+.bh-feedback-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.bh-feedback.resolved .bh-feedback-head {
+    color: #4ade80;
+}
+
+.bh-feedback.retry .bh-feedback-head {
+    color: #fbbf24;
+}
+
+.bh-feedback.failed .bh-feedback-head {
+    color: #f87171;
+}
+
+.bh-feedback-mark {
+    font-size: 1.05rem;
+}
+
+.bh-feedback-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0.5rem 0 0;
+}
+
+.bh-feedback-score strong {
+    font-size: 1.7rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-attempts {
+    margin: 0.5rem 0 0;
+    color: #fbbf24;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.bh-explanation {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.65;
+}
+
+/* ---------- actions ---------- */
+
+.bh-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* ---------- restored ---------- */
+
+.bh-restored {
+    max-width: 30rem;
+    margin: 5rem auto;
+    text-align: center;
+}
+
+.bh-restored-mark {
+    margin: 0;
+    font-size: 3.5rem;
+    color: #4ade80;
+    animation: bh-rise 320ms ease-out;
+}
+
+.bh-restored h1 {
+    margin: 0.5rem 0;
+    font-size: 2rem;
+}
+
+/* ---------- results ---------- */
+
+.bh-results {
+    max-width: 46rem;
+    margin: 0 auto;
+}
+
+.bh-results-head {
+    text-align: center;
+}
+
+.bh-results-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.bh-results-state.restored {
+    color: #4ade80;
+}
+
+.bh-results-state.degraded {
+    color: #fbbf24;
+}
+
+.bh-results-line {
+    margin: 0.6rem 0 1.5rem;
+    color: var(--muted);
+}
+
+.bh-results-score {
+    margin: 0;
+    font-size: clamp(3rem, 12vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-results-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: 1rem 1.25rem;
+    margin: 2rem 0;
+    padding: 1.25rem;
+    border: 1px solid #232a3d;
+    border-radius: 12px;
+    background: #0f1320;
+}
+
+.bh-results-stats dt {
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.bh-results-stats dd {
+    margin: 0.25rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-results-stats .of {
+    margin-left: 0.2rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+.bh-readout {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.bh-readout-line {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    background: #141a29;
+    font-size: 0.92rem;
+}
+
+.bh-readout-tag {
+    display: block;
+    margin-bottom: 0.15rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-readout-line.strong .bh-readout-tag {
+    color: #4ade80;
+}
+
+.bh-readout-line.weak .bh-readout-tag {
+    color: #fbbf24;
+}
+
+/* ---------- incident log ---------- */
+
+.bh-log {
+    margin: 0 0 2rem;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.bh-log-row {
+    padding: 0.9rem 1rem;
+    border: 1px solid #232a3d;
+    border-left-width: 3px;
+    border-radius: 0 10px 10px 0;
+    background: #0f1320;
+}
+
+.bh-log-row.resolved {
+    border-left-color: #4ade80;
+}
+
+.bh-log-row.failed {
+    border-left-color: #f87171;
+}
+
+.bh-log-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.bh-log-no {
+    color: #3f4760;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-log-title {
+    flex: 1;
+    min-width: 12rem;
+    font-weight: 600;
+}
+
+.bh-log-boss {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.bh-log-status {
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.bh-log-status.resolved {
+    color: #4ade80;
+}
+
+.bh-log-status.failed {
+    color: #f87171;
+}
+
+.bh-log-points {
+    min-width: 3rem;
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bh-log-meta {
+    margin: 0.4rem 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.bh-log-answer {
+    margin: 0.6rem 0 0;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    background: #141a29;
+    font-size: 0.84rem;
+    overflow-x: auto;
+}
+
+.bh-log-why {
+    margin: 0.45rem 0 0;
+    color: var(--muted);
+    font-size: 0.87rem;
+    line-height: 1.6;
+}
+
+.bh-results-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.bh-replay-note {
+    margin: 1rem 0 0;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+/* ---------- card preview ---------- */
+
+.preview-bughunt {
+    display: grid;
+    gap: 5px;
+    align-content: center;
+    padding: 0 14px;
+}
+
+.preview-bughunt .preview-bugline {
+    height: 6px;
+    border-radius: 3px;
+    background: #2a3145;
+}
+
+.preview-bughunt .preview-bugline.is-flagged {
+    background: color-mix(in srgb, var(--bughunt) 65%, transparent);
+    box-shadow: -10px 0 0 -3px var(--bughunt);
+}
+
+/* Motion is the last thing added and the first thing removed. Every animation
+   here is decorative -- the state is always carried by text and a mark too. */
+@media (prefers-reduced-motion: reduce) {
+
+    .bh-alert-dot,
+    .bh-feedback,
+    .bh-restored-mark {
+        animation: none;
+    }
+
+    .bh-integrity-fill,
+    .bh-line.selectable .bh-line-label,
+    .bh-patch {
+        transition: none;
+    }
+}
+
+/* ---------- Bug Hunt: alert beat, voice, severity ---------- */
+
+.bh-alert-beat {
+    --accent: var(--bughunt);
+    max-width: 34rem;
+    margin: 6rem auto;
+    text-align: center;
+}
+
+.bh-alert-siren {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 1.5rem;
+}
+
+.bh-alert-ring {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    animation: bh-siren 1.4s ease-out infinite;
+}
+
+/* One expanding ring, not a strobe. It reads as a beacon rather than as an
+   error the browser is having, and it stops the moment the incident lands. */
+@keyframes bh-siren {
+    0% {
+        transform: scale(0.7);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.35);
+        opacity: 0;
+    }
+}
+
+.bh-alert-kicker {
+    margin: 0 0 0.9rem;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.bh-alert-beat.is-boss .bh-alert-kicker {
+    font-size: 1.1rem;
+}
+
+.bh-alert-beat.is-boss .bh-alert-ring {
+    border-color: #f87171;
+    animation-duration: 0.9s;
+}
+
+.bh-alert-voice,
+.bh-feedback-voice {
+    margin: 0;
+    color: #c9cee0;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.bh-feedback-voice {
+    margin: 0.5rem 0 0;
+}
+
+/* The system speaking, marked as such. Without the tag it reads as UI copy;
+   with it, it reads as somebody in the incident channel. */
+.bh-voice-tag {
+    display: inline-block;
+    margin-right: 0.6rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    vertical-align: 0.15em;
+}
+
+.bh-recoverable {
+    margin: 0.7rem 0 0;
+    color: #86efac;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Severity, which the client used to drop on the floor. */
+.bh-severity {
+    margin-left: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    background: #1e2334;
+    color: #9aa3bd;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.bh-severity.sev-4 {
+    background: #45200733;
+    color: #fbbf24;
+}
+
+.bh-severity.sev-5 {
+    background: #45090933;
+    color: #f87171;
+}
+
+.bh-legend-sub {
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+/* The clock, in words. Sits above the bar and shares its tier, so the wording
+   and the colour can never disagree. */
+.countdown-status {
+    margin: 0 0 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.countdown-status.warn {
+    color: #fbbf24;
+}
+
+.countdown-status.urgent {
+    color: #f87171;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bh-alert-ring {
+        animation: none;
+        opacity: 0.9;
+    }
+}
+
+/* ---------- Bug Hunt: targeting + diagnostic run ---------- */
+
+.bh-targeted {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.9rem 0 0;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-targeted-mark {
+    font-size: 0.9rem;
+}
+
+.bh-diagnostic {
+    margin: 1.25rem 0 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid #232a3d;
+    border-radius: 12px;
+    background: #0f1320;
+}
+
+.bh-diagnostic-head {
+    margin: 0 0 0.7rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bh-checks {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.4rem;
+}
+
+.bh-check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #6b7492;
+    font-size: 0.9rem;
+    transition: color 160ms ease;
+}
+
+.bh-check.done {
+    color: #c9cee0;
+}
+
+.bh-check.done .bh-check-mark {
+    color: #4ade80;
+}
+
+.bh-check.failed {
+    color: #fca5a5;
+}
+
+.bh-check.failed .bh-check-mark {
+    color: #f87171;
+}
+
+.bh-check-mark {
+    width: 1ch;
+    font-weight: 700;
+    color: #3f4760;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bh-check {
+        transition: none;
+    }
+}
+
+/* ---------- Bug Hunt: service panel + integrity legend ---------- */
+
+.bh-services {
+    display: flex;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-wrap: wrap;
+}
+
+.bh-service {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #4b5470;
+}
+
+.bh-service-dot {
+    font-size: 0.7rem;
+}
+
+.bh-service.restored {
+    color: #86efac;
+}
+
+.bh-service.critical {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.bh-service.down {
+    color: #f87171;
+}
+
+/* Services still to come are named but muted -- present enough to show the shape
+   of the run, quiet enough not to compete with the one that is on fire. */
+.bh-service.pending .bh-service-name {
+    opacity: 0.55;
+}
+
+.bh-integrity-costs {
+    display: flex;
+    gap: 0.75rem;
+    margin: 0.4rem 0 0;
+    flex-wrap: wrap;
+}
+
+.bh-integrity-costs div {
+    display: flex;
+    gap: 0.25rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    color: #4b5470;
+}
+
+.bh-integrity-costs dt {
+    text-transform: uppercase;
+}
+
+.bh-integrity-costs dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- depth system ---------- */
+
+:root {
+    --shadow-sm:
+        0 4px 12px rgba(0, 0, 0, 0.22);
+
+    --shadow-md:
+        0 10px 30px rgba(0, 0, 0, 0.32);
+
+    --shadow-lg:
+        0 18px 50px rgba(0, 0, 0, 0.42);
+
+    --surface-glow:
+        0 0 0 1px rgba(255, 255, 255, 0.025),
+        0 10px 30px rgba(0, 0, 0, 0.28);
+
+    --game-glow:
+        0 0 28px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* ---------- Bug Hunt: debrief sign-off ---------- */
+
+.bh-signoff {
+    max-width: 34rem;
+    margin: 0 auto 1.5rem;
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+    background: #141a29;
+    text-align: left;
+    color: #c9cee0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* One thin strip carrying both system readouts, so neither competes with the
+   snippet for vertical space. */
+.bh-systembar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #1b2132;
+    border-radius: 8px;
+    background: #0d111c;
+}
+
+.bh-systembar .bh-integrity-costs {
+    margin: 0;
+}
+
+@media (max-width: 620px) {
+
+    /* The costs are reference material; the failing service is not. On a narrow
+       screen the reference goes rather than wrapping the strip to three rows. */
+    .bh-systembar .bh-integrity-costs {
+        display: none;
+    }
+}
+
+/* ---------- Bug Hunt: streak + run phase ---------- */
+
+/* The streak is the emotional mechanic, so it gets weight. It was a small
+   suffix that only appeared above one -- which is precisely when a player has
+   nothing invested in it yet. */
+.bh-streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #9aa3bd;
+    transition: color 200ms ease, transform 200ms ease;
+}
+
+.bh-streak-badge.hot {
+    color: var(--accent);
+    transform: scale(1.08);
+}
+
+.bh-streak-n {
+    letter-spacing: -0.02em;
+}
+
+.bh-phase {
+    margin: 0 0 0.2rem;
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bh-streak-badge {
+        transition: none;
+        transform: none;
+    }
+}
+/* ================= Layer 1: foundation polish =================
+   Additive only. Nothing above is replaced; these are the few places the
+   foundation was missing a step that Layers 2-5 would otherwise each have to
+   invent for themselves. */
+
+/* Selection should be Jolt's, not the browser's default blue. Uses the live
+   --accent, so it recolours per game the same way buttons already do. */
+::selection {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    color: var(--text);
+}
+
+/* A third heading level. The sheet jumped from h1 (clamped, ~2.9rem) straight to
+   h2 at 1rem, so anything needing a step between them was reaching for a class.
+   Sized to sit between them rather than to introduce a new voice. */
+h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+/* Tertiary text. --muted is the second level and was carrying both jobs, which
+   is why captions and labels kept reaching for raw hex. */
+.muted-2 {
+    color: var(--muted-2);
+}
+
+.faint {
+    color: var(--faint);
+}
+
+/* Eyebrows are the sheet's most repeated pattern -- uppercase, tracked, small,
+   accent-coloured -- and several sections reimplement it locally because there
+   was no shared piece to reach for beyond .eyebrow, which carries its own
+   margin. This is the type treatment without the spacing opinion. */
+.label-caps {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Code should read the same wherever it appears. The mono stack was already a
+   token; this makes sure anything falling back to a bare <code> or <pre> gets
+   it, at a size that holds up against the body text around it. */
+code,
+pre {
+    font-family: var(--mono);
+    font-size: 0.9em;
+}
+
+pre {
+    margin: 0;
+    overflow-x: auto;
+}
+
+/* Long identifiers in code and long words in prose should wrap rather than
+   force the page sideways. The app container is capped at 820px, so anything
+   wider than that is a horizontal scrollbar on a phone. */
+.app {
+    overflow-wrap: break-word;
+}
+
+/* The focus ring is the one thing that must stay visible against every surface
+   in the system, including the accent-coloured buttons it would otherwise sit
+   on top of. A dark halo under the ring keeps it readable on light accents
+   without changing its colour. */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Buttons carry the elevation ladder rather than sitting flat on the surface
+   they are on. Kept to the lowest step: a button is an active element, not an
+   elevated panel, and the existing hover/active transitions still own the
+   interaction. Layer 3 can take this further. */
+.button {
+    box-shadow: var(--shadow-1);
+}
+
+.button.ghost {
+    box-shadow: none;
+}
+
+.button.primary {
+    box-shadow: var(--lift), var(--shadow-1);
+}
+
+/* ================= Layer 3: reduced motion =================
+   Everything Layer 3 added that MOVES is removed here. Everything it added that
+   carries meaning -- border, background, shadow, brightness -- stays, because a
+   player who has asked for less motion still has to be able to tell a pressed
+   control from a resting one.
+
+   The press states keep their inset shadow and lose only the translation, so
+   "this is being pressed" survives without anything travelling. */
+@media (prefers-reduced-motion: reduce) {
+
+    .button:active:not(:disabled),
+    .option:hover:not(:disabled),
+    .option:active:not(:disabled),
+    a.card-body:active {
+        transform: none;
+    }
+
+    .option,
+    .preview,
+    .site-header nav a {
+        transition: none;
+    }
+
+    /* Hover on an answer loses its lift, so the border and background have to do
+       the whole job. Strengthened so the affordance does not get quieter for the
+       people who opted out of movement. */
+    .option:hover:not(:disabled) {
+        border-color: var(--accent);
+        background: var(--surface-2);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    /* Same reasoning for the card: Layer 2's ring already survives here via the
+       existing reduced-motion block, and the preview still brightens, which is
+       a change of state rather than a movement. */
+    a.card-body:active {
+        box-shadow:
+            var(--shadow-1),
+            0 0 0 2px color-mix(in srgb, var(--card-accent) 55%, transparent);
+    }
+}
+
+/* ================= Layer 4: game feel & state feedback =================
+
+   Bug Hunt is the whole of this layer. The other four games already had it:
+   Code Blitz has score-bump, award-float, option-pop, option-shake, reveal-in
+   and stage transitions; Flush has line-snap and tile-reject; Reaction has
+   rx-snap and rx-land; Memory has mem-land and mem-reveal. Bug Hunt shipped
+   with three keyframes, all atmospheric (a siren, a pulse, a fade-up), and
+   nothing that reacts to what the player did.
+
+   So this is almost entirely re-use. Bug Hunt now speaks the vocabulary the
+   rest of the platform already speaks, which matters more than giving it a
+   voice of its own -- a correct answer should feel the same everywhere in Jolt.
+
+   The one exception is documented where it appears. */
+
+/* The incident arrives. Reuses Code Blitz's question transition, because a new
+   hunt and a new question are the same event: the board just changed. */
+.bh-incident {
+    animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The score reacts. Same keyframe and timing as Code Blitz's, keyed on the
+   score so it re-fires per award rather than once per mount. */
+.bh-score-value {
+    display: inline-block;
+    animation: score-bump 380ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+/* The points land in the feedback panel. Delayed past the panel's own rise so
+   the number arrives after the verdict, not with it -- reading "patch
+   successful" and "+150" simultaneously makes neither of them a moment. */
+.bh-feedback-score strong {
+    display: inline-block;
+    animation: tick-in 320ms cubic-bezier(0.2, 1.3, 0.4, 1) 140ms both;
+}
+
+/* The verdict itself. Correct pops, wrong shakes -- Code Blitz's own two
+   answers, so the gesture that means "yes" and the one that means "no" are
+   identical across the platform. Composed with the panel's existing rise
+   rather than replacing it. */
+.bh-feedback.resolved {
+    animation:
+        bh-rise 220ms ease-out,
+        option-pop 260ms cubic-bezier(0.2, 1.4, 0.35, 1);
+}
+
+.bh-feedback.retry,
+.bh-feedback.failed {
+    animation:
+        bh-rise 220ms ease-out,
+        option-shake 300ms ease-in-out;
+}
+
+/* Each diagnostic check lands as it completes, rather than the row simply
+   changing colour. Flush's tick, because it is the same idea: a thing
+   resolving one step at a time. */
+.bh-check.done .bh-check-mark {
+    display: inline-block;
+    animation: tick-in 320ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+/* Targeting confirms. The marker lands; the line itself does not move, for the
+   reason given in Layer 3 -- this is code being read. */
+.bh-line.selected .bh-line-mark,
+.bh-patch.selected .bh-patch-mark {
+    display: inline-block;
+    animation: tick-in 260ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+/* The streak counts up. Keyed on the streak, so every increment lands. */
+.bh-streak-n {
+    display: inline-block;
+    animation: tick-in 300ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+/* The one new keyframe in this layer.
+   Reaching three is the milestone the streak exists for, and nothing in the
+   sheet pulses a ring in the element's OWN colour -- option-pop hardcodes the
+   green of a correct answer, which would be wrong on an amber streak. One
+   short flare, once, when the badge goes hot. */
+.bh-streak-badge.hot {
+    animation: streak-flare 420ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes streak-flare {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 0 transparent;
+    }
+
+    35% {
+        transform: scale(1.22);
+        text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
+    }
+
+    100% {
+        transform: scale(1.08);
+        text-shadow: 0 0 0 transparent;
+    }
+}
+
+/* Layer 4 motion is feedback, so removing it must not remove the feedback.
+   Every rule below drops the movement and keeps the state: the score still
+   changes, the verdict panel still appears, the checks still turn green, the
+   streak still goes hot and stays scaled. */
+@media (prefers-reduced-motion: reduce) {
+
+    .bh-incident,
+    .bh-score-value,
+    .bh-feedback-score strong,
+    .bh-feedback.resolved,
+    .bh-feedback.retry,
+    .bh-feedback.failed,
+    .bh-check.done .bh-check-mark,
+    .bh-line.selected .bh-line-mark,
+    .bh-patch.selected .bh-patch-mark,
+    .bh-streak-n {
+        animation: none;
+    }
+
+    /* The flare is removed but the state it announces is not -- .hot keeps the
+       colour and the scale it had before this layer existed. */
+    .bh-streak-badge.hot {
+        animation: none;
+        transform: scale(1.08);
+    }
+}
+
+/* ================= Layer 5: card previews as miniature screens =================
+   The previews were abstract shapes. These give them the one silhouette every
+   Jolt gameplay screen shares -- label, clock, score -- so a card reads as a
+   picture of a game rather than as decoration. Nothing here duplicates gameplay
+   markup: it is one shared strip plus each game's smallest recognisable shape. */
+
+/* Only the previews that gained a HUD strip need the extra few pixels. Memory
+   keeps the original geometry, because its preview was already right. */
+.preview-blitz,
+.preview-flush,
+.preview-reaction,
+.preview-bughunt {
+    height: 96px;
+    gap: 0.26rem;
+}
+
+.pv-hud {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 7px;
+    margin-bottom: 0.12rem;
+}
+
+.pv-hud-label {
+    width: 22%;
+    height: 100%;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card-accent, var(--jolt)) 55%, transparent);
+}
+
+.pv-hud-meter {
+    flex: 1;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+}
+
+.pv-hud-meter i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--card-accent, var(--jolt));
+    transition: width var(--t-surface) var(--ease-control);
+}
+
+.pv-hud-score {
+    width: 14%;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--surface-2);
+}
+
+/* Rows shrink to make room for the strip without the card growing. */
+.preview-row,
+.preview-line {
+    height: 13px;
+}
+
+/* ---------- Bug Hunt: a listing, not a barcode ----------
+   The gutter is what does the work. Four equal bars read as a barcode; four
+   bars with a numbered gutter read as code, and then one flagged row reads as
+   the bug. Numbers are drawn as a dotted rail rather than glyphs, because real
+   digits at 7px are mush. */
+.preview-codeline {
+    position: relative;
+    height: 13px;
+    margin-left: 14px;
+    border-radius: 4px;
+    background: var(--surface-2);
+}
+
+.preview-codeline::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 50%;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #3f4760;
+    transform: translateY(-50%);
+}
+
+.preview-codeline.is-short {
+    margin-right: 32%;
+}
+
+.preview-codeline.is-flagged {
+    background: color-mix(in srgb, var(--bughunt) 26%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bughunt) 70%, transparent);
+}
+
+.preview-codeline.is-flagged::before {
+    background: var(--bughunt);
+}
+
+/* Reaction: the signal needs its own centred area now that the strip sits above
+   it, or the ring drifts off-centre. */
+.preview-stage {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pv-hud-meter i {
+        transition: none;
+    }
+}
+
+/* The room is a desktop composition. Below this the floor would be a frame
+   around a single column of cards, which is decoration rather than structure --
+   so the surface flattens out and the cards go back to being a list. */
+@media (max-width: 780px) {
+    .game-grid {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0;
+        background: none;
+        box-shadow: none;
+    }
+
+    .landing .game-grid {
+        margin-top: 1.5rem;
+    }
+
+    /* No floor here means no room around it. The environment band would just be
+       dead space under a list, so it goes away with the surface it belonged to. */
+    .landing {
+        padding-bottom: 0;
+    }
+
+    /* The pool dims with the floor, for the same reason.
+       On desktop the light works because its bright centre is hidden UNDER the
+       floor's opaque surface -- only the perimeter is ever visible, at roughly
+       2-4%. Here that surface is gone, so nothing covers the middle and the full
+       12% reads directly behind the card list: the ambient light ends up more
+       dominant on a phone than on a 1440px display, which is backwards.
+       Halving the peaks puts the mobile centre at about the brightness the
+       desktop EDGE has, so the room stays felt without the floor to shade it. */
+    .landing::before {
+        background:
+            radial-gradient(ellipse 58% 68% at 50% 52%,
+                color-mix(in srgb, var(--jolt) 6%, transparent) 0%,
+                color-mix(in srgb, var(--accent) 4%, transparent) 42%,
+                transparent 80%);
+    }
+
+    /* Memory is just the last card again. */
+    .game-card:nth-child(5):last-child {
+        grid-column: auto;
+        justify-self: stretch;
+        width: auto;
+    }
+}
+
+/* ---------- the entrance ----------
+   Derived from Memory's intro, which is why Memory feels like a game you enter
+   rather than a page that starts. Centred, vertical, no HUD and no clock -- the
+   run has not begun yet, and the screen should not pretend otherwise. */
+
+.game-intro {
+    max-width: 34rem;
+    margin: 4rem auto 0;
+    text-align: center;
+}
+
+.game-intro-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.game-intro-title {
+    margin: 0 0 0.8rem;
+    font-size: clamp(1.9rem, 5vw, 2.6rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+}
+
+.game-intro-lede {
+    margin: 0 auto 1.75rem;
+    max-width: 30rem;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.game-intro-preview {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.game-intro-shape {
+    margin: 0 0 1.5rem;
+    color: var(--muted-2);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+    .game-intro {
+        margin-top: 2rem;
+    }
+}
+
+/* ---------- Code Blitz: streak ----------
+   Reuses Bug Hunt's treatment so a streak means the same thing and looks the
+   same wherever it appears. tick-in on the numeral so each increment lands. */
+/* The HUD's first cell now holds the name and the streak side by side, so the
+   three-column grid is untouched. */
+.hud-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.blitz-streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #9aa3bd;
+    transition: color 200ms ease;
+}
+
+.blitz-streak.hot {
+    color: var(--accent);
+}
+
+.blitz-streak-n {
+    display: inline-block;
+    animation: tick-in 300ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .blitz-streak-n {
+        animation: none;
+    }
+
+    .blitz-streak {
+        transition: none;
+    }
+}
+
+/* Flush's stage. Same treatment as Code Blitz's .play-stage -- the board, the
+   stakes line and the tile rack become one surface the game is played on
+   instead of three blocks stacked on the page. The reveal deliberately sits
+   OUTSIDE it: that is the round talking back, not part of the board. */
+.flush-stage {
+    padding: 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--surface) 70%, transparent),
+            color-mix(in srgb, var(--bg) 90%, var(--surface)));
+    box-shadow: var(--lift), var(--shadow-2);
+    margin-top: 1.1rem;
+}
+
+@media (max-width: 620px) {
+    .flush-stage {
+        padding: 0.9rem;
+    }
+}
+
+/* Flush is the one game whose challenge is two panels side by side, so it needs
+   more width than the 820px reading column the other games use. Same :has()
+   approach as the landing page: no route has to know what it is rendered inside,
+   and where :has() is unsupported the page simply keeps the narrower column. */
+.app:has(.game.flush) {
+    max-width: 1080px;
+}
+
+/* ---------- the world ----------
+
+   Everything above this point lights the floor. This is what the floor stands
+   IN: objects at a distance, which is the thing light alone could never supply.
+   A wash behind a page reads as a vignette; a wash with something far away in it
+   reads as a place.
+
+   Depth order, back to front:
+
+       sky (z-index -2)   stars, then a planet nearer than they are
+       pool (z-index -1)  the existing .landing::before ambient light
+       floor              the game floor and its stations
+
+   The ambient light sitting BETWEEN the sky and the floor is what ties the two
+   together: the room's light is in front of the sky and behind the floor, so the
+   floor reads as lit from within a space rather than pasted over a picture. */
+
+.sky {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Fixed, so the sky holds still while the page scrolls past it. That difference
+   in behaviour IS the parallax: content moves, the distance does not. Discrete
+   points can do this safely where a gradient could not -- the seam that made the
+   old background look like it was peeling away needed a continuous edge to be
+   visible on, and a star has none. */
+.sky-stars {
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+}
+
+/* Irregular by hand. Anything generated from a loop or a repeating tile lands on
+   a lattice, and the eye finds a lattice immediately -- that is the difference
+   between a sky and starfield wallpaper. A few carry --jolt or --accent so the
+   sky belongs to Jolt rather than to a stock background. */
+.sky-stars-far {
+    opacity: 0.62;
+    background-image:
+        radial-gradient(1px 1px at 15% 34%, rgba(255, 255, 255, 0.32), transparent),
+        radial-gradient(1px 1px at 52% 18%, rgba(255, 255, 255, 0.38), transparent),
+        radial-gradient(1px 1px at 74% 68%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 26% 84%, rgba(255, 255, 255, 0.32), transparent),
+        radial-gradient(1px 1px at 88% 8%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 41% 52%, rgba(255, 255, 255, 0.26), transparent),
+        radial-gradient(1px 1px at 7% 14%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1px 1px at 23% 8%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 38% 22%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 61% 6%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 79% 17%, rgba(255, 255, 255, 0.45), transparent),
+        radial-gradient(1px 1px at 91% 31%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 12% 43%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 84% 57%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 33% 71%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 68% 83%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 47% 92%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 4% 66%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 96% 74%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 55% 38%, rgba(255, 255, 255, 0.28), transparent);
+}
+
+.sky-stars-near {
+    opacity: 0.72;
+    background-image:
+        radial-gradient(1.6px 1.6px at 17% 27%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1.6px 1.6px at 72% 12%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(2px 2px at 88% 44%, color-mix(in srgb, var(--jolt) 70%, white), transparent),
+        radial-gradient(1.6px 1.6px at 29% 58%, rgba(255, 255, 255, 0.55), transparent),
+        radial-gradient(1.6px 1.6px at 58% 76%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(2px 2px at 9% 88%, color-mix(in srgb, var(--accent) 60%, white), transparent),
+        radial-gradient(1.6px 1.6px at 43% 4%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1.6px 1.6px at 94% 63%, rgba(255, 255, 255, 0.45), transparent);
+}
+
+/* A body, not a circle on the page.
+   Three quarters of it sits outside the viewport corner, so what you see is an
+   arc. The lit edge faces up and inward, toward the same top-of-page halo that
+   already exists on the root element -- the sky and the room agree about where
+   the light is coming from, which is most of what makes it read as real.
+   Alphas are barely above the background on purpose: it should be something you
+   notice on the second look, not an illustration. */
+.sky-planet {
+    position: absolute;
+    left: -13rem;
+    bottom: -17rem;
+    width: 34rem;
+    height: 34rem;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 68% 22%,
+            rgba(255, 255, 255, 0.05) 0%,
+            rgba(120, 130, 190, 0.035) 34%,
+            rgba(10, 12, 20, 0.5) 68%,
+            rgba(8, 9, 13, 0.6) 100%);
+    box-shadow: inset 0 2px 0 color-mix(in srgb, var(--jolt) 9%, transparent);
+}
+
+/* Sparse on purpose.
+   The whole animation is one long wait with a short streak at the end of it, so
+   the odds are you are looking somewhere else when it happens -- which is the
+   point. Catching one should feel like catching one, not like watching a loop.
+   Periods are 31s and 47s: no common factor worth speaking of, so the two never
+   settle into a pattern together.
+   transform and opacity only. Both are compositor properties, so this costs no
+   layout and no paint while it runs. */
+.sky-shot {
+    position: absolute;
+    width: 9rem;
+    height: 1px;
+    opacity: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+    /* The head, which is what actually reads at this size. */
+    box-shadow: 0 0 3px 0 rgba(255, 255, 255, 0.5);
+}
+
+.sky-shot-a {
+    top: 12%;
+    left: 58%;
+    animation: sky-shoot 31s linear infinite;
+}
+
+.sky-shot-b {
+    top: 34%;
+    left: 22%;
+    animation: sky-shoot 47s linear 19s infinite;
+}
+
+/* 2.6% of the cycle is lit. At 31s that is roughly eight tenths of a second of
+   streak followed by half a minute of nothing. */
+@keyframes sky-shoot {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) rotate(14deg) scaleX(0.3);
+    }
+
+    0.4% {
+        opacity: 0.9;
+    }
+
+    2.6% {
+        opacity: 0;
+        transform: translate3d(19rem, 5rem, 0) rotate(14deg) scaleX(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate3d(19rem, 5rem, 0) rotate(14deg) scaleX(1);
+    }
+}
+
+/* Stars and the planet stay -- they are objects in the room, not motion. Only
+   the thing that moves stops moving. */
+@media (prefers-reduced-motion: reduce) {
+    .sky-shot {
+        display: none;
+    }
+}
+
+/* Tablet: the same world, with the body pulled further out of frame so it does
+   not crowd a narrower floor. */
+@media (max-width: 1100px) {
+    .sky-planet {
+        left: -17rem;
+        bottom: -20rem;
+        width: 28rem;
+        height: 28rem;
+    }
+}
+
+/* Mobile: fewer objects, not smaller ones.
+   The near star layer and both shooting stars go. On a phone the games fill the
+   viewport, so anything else in it is competing rather than surrounding -- and
+   the sky is the part that should give way, since the floor is the destination.
+   What is left is the far layer and a sliver of the planet, which is enough to
+   say "this is somewhere" without asking for attention. */
+@media (max-width: 780px) {
+    .sky-stars-near,
+    .sky-shot {
+        display: none;
+    }
+
+    .sky-stars-far {
+        opacity: 0.38;
+    }
+
+    .sky-planet {
+        left: -14rem;
+        bottom: -16rem;
+        width: 21rem;
+        height: 21rem;
+    }
+}
+
+/* The line that turns a wrong answer into something learned.
+   Sits under the verdict tag, quieter than it: the verdict is the score, this
+   is the reason. Kept to the feedback strip's existing rhythm so no layout
+   moves when a question happens not to carry one. */
+.feedback-why {
+    max-width: 62ch;
+    margin: 0.4rem 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+/* ---------- the station's window ----------
+
+   A real frame of the game inside the existing preview box. Everything about
+   the box -- its size, its radius, its border, its place in the card -- comes
+   from .preview above and is untouched; this only says what fills it.
+
+   The framing needs explaining, because object-fit alone gets it wrong. Each
+   capture is a whole 1440x900 page, and Jolt centres its content in a column
+   with dark floor either side. `cover` on a box this wide scales the image to
+   fit the WIDTH, so the card ends up showing mostly empty margin with a thin
+   strip of game in the middle -- which is what it did on the first attempt.
+   Sizing the image well past the box and pulling it left instead zooms past the
+   margins onto the column itself, which is the part worth showing.
+
+   --shot-y is the only per-game value: they do not all put their content in the
+   same place vertically, so each card says where its own game lives. */
+.preview-shot {
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+}
+
+.preview-shot img {
+    position: absolute;
+    top: 0;
+    /* --shot-x is the horizontal twin of --shot-y, and it exists for the same
+       reason: the games do not all put their panel in the same place. At the
+       shared -42% Flush lost the first two characters of every line -- the card
+       read "nsole.log" and "ait null", which looks like a broken image rather
+       than a tight crop. */
+    left: var(--shot-x, -42%);
+    /* --shot-w trades text size against how much page fits. The card window is
+       ~487x132 -- 3.7:1 -- so at 184% only ~213px of page height lands in it.
+       Games whose story needs more than that (a question AND its answers) zoom
+       out a little; games whose story fits stay at 184% and keep the larger
+       text. Keep --shot-x at -(w - 100)/2 to stay centred. */
+    width: var(--shot-w, 184%);
+    height: auto;
+    /* translateY rather than `top`, because a percentage on `top` resolves
+       against the CONTAINER -- 132px -- and moves the image barely at all. A
+       percentage on transform resolves against the element's own height, which
+       is what "show the part of the page a third of the way down" needs. */
+    transform: translateY(var(--shot-y, -30%));
+    /* Slightly cool and dimmed, so a bright gameplay frame sits in the card's
+       lighting rather than punching a hole in it. The card is a station in a
+       dark room; the screen inside it should read as lit, not as a sticker. */
+    filter: saturate(0.94) brightness(0.9);
+    transition: filter var(--t-surface) var(--ease-control);
+}
+
+/* Where each game's story sits in its own capture, measured from the frame
+   rather than guessed. The numbers are tied to the specific PNG in
+   public/screenshots -- re-running scripts/recapture.mjs can land on a different
+   incident or question and shift them, so re-check the crop if you recapture. */
+
+/* Code, the first answer row in full, and the edge of the next -- enough to read
+   as a list of choices without cutting any text in half.
+
+   This one cannot zoom out. At 184% the window is ~786 source px, which is what
+   Code Blitz's question card actually measures; any wider and the window is
+   wider than the card, so the page background shows as black bars down both
+   sides. Flush can afford 151% only because its stage panel is ~1038px wide and
+   still fills the frame. So the question headline above the code is what gets
+   sacrificed here -- the card's own line, "Read the code. Call the output. Beat
+   the clock.", already says what the headline would. */
+.preview-shot-blitz {
+    --shot-y: -35%;
+}
+
+/* The board (code beside the predicted output) plus the stake line, so the card
+   carries the round's banked score and multiplier. The rack sits 65px lower and
+   including it would cost another 20% of text size. */
+.preview-shot-flush {
+    --shot-w: 151%;
+    --shot-x: -25.5%;
+    --shot-y: -41%;
+}
+
+/* The red ReferenceError, "LOCATE THE FAULT", and all three numbered lines --
+   187px of page, so this one keeps the full 184% and the largest text of the
+   five. The incident title above it is the part sacrificed to do that. */
+.preview-shot-bughunt {
+    --shot-y: -30.5%;
+}
+
+.preview-shot-reaction {
+    --shot-y: -32%;
+}
+
+.preview-shot-memory {
+    --shot-y: -28%;
+}
+
+/* The screen wakes with the rest of the machine, matching what the drawn
+   preview already does on hover -- so a card with a screenshot and a card with
+   a drawing behave identically. */
+a.card-body:hover .preview-shot img,
+a.card-body:focus-visible .preview-shot img {
+    filter: saturate(1) brightness(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .preview-shot img {
+        transition: none;
     }
 }

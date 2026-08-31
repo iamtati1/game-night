@@ -31,9 +31,12 @@ describe("architecture boundaries", () => {
     it("served questions expose only id and text", () => {
         const routes = readFileSync(join(SERVER_SRC, "game/routes.ts"), "utf8");
 
-        expect(routes).toMatch(/options: shuffle\(options\)\.map\(\(o\) => \(\{ id: o\.id, text: o\.option_text \}\)\)/);
+        // Whatever orders the options, only id and text may survive the map.
+        expect(routes).toMatch(
+            /options: seededShuffle\(options, question\.id\)\.map\(\(o\) => \(\{\s*id: o\.id,\s*text: o\.option_text\s*\}\)\)/
+        );
         // The raw option rows carry is_correct; they must never be spread wholesale.
-        expect(routes).not.toMatch(/options: shuffle\(options\),/);
+        expect(routes).not.toMatch(/options: \w*[Ss]huffle\([^)]*\),/);
     });
 
     it("correct_option_text is only written on answer or timeout, never at planning time", () => {
