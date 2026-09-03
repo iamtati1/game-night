@@ -4,6 +4,7 @@
 
 CREATE OR REPLACE FUNCTION seed_question(
     p_prompt TEXT,
+    p_topic TEXT,
     p_a TEXT, p_b TEXT, p_c TEXT, p_d TEXT,
     p_correct INTEGER
 ) RETURNS VOID LANGUAGE plpgsql AS $$
@@ -14,7 +15,7 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO questions (prompt) VALUES (p_prompt) RETURNING id INTO v_question_id;
+    INSERT INTO questions (prompt, topic) VALUES (p_prompt, p_topic) RETURNING id INTO v_question_id;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
     VALUES (v_question_id, p_a, 1, p_correct = 1),
@@ -26,56 +27,69 @@ $$;
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log(typeof null);',
+    'variables',
     '"object"', '"null"', '"undefined"', 'ReferenceError', 1);
 
 SELECT seed_question(
     E'What does this log?\n\nconst nums = [2, 4, 6];\nconsole.log(nums.map(n => n * 2));',
+    'array-methods',
     '[2, 4, 6]', '[4, 8, 12]', '[2, 4, 6, 2, 4, 6]', 'undefined', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log(0.1 + 0.2 === 0.3);',
+    'variables',
     'true', 'false', 'NaN', 'TypeError', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log([10, 9, 1].sort());',
+    'array-methods',
     '[1, 9, 10]', '[1, 10, 9]', '[10, 9, 1]', '[9, 10, 1]', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log(1 + "1");',
+    'variables',
     '2', '"11"', 'NaN', 'TypeError', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log("5" - 3);',
+    'variables',
     '2', '"53"', 'NaN', 'TypeError', 1);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log([..."abc"]);',
+    'arrays',
     '"abc"', '["abc"]', '["a", "b", "c"]', '[97, 98, 99]', 3);
 
 SELECT seed_question(
     E'What does this log?\n\nlet x;\nconsole.log(x);',
+    'variables',
     'null', 'undefined', '0', 'ReferenceError', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log([1, 2] + [3, 4]);',
+    'arrays',
     '[1, 2, 3, 4]', '"1,23,4"', '10', 'TypeError', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log([1, 2, 3].filter(n => n > 1).length);',
+    'array-methods',
     '1', '2', '3', '0', 2);
 
 SELECT seed_question(
     'What is the average time complexity of binary search on a sorted array?',
+    'arrays',
     'O(1)', 'O(log n)', 'O(n)', 'O(n log n)', 2);
 
 SELECT seed_question(
     E'What does this log?\n\nconsole.log(Array.isArray([]));',
+    'arrays',
     'true', 'false', 'undefined', 'TypeError', 1);
 
 SELECT seed_question(
     E'What does this log?\n\nconst a = { n: 1 };\nconst b = a;\nb.n = 2;\nconsole.log(a.n);',
+    'objects',
     '1', '2', 'undefined', 'TypeError', 2);
 
-DROP FUNCTION seed_question(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER);
+DROP FUNCTION seed_question(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER);
 
 SELECT COUNT(*) AS active_questions FROM questions WHERE is_active;
