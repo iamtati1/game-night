@@ -15,7 +15,7 @@ import {
     resumePausedSession
 } from "../sessions/queries.js";
 import { wantsFreshSession } from "../sessions/schemas.js";
-import { isActiveSessionConflict } from "./conflicts.js";
+import { isActiveSessionConflict, resolveSessionRace } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
 import { submitAnswerSchema } from "./schemas.js";
@@ -281,35 +281,71 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     try {
         session = await db.createSessionWithQuestions(userId);
     } catch (err) {
-        // The check above (findInProgressSession) and this insert are not atomic,
-        // so two concurrent requests can both pass the check -- React StrictMode
-        // double-invoking an effect is enough to trigger it. Rather than repeat
-        // the check-then-insert race, let the database arbitrate: whichever
-        // request loses the unique index resumes the winner's session, which is
-        // the correct outcome anyway.
+        // The check at the top of this route and this INSERT are not atomic, so
+        // the single active-session slot can change hands between them: a second
+        // tab, a double-submit, or another game started on another device.
+        // Rather than repeat the check-then-insert race, let the database
+        // arbitrate and then answer whatever the new state actually calls for.
         if (!isActiveSessionConflict(err)) {
             throw err;
         }
 
-        // Re-read with the game included. The winner of a Code Blitz race is a
-        // Code Blitz session, but checking keeps this path from ever adopting
-        // another game's session the way the block above used to.
+        // Re-read with the game included, and let the resolver name the outcome.
+        // Every branch below used to rethrow the rejected INSERT, which the app's
+        // error handler turned into "Internal Server Error" -- for a situation
+        // this same route answers with a conflict dialog eighty lines earlier.
+        // Losing a race is not a server fault.
         const winner = await findActiveSession(userId);
 
-        if (!winner || winner.gameSlug !== CODE_BLITZ) {
-            // The winner vanished, or belongs to another game. Nothing sensible
-            // to resume, so surface the original failure.
-            throw err;
+        switch (resolveSessionRace(winner, CODE_BLITZ)) {
+            case "conflict":
+                // Another game took the slot between the check at the top of this
+                // route and the INSERT. Identical to the pre-check's answer, and
+                // the client already knows how to render it: activeGame in the
+                // body is what raises the "one game at a time" dialog.
+                res.status(409).json(conflictBody(winner!));
+                return;
+
+            case "retry":
+                // The slot was held when the INSERT was rejected and is free now.
+                // There is nothing to resume and no holder to name, so say what
+                // actually happened rather than reporting a fault the player
+                // cannot act on.
+                res.status(409).json({
+                    error: "Could not start the game",
+                    details: [
+                        {
+                            field: "game",
+                            message:
+                                "Another game was still finishing when this one tried to start. Try again."
+                        }
+                    ]
+                });
+                return;
+
+            case "resume": {
+                const full = await db.findSessionForUser(winner!.id, userId);
+
+                // The winner is this player's own Code Blitz session, so a miss
+                // here means it stopped existing mid-request. Same situation as
+                // "retry", same answer -- and still not a 500.
+                if (!full) {
+                    res.status(409).json({
+                        error: "Could not start the game",
+                        details: [
+                            {
+                                field: "game",
+                                message: "That game ended as this one was starting. Try again."
+                            }
+                        ]
+                    });
+                    return;
+                }
+
+                await respondResumed(res, full, now);
+                return;
+            }
         }
-
-        const full = await db.findSessionForUser(winner.id, userId);
-
-        if (!full) {
-            throw err;
-        }
-
-        await respondResumed(res, full, now);
-        return;
     }
 
     const question = await nextPlayableQuestion(session.id, now);

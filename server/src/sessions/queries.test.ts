@@ -354,8 +354,26 @@ describe("regressions already fixed stay fixed", () => {
         );
 
         expect(handler).toMatch(/await findActiveSession\(userId\)/);
-        expect(handler).toMatch(/winner\.gameSlug !== CODE_BLITZ/);
-        expect(handler).toMatch(/throw err/);
+        // The game comparison itself moved into resolveSessionRace, which is
+        // unit-tested in conflicts.test.ts. The property this guards is unchanged
+        // and still the point: the route decides by the winner's game rather than
+        // resuming whatever happens to hold the slot.
+        expect(handler).toMatch(/resolveSessionRace\(winner, CODE_BLITZ\)/);
+    });
+
+    it("losing the race is answered, never rethrown", () => {
+        // The production bug. Every branch of this handler used to rethrow the
+        // rejected INSERT, and the app's error handler turned that into
+        // "Internal Server Error" for a state the same route answers with a
+        // conflict dialog earlier on. The only throw left in the catch is the one
+        // for an error that is NOT a session race.
+        const handler = GAME_ROUTES.slice(
+            GAME_ROUTES.indexOf("const winner = await findActiveSession(userId);"),
+            GAME_ROUTES.lastIndexOf("await respondResumed(res, full, now);")
+        );
+
+        expect(handler).not.toMatch(/throw err/);
+        expect(handler).toMatch(/res\.status\(409\)/);
     });
 
     it("both 409s still report the game by name, not just a slug", () => {
