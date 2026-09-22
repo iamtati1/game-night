@@ -67,11 +67,11 @@ export function HomePage() {
                     <Ship size={54} rotate={18} thrusting />
                 </div>
 
-                <h1 className="welcome-title">Learn JavaScript by playing with it.</h1>
+                <h1 className="welcome-title">Learn JavaScript by running it.</h1>
 
                 <p className="welcome-lede">
-                    You do not need to know any code. You will write a little, run it, and
-                    watch what happens — starting from the very beginning.
+                    You do not need to know any code. You will write a little, press RUN,
+                    and watch what happens — starting from the very beginning.
                 </p>
 
                 <Link className="button primary big welcome-start" to="/register">
