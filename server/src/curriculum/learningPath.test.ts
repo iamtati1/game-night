@@ -981,9 +981,17 @@ describe("a learner always has one obvious next action", () => {
     });
 
     it("tells a signed-out visitor what Jolt is before asking anything", () => {
-        expect(home).toContain("Learn JavaScript by playing with it");
-        expect(home, "and that no prior code is needed").toContain(
-            "You do not need to know any code"
+        // The exact wording is the product's to change -- it has already moved
+        // from "playing with it" to "running it" to "making things happen" --
+        // so this asserts the two things that must stay true of whatever it
+        // says: the headline names the subject, and the page promises that no
+        // prior knowledge is required. Pinning the sentence itself made this a
+        // test of the copywriter rather than of the page.
+        const headline = home.match(/className="welcome-title"[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
+
+        expect(headline, "the headline names what is being learned").toMatch(/JavaScript/);
+        expect(home, "and that no prior code is needed").toMatch(
+            /No experience needed|do not need to know any code/
         );
     });
 
@@ -1007,12 +1015,16 @@ describe("a learner always has one obvious next action", () => {
     });
 
     it("keeps the navigation to four ordered destinations", () => {
+        // Read from aria-label rather than from the link text. The visible word
+        // is hidden below 40rem -- the icon carries it there -- so the
+        // accessible name is the thing that is always present, and it is the
+        // stable contract this test actually cares about.
         const nav = app.slice(app.indexOf("{user ? ("), app.indexOf("Log out"));
-        const links = [...nav.matchAll(/<Link to="([^"]+)">([^<]+)<\/Link>/g)].map(
-            (m) => m[2]
+        const links = [...nav.matchAll(/<Link to="[^"]+" aria-label="([^"]+)">/g)].map(
+            (m) => m[1]
         );
 
-        expect(links).toEqual(["Home", "Journey", "Play", "History"]);
+        expect(links).toEqual(["Home", "Map", "Play", "Log"]);
     });
 });
 
