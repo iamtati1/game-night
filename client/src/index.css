@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap");
+
 :root {
     --bg: #08090d;
     --surface: #11131a;
@@ -27,7 +29,23 @@
     --incorrect: #f87171;
     --warn: #fbbf24;
     --radius: 12px;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    /* ------------------------------------------------- Jolt's type system
+     *
+     * Three roles, three faces, and no more than that.
+     *
+     *   --display  Bricolage Grotesque — concept moments and the Journey. It has
+     *              a slightly mechanical warmth that reads as a studio rather
+     *              than a school, and it is doing a job no other face here does.
+     *   --mono     JetBrains Mono — every character of JavaScript. Chosen over
+     *              the system stack because it disambiguates 1/l/I and 0/O,
+     *              which matters when a whole lesson turns on "5" versus 5.
+     *   body       Inter, unchanged. Explanations are read, not performed.
+     *
+     * Every face carries a real fallback stack: the app has to stay legible
+     * offline, and a display font that silently becomes Times is worse than one
+     * that was never loaded. */
+    --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
     /* ---------- Layer 1: the scales the rest of the system can build on ----------
 
@@ -5740,202 +5758,6 @@ pre {
     max-width: 1080px;
 }
 
-/* ---------- the world ----------
-
-   Everything above this point lights the floor. This is what the floor stands
-   IN: objects at a distance, which is the thing light alone could never supply.
-   A wash behind a page reads as a vignette; a wash with something far away in it
-   reads as a place.
-
-   Depth order, back to front:
-
-       sky (z-index -2)   stars, then a planet nearer than they are
-       pool (z-index -1)  the existing .landing::before ambient light
-       floor              the game floor and its stations
-
-   The ambient light sitting BETWEEN the sky and the floor is what ties the two
-   together: the room's light is in front of the sky and behind the floor, so the
-   floor reads as lit from within a space rather than pasted over a picture. */
-
-.sky {
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-/* Fixed, so the sky holds still while the page scrolls past it. That difference
-   in behaviour IS the parallax: content moves, the distance does not. Discrete
-   points can do this safely where a gradient could not -- the seam that made the
-   old background look like it was peeling away needed a continuous edge to be
-   visible on, and a star has none. */
-.sky-stars {
-    position: absolute;
-    inset: 0;
-    background-repeat: no-repeat;
-}
-
-/* Irregular by hand. Anything generated from a loop or a repeating tile lands on
-   a lattice, and the eye finds a lattice immediately -- that is the difference
-   between a sky and starfield wallpaper. A few carry --jolt or --accent so the
-   sky belongs to Jolt rather than to a stock background. */
-.sky-stars-far {
-    opacity: 0.62;
-    background-image:
-        radial-gradient(1px 1px at 15% 34%, rgba(255, 255, 255, 0.32), transparent),
-        radial-gradient(1px 1px at 52% 18%, rgba(255, 255, 255, 0.38), transparent),
-        radial-gradient(1px 1px at 74% 68%, rgba(255, 255, 255, 0.3), transparent),
-        radial-gradient(1px 1px at 26% 84%, rgba(255, 255, 255, 0.32), transparent),
-        radial-gradient(1px 1px at 88% 8%, rgba(255, 255, 255, 0.35), transparent),
-        radial-gradient(1px 1px at 41% 52%, rgba(255, 255, 255, 0.26), transparent),
-        radial-gradient(1px 1px at 7% 14%, rgba(255, 255, 255, 0.55), transparent),
-        radial-gradient(1px 1px at 23% 8%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1px 1px at 38% 22%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1px 1px at 61% 6%, rgba(255, 255, 255, 0.35), transparent),
-        radial-gradient(1px 1px at 79% 17%, rgba(255, 255, 255, 0.45), transparent),
-        radial-gradient(1px 1px at 91% 31%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1px 1px at 12% 43%, rgba(255, 255, 255, 0.35), transparent),
-        radial-gradient(1px 1px at 84% 57%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1px 1px at 33% 71%, rgba(255, 255, 255, 0.3), transparent),
-        radial-gradient(1px 1px at 68% 83%, rgba(255, 255, 255, 0.35), transparent),
-        radial-gradient(1px 1px at 47% 92%, rgba(255, 255, 255, 0.3), transparent),
-        radial-gradient(1px 1px at 4% 66%, rgba(255, 255, 255, 0.3), transparent),
-        radial-gradient(1px 1px at 96% 74%, rgba(255, 255, 255, 0.35), transparent),
-        radial-gradient(1px 1px at 55% 38%, rgba(255, 255, 255, 0.28), transparent);
-}
-
-.sky-stars-near {
-    opacity: 0.72;
-    background-image:
-        radial-gradient(1.6px 1.6px at 17% 27%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1.6px 1.6px at 72% 12%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(2px 2px at 88% 44%, color-mix(in srgb, var(--jolt) 70%, white), transparent),
-        radial-gradient(1.6px 1.6px at 29% 58%, rgba(255, 255, 255, 0.55), transparent),
-        radial-gradient(1.6px 1.6px at 58% 76%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(2px 2px at 9% 88%, color-mix(in srgb, var(--accent) 60%, white), transparent),
-        radial-gradient(1.6px 1.6px at 43% 4%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1.6px 1.6px at 94% 63%, rgba(255, 255, 255, 0.45), transparent);
-}
-
-/* A body, not a circle on the page.
-   Three quarters of it sits outside the viewport corner, so what you see is an
-   arc. The lit edge faces up and inward, toward the same top-of-page halo that
-   already exists on the root element -- the sky and the room agree about where
-   the light is coming from, which is most of what makes it read as real.
-   Alphas are barely above the background on purpose: it should be something you
-   notice on the second look, not an illustration. */
-.sky-planet {
-    position: absolute;
-    left: -13rem;
-    bottom: -17rem;
-    width: 34rem;
-    height: 34rem;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 68% 22%,
-            rgba(255, 255, 255, 0.05) 0%,
-            rgba(120, 130, 190, 0.035) 34%,
-            rgba(10, 12, 20, 0.5) 68%,
-            rgba(8, 9, 13, 0.6) 100%);
-    box-shadow: inset 0 2px 0 color-mix(in srgb, var(--jolt) 9%, transparent);
-}
-
-/* Sparse on purpose.
-   The whole animation is one long wait with a short streak at the end of it, so
-   the odds are you are looking somewhere else when it happens -- which is the
-   point. Catching one should feel like catching one, not like watching a loop.
-   Periods are 31s and 47s: no common factor worth speaking of, so the two never
-   settle into a pattern together.
-   transform and opacity only. Both are compositor properties, so this costs no
-   layout and no paint while it runs. */
-.sky-shot {
-    position: absolute;
-    width: 9rem;
-    height: 1px;
-    opacity: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
-    /* The head, which is what actually reads at this size. */
-    box-shadow: 0 0 3px 0 rgba(255, 255, 255, 0.5);
-}
-
-.sky-shot-a {
-    top: 12%;
-    left: 58%;
-    animation: sky-shoot 31s linear infinite;
-}
-
-.sky-shot-b {
-    top: 34%;
-    left: 22%;
-    animation: sky-shoot 47s linear 19s infinite;
-}
-
-/* 2.6% of the cycle is lit. At 31s that is roughly eight tenths of a second of
-   streak followed by half a minute of nothing. */
-@keyframes sky-shoot {
-    0% {
-        opacity: 0;
-        transform: translate3d(0, 0, 0) rotate(14deg) scaleX(0.3);
-    }
-
-    0.4% {
-        opacity: 0.9;
-    }
-
-    2.6% {
-        opacity: 0;
-        transform: translate3d(19rem, 5rem, 0) rotate(14deg) scaleX(1);
-    }
-
-    100% {
-        opacity: 0;
-        transform: translate3d(19rem, 5rem, 0) rotate(14deg) scaleX(1);
-    }
-}
-
-/* Stars and the planet stay -- they are objects in the room, not motion. Only
-   the thing that moves stops moving. */
-@media (prefers-reduced-motion: reduce) {
-    .sky-shot {
-        display: none;
-    }
-}
-
-/* Tablet: the same world, with the body pulled further out of frame so it does
-   not crowd a narrower floor. */
-@media (max-width: 1100px) {
-    .sky-planet {
-        left: -17rem;
-        bottom: -20rem;
-        width: 28rem;
-        height: 28rem;
-    }
-}
-
-/* Mobile: fewer objects, not smaller ones.
-   The near star layer and both shooting stars go. On a phone the games fill the
-   viewport, so anything else in it is competing rather than surrounding -- and
-   the sky is the part that should give way, since the floor is the destination.
-   What is left is the far layer and a sliver of the planet, which is enough to
-   say "this is somewhere" without asking for attention. */
-@media (max-width: 780px) {
-    .sky-stars-near,
-    .sky-shot {
-        display: none;
-    }
-
-    .sky-stars-far {
-        opacity: 0.38;
-    }
-
-    .sky-planet {
-        left: -14rem;
-        bottom: -16rem;
-        width: 21rem;
-        height: 21rem;
-    }
-}
 
 /* The line that turns a wrong answer into something learned.
    Sits under the verdict tag, quieter than it: the verdict is the score, this
@@ -6054,4 +5876,1307 @@ a.card-body:focus-visible .preview-shot img {
     .preview-shot img {
         transition: none;
     }
+}
+
+/* ---------- Learning loop: Learn beat, Next control, results teaching ---------- */
+
+/* The Learn beat.
+   Sized and spaced like the game screen it precedes rather than like a page of
+   documentation -- same column, same panel treatment -- so it reads as the first
+   move of the run and not as a detour out of it. */
+.learn-beat {
+    max-width: 42rem;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.learn-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--blitz);
+    margin: 0 0 0.4rem;
+}
+
+.learn-title {
+    font-size: 1.7rem;
+    margin: 0 0 1.4rem;
+}
+
+.learn-beat .learn-code {
+    text-align: left;
+    display: inline-block;
+    min-width: min(26rem, 100%);
+    margin: 0 0 0.9rem;
+}
+
+/* The output is the point of the card: there is nothing to work out, and it
+   should not look like a question. Stated, not quizzed. */
+.learn-output {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    color: var(--correct);
+    margin: 0 0 1.5rem;
+}
+
+.learn-arrow {
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 0.5rem;
+}
+
+.learn-rule {
+    font-size: 1.05rem;
+    color: var(--text);
+    margin: 0 auto 2rem;
+    max-width: 30rem;
+}
+
+/* The advance control.
+   Inside .feedback so it appears in the same region the result does -- the eye
+   is already there, and a button somewhere else would mean hunting for it. */
+.next-beat {
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.next-hint {
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.65;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+}
+
+/* Why it was wrong, in the review. Indented under the answer line it explains,
+   rather than presented as a sibling fact. */
+.review-why {
+    margin: 0.5rem 0 0;
+    padding-left: 0.9rem;
+    border-left: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.94rem;
+    max-width: 40rem;
+}
+
+.practiced {
+    margin-top: 2.5rem;
+}
+
+.topic-tally {
+    list-style: none;
+    padding: 0;
+    margin: 0.6rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.topic-tally li {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.25rem 0.6rem;
+}
+
+.topic-tally .topic-name {
+    font-size: 0.88rem;
+}
+
+.topic-tally .topic-score {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+}
+
+/* A unit answered clean reads differently at a glance -- the only encoding on
+   this list, so it stays a tally rather than becoming a chart. */
+.topic-tally li.all .topic-score {
+    color: var(--correct);
+}
+
+.next-up {
+    margin: 1.1rem 0 0;
+    font-size: 0.98rem;
+    color: var(--muted);
+}
+
+.next-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blitz);
+    margin-right: 0.5rem;
+}
+
+/* ---------- complete-code: the assembly stage ---------- */
+
+.assembly {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+/* The gap sits inline in the snippet, so the player reads the code as one line
+   of thought rather than matching a box to a slot somewhere else. */
+.assembly-gap {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    vertical-align: baseline;
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border);
+    background: var(--surface-2);
+    min-width: 4.5rem;
+}
+
+.assembly-gap.filled {
+    border-style: solid;
+    border-color: var(--blitz);
+}
+
+.assembly-placeholder {
+    display: inline-block;
+    min-width: 3.5rem;
+}
+
+/* A placed token is still a control: tapping it takes it back. */
+.assembly-placed {
+    font-family: var(--mono);
+    font-size: 0.95em;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--blitz);
+    border-radius: var(--radius-sm);
+    padding: 0.05rem 0.4rem;
+    cursor: pointer;
+}
+
+.assembly-placed:disabled {
+    cursor: default;
+}
+
+.assembly-bank {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: 0;
+    margin: 0;
+}
+
+/* 44px minimum, because this is the one interaction in Jolt that is genuinely
+   better with a thumb than a keyboard. */
+.assembly-token {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: 0 var(--space-3);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--lift);
+    cursor: pointer;
+    transition: border-color var(--t-control, 140ms) ease, opacity var(--t-control, 140ms) ease;
+}
+
+.assembly-token:hover:not(:disabled) {
+    border-color: var(--blitz);
+}
+
+/* Used tokens stay in place rather than disappearing: a bank that reflows while
+   you are reading it loses you the position you were about to tap. */
+.assembly-token.used {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.assembly-token kbd {
+    font-size: 0.68rem;
+    opacity: 0.55;
+}
+
+.assembly-submit {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+/* The verdict: two rows, aligned, with the first divergent token marked. */
+.verdict-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.verdict-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+}
+
+.verdict-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    min-width: 5rem;
+}
+
+.verdict-token {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.verdict-token.diverged {
+    background: color-mix(in srgb, var(--incorrect) 22%, transparent);
+    color: var(--incorrect);
+}
+
+@media (max-width: 520px) {
+    .assembly-token {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+/* ------------------------------------------- Bug Hunt · curriculum incidents
+ *
+ * The beginner presentation. Everything here is subtraction: the code block
+ * already has the page's attention, so the two lines above it are quiet enough
+ * to read once and stop looking at. No panel, no border, no icon -- a label and
+ * a sentence.
+ */
+.bh-report.is-learning {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1.25rem;
+}
+
+.bh-learning-concept {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted, #8b93a7);
+    margin: 0;
+}
+
+.bh-expected {
+    font-size: 1.05rem;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 52ch;
+}
+
+/* The rule the code broke, in the curriculum's own words. Set apart from the
+ * outcome line above it, because this is the part worth reading twice. */
+.bh-feedback-rule {
+    margin: 0.5rem 0 0;
+    padding-left: 0.75rem;
+    border-left: 2px solid currentColor;
+    opacity: 0.85;
+    line-height: 1.5;
+    max-width: 56ch;
+}
+
+/* --------------------------------------------- learner standing on a topic
+ *
+ * A list, not a dashboard. No card, no progress bar, no percentage -- the marks
+ * carry the state and the names carry the meaning. Sits above the run tally
+ * because "what am I learning" outranks "how did this run go".
+ */
+.standing {
+    margin: 1.75rem 0 0;
+}
+
+.standing-list {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.standing-step {
+    display: grid;
+    grid-template-columns: 1.25rem 1fr;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.standing-mark {
+    text-align: center;
+    opacity: 0.55;
+}
+
+.standing-step.is-done .standing-name {
+    opacity: 0.6;
+}
+
+/* The one thing on this list the learner is about to act on. */
+.standing-step.is-current {
+    font-weight: 600;
+}
+
+.standing-step.is-current .standing-mark {
+    opacity: 1;
+}
+
+.standing-step.is-upcoming {
+    opacity: 0.45;
+}
+
+/* ===================================================== the learning journey
+ *
+ * A path and a lesson, and neither is a dashboard. The content is the interface:
+ * code and questions carry the page, and the chrome around them is a mark, a
+ * name and nothing else. No cards, no pills, no meters, no percentages.
+ */
+
+.journey {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+}
+
+.journey-eyebrow,
+.lesson-eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted, #8b93a7);
+    margin: 0 0 0.25rem;
+}
+
+.journey-title {
+    font-size: 2.25rem;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+.journey-now {
+    margin: 0 0 1.5rem;
+    color: var(--muted, #8b93a7);
+}
+
+.journey-topics,
+.journey-concepts,
+.lesson-choices {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.journey-topics {
+    margin-top: 2.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.journey-topic-head {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: 0.6rem;
+    align-items: baseline;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.journey-topic.is-locked .journey-topic-head {
+    opacity: 0.4;
+    font-weight: 400;
+}
+
+.journey-topic.is-complete .journey-topic-name {
+    opacity: 0.65;
+}
+
+.journey-mark {
+    text-align: center;
+    opacity: 0.6;
+}
+
+.journey-topic.is-current .journey-mark {
+    opacity: 1;
+}
+
+/* The one line worth reading about the topic you are actually on. */
+.journey-principle {
+    margin: 0.4rem 0 0.75rem 2.1rem;
+    max-width: 46ch;
+    line-height: 1.5;
+    color: var(--muted, #8b93a7);
+}
+
+.journey-concepts {
+    margin: 0.4rem 0 0 2.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.journey-concept {
+    display: grid;
+    grid-template-columns: 1.25rem 1fr;
+    gap: 0.5rem;
+    align-items: baseline;
+    font-size: 0.95rem;
+}
+
+.journey-concept.is-demonstrated { opacity: 0.6; }
+.journey-concept.is-locked { opacity: 0.4; }
+.journey-concept.is-current { font-weight: 600; }
+
+/* ------------------------------------------------------------------ lesson */
+
+.lesson {
+    max-width: 38rem;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+}
+
+.lesson-eyebrow {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.lesson-progress {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+}
+
+.lesson-title {
+    font-size: 1.75rem;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+}
+
+.lesson-why {
+    margin: 0 0 1.75rem;
+    line-height: 1.55;
+    max-width: 48ch;
+    color: var(--muted, #8b93a7);
+}
+
+.lesson-teach {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.lesson-code {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    background: rgba(127, 127, 127, 0.12);
+    overflow-x: auto;
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+.lesson-note {
+    margin: 0.35rem 0 0 0.15rem;
+    font-size: 0.9rem;
+    color: var(--muted, #8b93a7);
+}
+
+.lesson-notice {
+    margin: 0 0 1.75rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid currentColor;
+    line-height: 1.5;
+    max-width: 52ch;
+}
+
+.lesson-notice-tag {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: 0.15rem;
+}
+
+.lesson-ask {
+    font-size: 1.15rem;
+    margin: 0.5rem 0 1rem;
+}
+
+.lesson-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1.25rem 0;
+}
+
+/* Full-width targets: a beginner reading code should not be aiming at a pill. */
+.lesson-choice {
+    width: 100%;
+    text-align: left;
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    white-space: pre-wrap;
+}
+
+.lesson-choice:hover:not(:disabled) {
+    border-color: currentColor;
+}
+
+.lesson-choice:disabled { cursor: default; }
+.lesson-choice.is-answer { border-color: #3fae6d; }
+.lesson-choice.is-wrong { border-color: #d0714b; }
+
+.lesson-feedback {
+    margin: 0 0 1.5rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid currentColor;
+}
+
+.lesson-feedback.right { color: #3fae6d; }
+.lesson-feedback.wrong { color: #d0714b; }
+
+.lesson-feedback-head {
+    margin: 0 0 0.25rem;
+    font-weight: 600;
+}
+
+/* The explanation is the point, so it reads as body text rather than as an
+   alert in the feedback colour. */
+.lesson-feedback-body {
+    margin: 0;
+    color: var(--text, inherit);
+    line-height: 1.55;
+    max-width: 52ch;
+}
+
+.lesson-done { text-align: center; }
+
+.lesson-done .lesson-mark {
+    font-size: 2.5rem;
+    color: #3fae6d;
+    margin: 2rem 0 0.5rem;
+}
+
+.lesson-done .lesson-notice {
+    border: 0;
+    padding: 0;
+    margin: 0 auto 2rem;
+    display: inline-block;
+}
+
+/* The output a snippet actually produces, shown beside it rather than described.
+   Visually a console: flush, monospace, and clearly a result rather than more
+   code the learner has to read. */
+.lesson-output {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0.4rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid #3fae6d;
+    background: rgba(63, 174, 109, 0.07);
+}
+
+.lesson-output-tag {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.65;
+    flex-shrink: 0;
+}
+
+.lesson-output pre {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Which piece is which. A definition list, because that is what it is. */
+.lesson-parts {
+    margin: 0.65rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.lesson-part {
+    display: grid;
+    grid-template-columns: minmax(auto, 11rem) 1fr;
+    gap: 0.75rem;
+    align-items: baseline;
+}
+
+.lesson-part dt {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.lesson-part dd {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--muted, #8b93a7);
+}
+
+/* The thing worth noticing that the question did not ask about. */
+.lesson-aside {
+    margin: 0.6rem 0 0;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(127, 127, 127, 0.25);
+    color: var(--muted, #8b93a7);
+    line-height: 1.5;
+    max-width: 52ch;
+}
+
+/* ============================================================ scene lessons
+ *
+ * The interactive lesson form. The rule the styling follows: the code and its
+ * output are the only two things with weight on the screen. Everything else --
+ * the prompt, the progress, the button -- is quiet enough to be read once.
+ */
+
+.scene {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+}
+
+/* Beats, not a percentage bar. A learner should see there are a handful of
+   steps left, not a number creeping toward 100. */
+.scene-beats {
+    display: flex;
+    gap: 0.3rem;
+    list-style: none;
+    margin: 0 0 2.25rem;
+    padding: 0;
+}
+
+.scene-beat {
+    height: 3px;
+    flex: 1;
+    border-radius: 2px;
+    background: rgba(127, 127, 127, 0.25);
+    transition: background 240ms ease;
+}
+
+.scene-beat.is-done { background: rgba(127, 127, 127, 0.55); }
+.scene-beat.is-now { background: var(--accent, #7c5cff); }
+
+.scene-invite,
+.scene-ask {
+    font-size: 1.15rem;
+    line-height: 1.5;
+    margin: 0 0 1.5rem;
+    max-width: 32ch;
+}
+
+.scene-ask { font-weight: 500; }
+
+/* ----------------------------------------------------------- the stage
+ *
+ * Code above, console below, and an arrow between them that only exists once
+ * something has travelled along it.
+ */
+
+.scene-stage {
+    margin-bottom: 1.75rem;
+}
+
+.scene-code {
+    margin: 0;
+    padding: 1rem 1.15rem;
+    border-radius: 8px;
+    background: rgba(127, 127, 127, 0.13);
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    transition: box-shadow 200ms ease;
+}
+
+.scene-code.is-quiet {
+    background: rgba(127, 127, 127, 0.08);
+    font-size: 1rem;
+}
+
+/* While it runs, the code is visibly the thing doing something. */
+.scene-code.is-running {
+    box-shadow: 0 0 0 2px var(--accent, #7c5cff);
+}
+
+/* The channel between the code and the console. It exists only once something
+   has travelled down it, and while the code is running a pulse actually makes
+   the trip — that journey is what communicates cause and effect to someone who
+   has never seen code run before. */
+.scene-arrow {
+    position: relative;
+    height: 2.5rem;
+    margin: 0.35rem 0;
+    text-align: center;
+    font-size: 1.3rem;
+    line-height: 2.5rem;
+    opacity: 0.5;
+    animation: scene-arrow-in 240ms ease both;
+}
+
+.scene-arrow.is-travelling::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 7px;
+    height: 7px;
+    margin-left: -3.5px;
+    border-radius: 50%;
+    background: #6fe3a3;
+    box-shadow: 0 0 10px rgba(111, 227, 163, 0.8);
+    animation: scene-pulse 620ms 180ms cubic-bezier(0.45, 0, 0.5, 1) both;
+}
+
+@keyframes scene-arrow-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 0.5; transform: none; }
+}
+
+@keyframes scene-pulse {
+    from { transform: translateY(0); opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    to { transform: translateY(2.5rem); opacity: 0; }
+}
+
+.scene-console {
+    min-height: 3.5rem;
+    padding: 0.85rem 1.15rem;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.28);
+    background: rgba(0, 0, 0, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    justify-content: center;
+}
+
+.scene-console-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.5;
+}
+
+.scene-console-empty {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 1rem;
+    opacity: 0.35;
+}
+
+/* The output arrives from the direction of the code, after the run delay. That
+   travel is what makes it read as a consequence rather than a caption. */
+.scene-output {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    line-height: 1.5;
+    color: #6fe3a3;
+    animation: scene-output-in 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes scene-output-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: none; }
+}
+
+.scene-run { width: 100%; }
+
+.scene-after {
+    margin: 0 0 1.5rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    max-width: 34ch;
+    animation: scene-output-in 300ms ease both;
+}
+
+/* ----------------------------------------------------------- questions */
+
+.scene-choices {
+    list-style: none;
+    margin: 1.25rem 0 1.5rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.scene-choice {
+    width: 100%;
+    text-align: left;
+    padding: 0.9rem 1.1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    background: transparent;
+    color: inherit;
+    font-family: var(--mono);
+    font-size: 1rem;
+    cursor: pointer;
+    white-space: pre-wrap;
+    transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.scene-choice:hover:not(:disabled) {
+    border-color: currentColor;
+    transform: translateX(2px);
+}
+
+.scene-choice:disabled { cursor: default; }
+.scene-choice.is-answer { border-color: #3fae6d; }
+.scene-choice.is-wrong { border-color: #d0714b; }
+
+.scene-feedback {
+    margin: 0 0 1.5rem;
+    padding-left: 0.85rem;
+    border-left: 3px solid currentColor;
+    animation: scene-output-in 260ms ease both;
+}
+
+.scene-feedback.right { color: #3fae6d; }
+.scene-feedback.wrong { color: #d0714b; }
+
+.scene-feedback-head {
+    margin: 0 0 0.3rem;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.scene-feedback-body,
+.scene-aside {
+    margin: 0;
+    color: var(--text, inherit);
+    line-height: 1.55;
+    max-width: 44ch;
+}
+
+.scene-aside {
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(127, 127, 127, 0.25);
+    color: var(--muted, #8b93a7);
+}
+
+/* ------------------------------------------------------- concept reveal */
+
+.scene-headline {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.85rem;
+    letter-spacing: -0.015em;
+    margin: 0 0 1.25rem;
+}
+
+.scene-parts {
+    margin: 1.25rem 0 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.scene-part {
+    display: grid;
+    grid-template-columns: minmax(auto, 10.5rem) 1fr;
+    gap: 0.85rem;
+    align-items: baseline;
+}
+
+.scene-part dt {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+}
+
+.scene-part dd {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--muted, #8b93a7);
+}
+
+/* The Journey's own title earns the display face — it is the one place the
+   product names itself to the learner. */
+.journey-title { font-family: var(--display); font-weight: 700; }
+
+/* Motion here communicates cause and effect, so when it is turned off the
+   states still differ — they simply stop travelling. */
+@media (prefers-reduced-motion: reduce) {
+    .scene-arrow.is-travelling::after { animation: none; content: none; }
+
+    .scene-arrow,
+    .scene-output,
+    .scene-after,
+    .scene-feedback {
+        animation: none;
+    }
+
+    .scene-choice:hover:not(:disabled) { transform: none; }
+    .scene-beat { transition: none; }
+}
+
+/* What the learner has earned, stated as capability rather than as a score.
+   Sits under the journey title because it is context for the path, not a
+   headline of its own. */
+.journey-earned {
+    margin: 0 0 1.5rem;
+    color: var(--muted, #8b93a7);
+    font-size: 0.95rem;
+}
+
+.journey-points {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--text, inherit);
+    font-variant-numeric: tabular-nums;
+}
+
+.journey-earned-sep {
+    margin: 0 0.5rem;
+    opacity: 0.45;
+}
+
+/* =============================================== entry: welcome, home, reward
+ *
+ * One action per screen. Everything else is context for it, and is quiet enough
+ * that the eye reaches the button without being asked to choose.
+ */
+
+.welcome,
+.home,
+.complete {
+    max-width: 32rem;
+    margin: 0 auto;
+    padding: 4rem 1.25rem 4rem;
+    text-align: center;
+}
+
+.welcome-mark {
+    margin: 0 auto 1.5rem;
+    width: 3.5rem;
+    opacity: 0.95;
+}
+
+.welcome-title {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 2.1rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+}
+
+.welcome-lede {
+    margin: 0 auto 2.25rem;
+    max-width: 30rem;
+    line-height: 1.6;
+    color: var(--muted, #8b93a7);
+}
+
+.welcome-start { min-width: 14rem; }
+
+.welcome-note {
+    margin: 1.5rem 0 0;
+    font-size: 0.9rem;
+    color: var(--muted, #8b93a7);
+}
+
+/* ------------------------------------------------------------------ home */
+
+.home-greeting {
+    margin: 0 0 2.5rem;
+    color: var(--muted, #8b93a7);
+}
+
+.home-label,
+.complete-label {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-2, #6b7492);
+}
+
+.home-topic {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 2.4rem;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.75rem;
+}
+
+.home-principle {
+    margin: 0 auto 2rem;
+    max-width: 28rem;
+    line-height: 1.55;
+    color: var(--muted, #8b93a7);
+}
+
+.home-next {
+    margin: 0 0 1.25rem;
+    font-size: 1.05rem;
+}
+
+.home-action { min-width: 13rem; }
+
+.home-earned,
+.home-aside {
+    margin: 1.75rem 0 0;
+    font-size: 0.92rem;
+    color: var(--muted, #8b93a7);
+}
+
+.home-aside { margin-top: 0.75rem; }
+
+.home-points {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text, inherit);
+    font-variant-numeric: tabular-nums;
+}
+
+.home-sep,
+.complete-sep {
+    margin: 0 0.55rem;
+    opacity: 0.4;
+}
+
+/* ------------------------------------------------- concept completion */
+
+.complete-mark {
+    font-size: 2.75rem;
+    color: #3fae6d;
+    margin: 0 0 1.5rem;
+    animation: complete-mark-in 420ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes complete-mark-in {
+    from { opacity: 0; transform: scale(0.7); }
+    60% { transform: scale(1.06); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* The capability, not the lesson title. "You can now run a snippet and say what
+   it prints" is what changed; "console-output complete" is bookkeeping. */
+.complete-capability {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.85rem;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    margin: 0 auto 1.75rem;
+    max-width: 24ch;
+}
+
+.complete-points {
+    margin: 0 0 2.25rem;
+    color: var(--muted, #8b93a7);
+    animation: complete-points-in 380ms 160ms ease both;
+}
+
+.complete-plus {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--accent, #7c5cff);
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes complete-points-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+.complete-next-label { margin-top: 0; }
+
+.complete-next {
+    margin: 0 0 1.5rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+}
+
+.complete-aside {
+    margin: 1.5rem 0 0;
+    font-size: 0.9rem;
+    color: var(--muted, #8b93a7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .complete-mark,
+    .complete-points {
+        animation: none;
+    }
+}
+
+/* ======================================== the opening lesson: bigger, slower
+ *
+ * Typography does the teaching here. A moment scene is one sentence in display
+ * type with nothing competing; the code is large enough to be the object of
+ * attention rather than a sample embedded in prose.
+ */
+
+.scene-moment {
+    padding: 2rem 0 1rem;
+    text-align: center;
+}
+
+.scene-eyebrow {
+    margin: 0 0 1.25rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted-2, #6b7492);
+}
+
+/* The one thing on the screen. Sized so a single sentence fills the eye and
+   nothing else has to be read first. */
+.scene-moment-head {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 2.3rem;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    margin: 0 auto 1.5rem;
+    max-width: 16ch;
+    animation: scene-moment-in 420ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+
+.scene-moment-line {
+    margin: 0 auto 0.6rem;
+    max-width: 30ch;
+    line-height: 1.6;
+    color: var(--muted, #8b93a7);
+    animation: scene-moment-in 420ms 120ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+
+.scene-moment .button {
+    margin-top: 2rem;
+    min-width: 12rem;
+}
+
+@keyframes scene-moment-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* The code is the object of attention, so it is set larger than the prose
+   around it rather than smaller, which is the usual mistake. */
+.scene .scene-code {
+    font-size: 1.25rem;
+    padding: 1.35rem 1.4rem;
+}
+
+/* ------------------------------------------------------ the editable line */
+
+.scene-editable {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    font-family: var(--mono);
+}
+
+/* Part of the program, not a form field beside it: same face, same size, and a
+   marked baseline so it still reads as the thing you can change. */
+.scene-slot {
+    font: inherit;
+    color: #ffd479;
+    background: rgba(255, 212, 121, 0.1);
+    border: 0;
+    border-bottom: 2px dashed rgba(255, 212, 121, 0.6);
+    border-radius: 3px;
+    padding: 0.05em 0.2em;
+    min-width: 5ch;
+    outline-offset: 3px;
+}
+
+.scene-slot::placeholder {
+    color: rgba(255, 212, 121, 0.45);
+}
+
+.scene-slot:disabled {
+    border-bottom-style: solid;
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scene-moment-head,
+    .scene-moment-line {
+        animation: none;
+    }
+}
+
+/* Where you are, always on screen. Quiet enough to ignore while working, present
+   enough to answer "what am I learning?" without leaving the lesson.
+
+   The topic reads as a place rather than a chapter number, which is the seam the
+   coding world grows from: when Values becomes somewhere you go, this line is
+   already naming it. */
+.scene-place {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+}
+
+.scene-place-topic {
+    font-family: var(--display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent, #7c5cff);
+}
+
+.scene-place-sep { opacity: 0.3; }
+
+.scene-place-lesson {
+    color: var(--muted, #8b93a7);
 }

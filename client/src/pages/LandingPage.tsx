@@ -5,7 +5,6 @@ import type { ResumableResponse, ResumableSession } from "../api/types.js";
 import { useAuth } from "../auth/AuthContext.js";
 import { GameCard } from "../components/GameCard.js";
 import { JoltLogo } from "../components/JoltLogo.js";
-import { Sky } from "../components/Sky.js";
 import { LIVE_GAMES } from "../games/catalog.js";
 
 interface StatsResponse {
@@ -56,7 +55,6 @@ export function LandingPage() {
 
     return (
         <div className="landing">
-            <Sky />
 
             {/* Compact on purpose: the wordmark, four words, and then the games.
                 Anything taller pushes the only interactive thing below the fold. */}

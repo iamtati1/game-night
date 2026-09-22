@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { JoltLogo } from "./components/JoltLogo.js";
+import { Cosmos } from "./world/Cosmos.js";
+import { Icon } from "./world/Icon.js";
 import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
+import { HomePage } from "./pages/HomePage.js";
+import { JourneyPage } from "./pages/JourneyPage.js";
+import { LessonPage } from "./pages/LessonPage.js";
 import { BugHuntPage } from "./pages/BugHuntPage.js";
 import { BugHuntResultsPage } from "./pages/BugHuntResultsPage.js";
 import { FlushPage } from "./pages/FlushPage.js";
@@ -67,9 +72,39 @@ function Header() {
                 <nav>
                     {user ? (
                         <>
-                            <Link to="/">Games</Link>
-                            <Link to="/history">History</Link>
-                            <span className="muted">{user.username}</span>
+                            {/* First in the nav on purpose: the journey is the
+                                product, and the games are how it is practiced. */}
+                            {/* Three destinations, in the order a learner needs
+                                them: what now, where am I going, where do I
+                                practise. History is real but not a beginner's
+                                concern, so it sits last. */}
+                            <Link to="/" aria-label="Home">
+                                <Icon name="home" />
+                                <span className="nav-label">Home</span>
+                            </Link>
+                            <Link to="/journey" aria-label="Map">
+                                <Icon name="map" />
+                                <span className="nav-label">Map</span>
+                            </Link>
+                            <Link to="/play" aria-label="Play">
+                                <Icon name="play" />
+                                <span className="nav-label">Play</span>
+                            </Link>
+                            <Link to="/history" aria-label="Log">
+                                <Icon name="log" />
+                                <span className="nav-label">Log</span>
+                            </Link>
+
+                            {/* The pilot, set apart from the destinations by a
+                                hairline: an identity is not somewhere you can
+                                navigate to, and reading as a fifth link is what
+                                made the old nav feel like five equal choices. */}
+                            <span className="nav-pilot">
+                                <span className="nav-avatar" aria-hidden="true">
+                                    {user.username.slice(0, 1).toUpperCase()}
+                                </span>
+                                <span className="nav-name">{user.username}</span>
+                            </span>
                             {failed && (
                                 <span className="logout-error" role="alert">
                                     Could not log out — still signed in.
@@ -100,11 +135,52 @@ function Header() {
 export default function App() {
     return (
         <div className="app">
+            {/*
+                Mounted here, outside <Routes>, so it never remounts on
+                navigation. That is what makes Jolt one continuous place:
+                travelling from Home to the map to a lesson moves the content
+                while the nebulae keep drifting at exactly the phase they were
+                at. Inside the router, every route change would restart every
+                animation and turn travel into a page load.
+            */}
+            <Cosmos />
+
             <Header />
 
             <main>
                 <Routes>
-                    <Route path="/" element={<LandingPage />} />
+                    {/* Home is the front door and answers "what now?".
+                        The games grid, which used to live here, is now /play --
+                        practice for what the journey teaches. */}
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/play" element={<LandingPage />} />
+                    {/* The learning path. /journey is where a learner sees
+                        where they are; /learn/:concept is one lesson. Both
+                        behind auth, because both read and write learner state. */}
+                    <Route
+                        path="/journey"
+                        element={
+                            <ProtectedRoute>
+                                <JourneyPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/challenge/:topic"
+                        element={
+                            <ProtectedRoute>
+                                <LessonPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/learn/:concept"
+                        element={
+                            <ProtectedRoute>
+                                <LessonPage />
+                            </ProtectedRoute>
+                        }
+                    />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route
