@@ -4,6 +4,8 @@ import { api } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.js";
 import { Planet } from "../world/Planet.js";
 import { Ship } from "../world/Ship.js";
+import { WorldLandmark } from "../world/Objects.js";
+import { worldFor } from "../world/atlas.js";
 import { Icon } from "../world/Icon.js";
 import type { JourneyPathResponse } from "../api/types.js";
 
@@ -63,15 +65,18 @@ export function HomePage() {
                     the illustration needs a caption to read as an invitation,
                     it is the wrong illustration. */}
                 <div className="welcome-stage">
-                    <Planet slug="values" state="here" size={190} />
-                    <Ship size={54} rotate={18} thrusting />
+                    <Planet slug="values" state="here" size={200} />
+                    <Ship size={56} rotate={18} thrusting />
+                    <WorldLandmark kind="station" size={44} />
                 </div>
 
-                <h1 className="welcome-title">Learn JavaScript by running it.</h1>
+                <h1 className="welcome-title">
+                    Learn JavaScript by <em>making things happen</em>.
+                </h1>
 
                 <p className="welcome-lede">
-                    You do not need to know any code. You will write a little, press RUN,
-                    and watch what happens — starting from the very beginning.
+                    No experience needed. Write a line, press RUN, and find out what it
+                    does — then keep going, one small discovery at a time.
                 </p>
 
                 <Link className="button primary big welcome-start" to="/register">
@@ -142,7 +147,11 @@ export function HomePage() {
                         size={150}
                         label={currentTopic ? `${currentTopic.name}, your current world` : undefined}
                     />
-                    <Ship size={38} rotate={28} />
+                    <Ship size={40} rotate={28} />
+                    <WorldLandmark
+                        kind={worldFor(currentTopic?.slug ?? "values").landmark}
+                        size={30}
+                    />
                 </div>
             </div>
 
@@ -177,7 +186,7 @@ export function HomePage() {
                     <Icon name="map" size={17} /> See the whole map
                 </Link>
                 <Link to="/play">
-                    <Icon name="play" size={17} /> Practise with a game
+                    <Icon name="play" size={17} /> Practice with a game
                 </Link>
             </p>
         </section>

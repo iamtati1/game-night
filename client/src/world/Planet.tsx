@@ -4,24 +4,26 @@ import { worldFor, type Surface } from "./atlas.js";
 /**
  * A world, drawn.
  *
- * Real vector art rather than a coloured circle, because the difference between
- * "this is a place" and "this is a status dot" is entirely in the detail: a
- * terminator that falls across the surface, bands that curve with the sphere,
- * an atmosphere that sits slightly proud of the edge. All of it is cheap -- a
- * dozen shapes and no images -- and all of it is what makes the map feel drawn
- * rather than generated.
+ * ART DIRECTION. Bright illustrated forms, not semi-realistic rendering. The
+ * first version of this component shaded every planet from a lit hemisphere
+ * into a near-black shadow, which is how a photograph of a planet looks and is
+ * exactly why it read as sober rather than as wonderful. These are built the
+ * way an illustrator would build them: a bold saturated silhouette, flat
+ * surface shapes in two tints of the same family, one crisp bright rim of
+ * atmosphere on the lit edge, and a coloured glow around the whole body.
  *
- * LIGHT COMES FROM THE UPPER LEFT, EVERYWHERE. Every planet, the ship, and the
- * page's own halo agree on one light source. That single rule does more for
- * coherence than the palette does; break it on one body and that body looks
- * pasted in.
+ * Nothing here is desaturated toward grey and nothing fades to black. A world
+ * you have not reached yet is DIMMER and COOLER, never colourless -- a grey
+ * planet reads as a disabled button, and the whole point of the map is that the
+ * places ahead of you look worth going to.
  *
- * `state` is the learner's relationship to the topic, and it changes the art
- * rather than just adding a badge:
- *   visited  -- fully lit and saturated, a place you have been
- *   here     -- the same, plus atmosphere and a live glow
- *   ahead    -- drained toward the background, still clearly a world, but one
- *               you are seeing from a distance
+ * CHARM COMES FROM SPECIFICS. City lights on the night side of a world you have
+ * already been to, ice caps, a moon that is slightly too big, a ring at an
+ * unlikely angle. Each is a few shapes, and together they are the difference
+ * between a set of coloured circles and a set of places.
+ *
+ * Light comes from the upper left on every body here, on the craft, and on the
+ * page itself. Break that on one object and it looks pasted in.
  */
 export type PlanetState = "visited" | "here" | "ahead";
 
@@ -35,28 +37,59 @@ interface PlanetProps {
     label?: string;
 }
 
-/** Surface features, drawn inside the sphere's clip. */
-function Features({ surface, lit, dark, spin }: { surface: Surface; lit: number; dark: number; spin: number }) {
-    const light = `hsl(${lit} 85% 74%)`;
-    const shade = `hsl(${dark} 70% 44%)`;
+/**
+ * Curated palettes rather than a hue wheel.
+ *
+ * Every planet is drawn from this list, so any two that end up side by side on
+ * the map belong to the same universe. Generating hues arithmetically was the
+ * earlier approach and it produced olive and mustard planets that fought with
+ * everything around them -- the palette is the art direction, so it is authored.
+ *
+ * light  the lit face and the atmosphere rim
+ * base   the body
+ * deep   surface features and the night side
+ */
+const PALETTES: ReadonlyArray<{ light: string; base: string; deep: string }> = [
+    { light: "#8ff3fb", base: "#3fc8e4", deep: "#1d6fae" }, // cyan
+    { light: "#cbb8ff", base: "#9b7bff", deep: "#5b45b8" }, // violet
+    { light: "#ffa9ba", base: "#ff7896", deep: "#b83f68" }, // coral
+    { light: "#ffe08a", base: "#ffc35c", deep: "#d1762c" }, // warm yellow
+    { light: "#9df5cf", base: "#5fd9a8", deep: "#238a6e" }, // mint
+    { light: "#ffc9a6", base: "#ff9f73", deep: "#c25a42" }, // peach
+    { light: "#a8c8ff", base: "#6d9bff", deep: "#3355c4" }, // bright blue
+    { light: "#e0c9ff", base: "#c0a0ff", deep: "#7a56cc" }  // lavender
+];
 
+/** Surface features, drawn inside the sphere's clip. Flat shapes, two tints. */
+function Features({
+    surface,
+    light,
+    deep,
+    spin
+}: {
+    surface: Surface;
+    light: string;
+    deep: string;
+    spin: number;
+}) {
     if (surface === "banded") {
-        // Gas giant. Ellipses wider than the sphere so they read as latitude
-        // bands wrapping it rather than as stripes laid on top.
+        // Gas giant. Ellipses wider than the sphere, so they read as latitude
+        // bands wrapping it rather than as stripes laid across it.
         return (
-            <g opacity="0.55">
-                <ellipse cx="50" cy="32" rx="58" ry="7" fill={light} opacity="0.5" />
-                <ellipse cx="50" cy="48" rx="58" ry="10" fill={shade} opacity="0.55" />
-                <ellipse cx="50" cy="66" rx="58" ry="6" fill={light} opacity="0.4" />
-                <ellipse cx="50" cy="78" rx="58" ry="8" fill={shade} opacity="0.4" />
-                <ellipse cx="62" cy="48" rx="9" ry="4" fill={light} opacity="0.75" />
+            <g>
+                <ellipse cx="50" cy="30" rx="58" ry="6" fill={light} opacity="0.55" />
+                <ellipse cx="50" cy="46" rx="58" ry="9" fill={deep} opacity="0.4" />
+                <ellipse cx="50" cy="64" rx="58" ry="5" fill={light} opacity="0.45" />
+                <ellipse cx="50" cy="76" rx="58" ry="7" fill={deep} opacity="0.32" />
+                {/* The storm. Every gas giant gets one, and it is the detail
+                    that makes it a particular planet rather than a striped ball. */}
+                <ellipse cx="63" cy="46" rx="10" ry="4.5" fill={light} opacity="0.9" />
+                <ellipse cx="63" cy="46" rx="5" ry="2" fill="#fff" opacity="0.5" />
             </g>
         );
     }
 
     if (surface === "cratered") {
-        // Rocky. Each crater is a lit rim plus an offset shadow -- two circles,
-        // and the offset is what makes it read as a dish rather than a dot.
         const craters: ReadonlyArray<[number, number, number]> = [
             [36, 34, 9],
             [62, 58, 12],
@@ -69,8 +102,10 @@ function Features({ surface, lit, dark, spin }: { surface: Surface; lit: number;
             <g transform={`rotate(${spin} 50 50)`}>
                 {craters.map(([cx, cy, r], i) => (
                     <g key={i}>
-                        <circle cx={cx} cy={cy} r={r} fill={shade} opacity="0.5" />
-                        <circle cx={cx - r * 0.18} cy={cy - r * 0.18} r={r * 0.82} fill={light} opacity="0.22" />
+                        <circle cx={cx} cy={cy} r={r} fill={deep} opacity="0.42" />
+                        {/* A bright rim on the upper left of each dish, matching
+                            the page's light. Without it a crater is just a dot. */}
+                        <circle cx={cx - r * 0.2} cy={cy - r * 0.2} r={r * 0.78} fill={light} opacity="0.3" />
                     </g>
                 ))}
             </g>
@@ -78,64 +113,71 @@ function Features({ surface, lit, dark, spin }: { surface: Surface; lit: number;
     }
 
     if (surface === "oceanic") {
-        // Continents. Deliberately irregular hand-set paths: anything symmetric
-        // reads as a logo.
+        // Continents. Deliberately irregular hand-set paths -- anything
+        // symmetric reads as a logo rather than as land.
         return (
-            <g transform={`rotate(${spin} 50 50)`} opacity="0.6">
+            <g transform={`rotate(${spin} 50 50)`}>
                 <path
                     d="M22 44c8-9 18-4 25-9s16-2 18 5-6 12-14 11-12 5-19 2-14-3-10-9Z"
                     fill={light}
+                    opacity="0.85"
                 />
-                <path d="M54 68c6-5 16-3 20 3s-3 12-11 11-15-8-9-14Z" fill={light} opacity="0.8" />
-                <path d="M30 76c4-4 11-2 12 3s-5 8-10 6-6-6-2-9Z" fill={light} opacity="0.6" />
+                <path d="M54 68c6-5 16-3 20 3s-3 12-11 11-15-8-9-14Z" fill={light} opacity="0.7" />
+                <path d="M30 76c4-4 11-2 12 3s-5 8-10 6-6-6-2-9Z" fill={light} opacity="0.55" />
+                {/* Ice caps. Two small arcs, and they do more to make a world
+                    look inhabitable than the continents do. */}
+                <ellipse cx="50" cy="10" rx="17" ry="6" fill="#fff" opacity="0.72" />
+                <ellipse cx="50" cy="90" rx="13" ry="5" fill="#fff" opacity="0.6" />
             </g>
         );
     }
 
-    // Swirled. One spiral storm, offset from centre so the sphere still reads
-    // as turning.
+    // Swirled. One spiral storm system, offset from centre so the body still
+    // reads as turning rather than as a target.
     return (
-        <g transform={`rotate(${spin} 50 50)`} opacity="0.5">
+        <g transform={`rotate(${spin} 50 50)`}>
             <path
                 d="M58 34c14 4 20 18 14 30s-24 16-34 7"
                 fill="none"
                 stroke={light}
-                strokeWidth="7"
+                strokeWidth="8"
                 strokeLinecap="round"
+                opacity="0.75"
             />
             <path
                 d="M52 46c7 1 10 8 7 14s-12 7-16 2"
                 fill="none"
-                stroke={shade}
+                stroke={deep}
                 strokeWidth="5"
                 strokeLinecap="round"
+                opacity="0.55"
             />
-            <ellipse cx="34" cy="30" rx="16" ry="5" fill={light} opacity="0.5" />
+            <ellipse cx="34" cy="28" rx="17" ry="5" fill={light} opacity="0.5" />
         </g>
     );
 }
 
 export function Planet({ slug, state, size = 84, label }: PlanetProps) {
     const world = worldFor(slug);
-    // Scoped so two planets on one page cannot share a clip path or a gradient.
     const uid = useId().replace(/:/g, "");
 
-    const body = `body-${uid}`;
-    const clip = `clip-${uid}`;
-    const glow = `glow-${uid}`;
-    const term = `term-${uid}`;
+    const body = `b-${uid}`;
+    const clip = `c-${uid}`;
+    const glow = `g-${uid}`;
+    const rim = `r-${uid}`;
 
-    // Distance drains saturation and lightness rather than applying opacity to
-    // the whole group: a semi-transparent planet lets the starfield show through
-    // its own surface, which immediately breaks the illusion of a solid body.
+    const palette = PALETTES[world.paletteIndex % PALETTES.length]!;
     const ahead = state === "ahead";
-    const sat = ahead ? 22 : 82;
-    const lum = ahead ? 38 : 66;
+
+    // Distance dims and cools; it never drains to grey. Applied as an opacity on
+    // the whole body group plus a cool overlay, rather than by desaturating the
+    // palette -- a greyed-out planet reads as a disabled control.
+    const bodyOpacity = ahead ? 0.5 : 1;
 
     return (
         <svg
             className={`planet is-${state}`}
-            viewBox="-22 -22 144 144"
+            viewBox="-24 -24 148 148"
             width={size}
             height={size}
             role={label ? "img" : "presentation"}
@@ -147,96 +189,129 @@ export function Planet({ slug, state, size = 84, label }: PlanetProps) {
                     <circle cx="50" cy="50" r="42" />
                 </clipPath>
 
-                {/* The body itself. Light upper-left, terminator falling to the
-                    lower right, and a hue shift into shadow rather than a fade
-                    to black. */}
-                <radialGradient id={body} cx="33%" cy="28%" r="78%">
-                    <stop offset="0%" stopColor={`hsl(${world.lit} ${sat}% ${lum + 16}%)`} />
-                    <stop offset="46%" stopColor={`hsl(${world.lit} ${sat}% ${lum}%)`} />
-                    <stop offset="82%" stopColor={`hsl(${world.dark} ${sat - 8}% ${lum - 26}%)`} />
-                    <stop offset="100%" stopColor={`hsl(${world.dark} ${sat - 12}% ${lum - 36}%)`} />
+                {/* Two stops, both bright. The body is lit from the upper left
+                    and deepens into colour, never into black. */}
+                <radialGradient id={body} cx="34%" cy="28%" r="82%">
+                    <stop offset="0%" stopColor={palette.light} />
+                    <stop offset="52%" stopColor={palette.base} />
+                    <stop offset="100%" stopColor={palette.deep} />
                 </radialGradient>
 
-                {/* Atmosphere. Strongest just outside the limb, gone by the edge
-                    of the box -- a uniform halo reads as a glow filter, this
-                    reads as air. */}
-                {/* The terminator. Soft-edged on purpose: a solid shape here
-                    lands as a hard crescent drawn across the surface, which
-                    reads as a wedge rather than as the body turning away from
-                    the light. The falloff is what sells it as curvature. */}
-                <radialGradient id={term} cx="26%" cy="22%" r="86%">
-                    <stop offset="38%" stopColor={`hsl(${world.dark} 60% 10%)`} stopOpacity="0" />
-                    <stop offset="72%" stopColor={`hsl(${world.dark} 60% 10%)`} stopOpacity="0.3" />
-                    <stop offset="100%" stopColor={`hsl(${world.dark} 65% 7%)`} stopOpacity="0.62" />
-                </radialGradient>
-
+                {/* Atmosphere: strongest just outside the limb, gone by the edge
+                    of the box. A uniform halo reads as a glow filter; this reads
+                    as air. */}
                 <radialGradient id={glow} cx="50%" cy="50%" r="50%">
-                    <stop offset="62%" stopColor={`hsl(${world.lit} 90% 68%)`} stopOpacity="0" />
-                    <stop offset="80%" stopColor={`hsl(${world.lit} 90% 68%)`} stopOpacity={ahead ? 0.1 : 0.34} />
-                    <stop offset="100%" stopColor={`hsl(${world.lit} 90% 68%)`} stopOpacity="0" />
+                    <stop offset="58%" stopColor={palette.light} stopOpacity="0" />
+                    <stop offset="76%" stopColor={palette.light} stopOpacity={ahead ? 0.14 : 0.42} />
+                    <stop offset="100%" stopColor={palette.light} stopOpacity="0" />
+                </radialGradient>
+
+                {/* The rim light: a bright crescent hugging the lit edge. This
+                    one detail does more than anything else to make a flat disc
+                    read as a sphere. */}
+                <radialGradient id={rim} cx="50%" cy="50%" r="50%">
+                    <stop offset="86%" stopColor="#fff" stopOpacity="0" />
+                    <stop offset="100%" stopColor="#fff" stopOpacity="0.9" />
                 </radialGradient>
             </defs>
 
-            {/* Back half of the ring, drawn before the body so the planet
-                occludes it. Drawing a whole ellipse on top is the giveaway that
-                a ring is a decoration rather than a ring. */}
+            {/* Back half of the ring, so the planet occludes it. Drawing a whole
+                ellipse on top is the giveaway that a ring is a decoration. */}
             {world.ring && (
-                <g transform={`rotate(${world.tilt} 50 50)`}>
+                <g transform={`rotate(${world.tilt} 50 50)`} opacity={bodyOpacity}>
                     <path
-                        d="M 8 50 A 42 13 0 0 1 92 50"
+                        d="M 4 50 A 46 14 0 0 1 96 50"
                         fill="none"
-                        stroke={`hsl(${world.lit} ${sat}% ${lum + 6}%)`}
+                        stroke={palette.light}
                         strokeWidth="5"
-                        opacity={ahead ? 0.3 : 0.75}
+                        opacity="0.6"
+                        strokeLinecap="round"
                     />
                 </g>
             )}
 
-            <circle cx="50" cy="50" r="58" fill={`url(#${glow})`} />
-            <circle cx="50" cy="50" r="42" fill={`url(#${body})`} />
+            <circle cx="50" cy="50" r="60" fill={`url(#${glow})`} />
 
-            <g clipPath={`url(#${clip})`} opacity={ahead ? 0.45 : 1}>
-                <Features surface={world.surface} lit={world.lit} dark={world.dark} spin={world.spin} />
+            <g opacity={bodyOpacity}>
+                <circle cx="50" cy="50" r="42" fill={`url(#${body})`} />
 
-                {/* Laid over the features, so the surface falls into shadow
-                    with the body rather than staying lit inside it. */}
-                <circle cx="50" cy="50" r="42" fill={`url(#${term})`} />
+                <g clipPath={`url(#${clip})`}>
+                    <Features
+                        surface={world.surface}
+                        light={palette.light}
+                        deep={palette.deep}
+                        spin={world.spin}
+                    />
+
+                    {/* Night side. A soft wash of the palette's own deep tone at
+                        low opacity -- enough to turn the sphere, nowhere near
+                        enough to make it dark. */}
+                    <circle cx="82" cy="84" r="54" fill={palette.deep} opacity="0.3" />
+
+                    {/* City lights, on worlds you have already been to. The
+                        single most charming detail in the set, and it is four
+                        dots: somebody lives there now because you went. */}
+                    {state === "visited" && (
+                        <g opacity="0.85">
+                            <circle cx="72" cy="66" r="1.6" fill="#ffe9a8" />
+                            <circle cx="78" cy="72" r="1.2" fill="#ffe9a8" />
+                            <circle cx="68" cy="76" r="1.4" fill="#ffd166" />
+                            <circle cx="80" cy="60" r="1" fill="#ffe9a8" />
+                        </g>
+                    )}
+                </g>
+
+                {/* Rim light and specular, drawn last so nothing sits over them. */}
+                <circle cx="50" cy="50" r="42" fill={`url(#${rim})`} opacity={ahead ? 0.3 : 0.65} />
+                <ellipse
+                    cx="34"
+                    cy="30"
+                    rx="12"
+                    ry="8"
+                    fill="#fff"
+                    opacity={ahead ? 0.12 : 0.34}
+                    transform="rotate(-24 34 30)"
+                />
             </g>
 
             {/* Front half of the ring. */}
             {world.ring && (
-                <g transform={`rotate(${world.tilt} 50 50)`}>
+                <g transform={`rotate(${world.tilt} 50 50)`} opacity={bodyOpacity}>
                     <path
-                        d="M 8 50 A 42 13 0 0 0 92 50"
+                        d="M 4 50 A 46 14 0 0 0 96 50"
                         fill="none"
-                        stroke={`hsl(${world.lit} ${sat}% ${lum + 14}%)`}
-                        strokeWidth="6"
-                        opacity={ahead ? 0.36 : 0.95}
+                        stroke={palette.light}
+                        strokeWidth="6.5"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M 4 50 A 46 14 0 0 0 96 50"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="2"
+                        opacity="0.5"
+                        strokeLinecap="round"
                     />
                 </g>
             )}
 
-            {/* A specular highlight where the light actually hits. Small, and
-                the last thing drawn. */}
-            <ellipse
-                cx="34"
-                cy="30"
-                rx="11"
-                ry="8"
-                fill="white"
-                opacity={ahead ? 0.06 : 0.2}
-                transform="rotate(-24 34 30)"
-            />
-
             {Array.from({ length: world.moons }, (_, i) => (
-                <circle
-                    key={i}
-                    cx={i === 0 ? 96 : 6}
-                    cy={i === 0 ? 24 : 78}
-                    r={i === 0 ? 6 : 4.5}
-                    fill={`hsl(${world.lit} ${Math.max(10, sat - 40)}% ${lum + 18}%)`}
-                    opacity={ahead ? 0.35 : 0.9}
-                />
+                <g key={i} opacity={bodyOpacity}>
+                    <circle
+                        cx={i === 0 ? 98 : 4}
+                        cy={i === 0 ? 22 : 80}
+                        r={i === 0 ? 7 : 5}
+                        fill={palette.light}
+                    />
+                    {/* One crater, so the moon is a little body rather than a dot. */}
+                    <circle
+                        cx={i === 0 ? 100 : 5.5}
+                        cy={i === 0 ? 24 : 82}
+                        r={i === 0 ? 2.4 : 1.8}
+                        fill={palette.deep}
+                        opacity="0.45"
+                    />
+                </g>
             ))}
         </svg>
     );

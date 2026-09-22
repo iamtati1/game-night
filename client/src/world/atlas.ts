@@ -33,32 +33,27 @@ function hash(slug: string): number {
 }
 
 /**
- * The palette walk. Each entry is a hue pair: the lit side and the shadow side.
- * Keeping shadow as its own hue rather than a darkened copy of the light is what
- * stops every planet reading as "a circle with a gradient" -- real bodies shift
- * hue into shadow, they do not just lose brightness.
+ * How many authored palettes Planet.tsx offers. Kept here so the atlas can pick
+ * one without importing the component (which would make the art direction and
+ * the geometry circularly dependent).
  */
-const HUES: ReadonlyArray<{ lit: number; dark: number }> = [
-    { lit: 178, dark: 202 }, // teal into deep cyan
-    { lit: 262, dark: 250 }, // violet into indigo
-    { lit: 322, dark: 288 }, // magenta into purple
-    { lit: 42, dark: 18 },   // gold into amber
-    { lit: 8, dark: 338 },   // coral into rose
-    { lit: 152, dark: 186 }, // spring green into teal
-    { lit: 218, dark: 244 }, // sky into indigo
-    { lit: 288, dark: 316 }  // orchid into magenta
-];
+const PALETTE_COUNT = 8;
 
 /** What a planet's surface is made of. Purely a drawing instruction. */
 export type Surface = "banded" | "cratered" | "oceanic" | "swirled";
 
 const SURFACES: readonly Surface[] = ["banded", "cratered", "oceanic", "swirled"];
 
+/** A structure that marks a destination as somewhere people go. */
+export type Landmark = "station" | "beacon" | "arch" | "none";
+
+const LANDMARKS: readonly Landmark[] = ["station", "beacon", "arch", "none", "beacon", "none"];
+
 export interface World {
-    /** Hue of the lit hemisphere, in degrees. */
-    readonly lit: number;
-    /** Hue of the shadowed hemisphere, in degrees. */
-    readonly dark: number;
+    /** Index into the authored palette list in Planet.tsx. */
+    readonly paletteIndex: number;
+    /** What is built at this destination, if anything. */
+    readonly landmark: Landmark;
     /** How the surface is drawn. */
     readonly surface: Surface;
     /** Whether the body carries a ring system. */
@@ -81,11 +76,9 @@ export function worldFor(slug: string): World {
 
     // Each property reads a different slice of the hash. Reusing one slice for
     // two properties correlates them -- every ringed planet would also be gold.
-    const hue = HUES[h % HUES.length]!;
-
     return {
-        lit: hue.lit,
-        dark: hue.dark,
+        paletteIndex: h % PALETTE_COUNT,
+        landmark: LANDMARKS[(h >>> 23) % LANDMARKS.length]!,
         surface: SURFACES[(h >>> 3) % SURFACES.length]!,
         // Roughly a third of bodies. Rings are the loudest feature here, so they
         // have to stay rare enough to still read as special on a map of sixteen.

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { JoltLogo } from "./components/JoltLogo.js";
 import { Cosmos } from "./world/Cosmos.js";
 import { Icon } from "./world/Icon.js";
@@ -76,7 +76,7 @@ function Header() {
                                 product, and the games are how it is practiced. */}
                             {/* Three destinations, in the order a learner needs
                                 them: what now, where am I going, where do I
-                                practise. History is real but not a beginner's
+                                practice. History is real but not a beginner's
                                 concern, so it sits last. */}
                             <Link to="/" aria-label="Home">
                                 <Icon name="home" />
@@ -133,6 +133,10 @@ function Header() {
 }
 
 export default function App() {
+    // Read once, at the top of the component, rather than inline in the JSX.
+    // A hook buried in an attribute is legal but it hides the dependency.
+    const { pathname } = useLocation();
+
     return (
         <div className="app">
             {/*
@@ -147,7 +151,14 @@ export default function App() {
 
             <Header />
 
-            <main>
+            {/*
+                Keyed on the path so each route mounts fresh and replays its
+                arrival animation. The Cosmos above is deliberately OUTSIDE
+                this, so the sky holds its phase while the content moves --
+                that difference is what makes navigating feel like travelling
+                rather than like loading a new document.
+            */}
+            <main className="route" key={pathname}>
                 <Routes>
                     {/* Home is the front door and answers "what now?".
                         The games grid, which used to live here, is now /play --

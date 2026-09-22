@@ -2,24 +2,29 @@
    JOLT — THE WORLD LAYER
    ============================================================================
 
-   A bright illustrated coding universe. Childlike in its wonder, adult in its
+   A bright, illustrated coding universe. Childlike in its wonder, adult in its
    craft.
 
-   HOW THIS FILE RELATES TO index.css. It is imported after it, and it is
-   deliberately not a rewrite of it. index.css is ~7,400 lines of working game
-   UI; rewriting that wholesale to change the look would risk every game screen
-   to redesign four. Instead this file redefines the TOKENS that index.css
-   already reads -- so recolouring `--bg`, `--text` and `--accent` here re-skins
-   every existing screen for free -- and then fully owns the surfaces this
-   redesign is actually about: the shell, the navigation, buttons, Home, the
-   Journey and the lesson space.
+   HOW THIS RELATES TO index.css. Imported after it, and deliberately not a
+   rewrite of it: index.css is ~7,000 lines of working game UI, and rewriting it
+   to change the look would risk every game screen in order to redesign four.
+   This file redefines the TOKENS index.css already reads -- so recolouring the
+   palette here re-skins all five games for free -- and then fully owns the
+   shell, Home, the map, the lesson and the arrival.
 
-   Read it as five layers:
-     1  palette and type tokens
-     2  the cosmos
-     3  the shell: navigation and buttons
-     4  the destinations: Home, Journey, lesson
-     5  motion, and turning all of it off
+   TWO CORRECTIONS THIS VERSION MAKES, both from the design brief:
+
+   1. NO GLASSMORPHISM. The previous pass leaned on backdrop-filter for the nav,
+      the panels and the lesson deck. Every surface was a frosted pane, which is
+      both a listed non-goal and the reason the whole thing read as "dark app
+      with a space wallpaper" rather than as a place. Surfaces here are either
+      SOLID and lit, or they are not surfaces at all -- most content now sits
+      directly in space with spacing doing the work a card used to do.
+
+   2. LUMINOUS, NOT DARK. The base moved from near-black to a deep blue-violet
+      with real colour in it, and the accents are a full illustrated palette --
+      cyan, lavender, mint, peach, coral, warm yellow -- rather than one accent
+      on grey. Space photographed honestly is not black.
    ========================================================================= */
 
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=Outfit:wght@300..700&display=swap");
@@ -27,127 +32,127 @@
 /* ---------------------------------------------------------------- 1. tokens */
 
 :root {
-    /* ---- the void ----------------------------------------------------------
-       The single biggest change in this redesign. The old base was #08090d --
-       near-black, effectively an absence. Space photographed honestly is not
-       black; it is deep violet-blue with colour in it. These three are the
-       ground, and every one of them is a hue, not a grey. */
-    --void: #10143a;
-    --void-2: #191a52;
-    --void-3: #241a63;
+    /* ---- the ground --------------------------------------------------------
+       Deep blue-violet, and every one of these is a hue rather than a grey.
+       The brief's phrase for the target was "beautiful illustrated night sky",
+       and a night sky is blue. */
+    --void: #141a52;
+    --void-deep: #0e1240;
+    --void-lift: #232a72;
+    --void-high: #313a94;
 
-    /* Surfaces float ON the void and are tinted by it, never neutral grey. */
-    --bg: #10143a;
-    --surface: #1b2050cc;
-    --surface-2: #262a6bcc;
-    --border: #414897;
+    --bg: #141a52;
+    /* Raised surfaces are SOLID. No blur, no transparency stack. */
+    --surface: #1f2668;
+    --surface-2: #2a3282;
+    --border: #4a54ad;
+    --hairline: #ffffff1f;
 
     /* ---- the palette -------------------------------------------------------
-       Five hues, and they mean things. Teal is Jolt itself and every affordance
-       that moves you forward. Magenta is energy and reward. Gold is achievement
-       and nothing else -- spending it on decoration is what makes a reward stop
-       reading as one. Violet is the ambient world. Coral is only ever error. */
-    --jolt: #3ddbd9;
-    --jolt-deep: #17a5b8;
-    --magenta: #ff6ec7;
-    --gold: #ffcb47;
-    --violet: #a78bfa;
-    --coral: #ff7a6b;
+       Eight colours, and they have jobs. Cyan is Jolt and every affordance that
+       moves you forward. Warm yellow is achievement, and is spent almost
+       nowhere else -- gold used as decoration stops reading as a reward.
+       Mint is correct, coral is wrong. Lavender, blue and peach are the world:
+       they colour the sky and the planets and never the controls. */
+    --cyan: #5ee7f0;
+    --cyan-deep: #22a9c4;
+    --blue: #6d9bff;
+    --lavender: #b9a7ff;
+    --violet: #9b7bff;
+    --mint: #6ee7b7;
+    --yellow: #ffd166;
+    --peach: #ffb08a;
+    --coral: #ff8098;
 
-    --accent: #3ddbd9;
-    --accent-soft: #3ddbd933;
-    --jolt-2: #ff6ec7;
+    --accent: #5ee7f0;
+    --accent-soft: #5ee7f033;
+    --jolt: #5ee7f0;
+    --jolt-2: #ff8098;
 
-    /* Text sits on a bright ground, so it can afford to be genuinely white at
-       the top of the hierarchy and still have three legible steps below it. */
-    --text: #f2f4ff;
-    --text-2: #c3c8f0;
-    --muted: #9098d0;
-    --dim: #6b73ae;
+    /* Warm white rather than pure white: on a blue ground, a cold white reads
+       as clinical and a warm one reads as lamplight. */
+    --text: #f6f3ff;
+    --text-2: #cfd0f5;
+    --muted: #9fa2dd;
+    --dim: #6f74b8;
 
-    --correct: #4ade80;
-    --incorrect: #ff7a6b;
-    --warn: #ffcb47;
+    --correct: #6ee7b7;
+    --incorrect: #ff8098;
+    --warn: #ffd166;
 
-    /* Per-game accents, re-tuned to the brighter ground. The old values were
-       mixed for a near-black background and go muddy on violet. */
-    --blitz: #a78bfa;
-    --flush: #ffb347;
-    --reaction: #3ddbd9;
-    --memory: #c4a2ff;
-    --bughunt: #ff8a4c;
+    /* Per-game accents, retuned for the brighter ground. */
+    --blitz: #b9a7ff;
+    --flush: #ffb86b;
+    --reaction: #5ee7f0;
+    --memory: #d4b8ff;
+    --bughunt: #ffb08a;
 
     /* ---- type --------------------------------------------------------------
-       Three faces, three jobs, and a real reason for each.
-
        Fraunces  display. A variable serif with SOFT and WONK axes -- literally
-                 designed to be able to soften and to go slightly wrong. Set
-                 soft and a little wonky, it carries wonder; set at low optical
-                 size it is still a sober serif. That range is exactly the brief:
-                 childlike, not childish. A rounded sans would have landed on
-                 childish, and a geometric sans on generic.
-       Outfit    UI. Geometric, open apertures, friendly without being a toy.
-                 Everything you operate rather than read.
-       JetBrains Mono  every character of JavaScript, unchanged. It
-                 disambiguates 1/l/I and 0/O, which matters when a lesson turns
-                 on "5" versus 5. */
+                 built to soften and to go slightly wrong. Set soft and a little
+                 wonky it carries wonder; at low optical size it is still a
+                 sober serif. That range is the brief exactly: childlike, not
+                 childish. A rounded sans would have landed on childish and a
+                 geometric sans on generic.
+       Outfit    UI. Geometric, open, friendly without being a toy. Everything
+                 you operate rather than read.
+       JetBrains Mono  every character of JavaScript. It disambiguates 1/l/I and
+                 0/O, which matters when a lesson turns on "5" versus 5. */
     --display: "Fraunces", "Iowan Old Style", Georgia, serif;
     --ui: "Outfit", "Inter", system-ui, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-    /* Display type is set soft and slightly wonky. This one declaration is most
-       of the personality of the redesign. */
     --display-soft: "SOFT" 60, "WONK" 1;
 
-    /* A fifth-based scale. Named by role, not by size, so a heading that needs
-       to be smaller changes role rather than picking a number. */
-    --t-hero: clamp(2.6rem, 7vw, 4.6rem);
-    --t-title: clamp(1.9rem, 4vw, 2.9rem);
-    --t-section: 1.35rem;
+    --t-hero: clamp(1.95rem, 7vw, 5rem);
+    --t-title: clamp(1.6rem, 4.5vw, 3.2rem);
+    --t-section: 1.4rem;
     --t-body: 1.0625rem;
     --t-small: 0.9375rem;
     --t-label: 0.75rem;
 
-    --radius: 16px;
-    --radius-sm: 10px;
-    --radius-lg: 26px;
+    --radius: 18px;
+    --radius-sm: 11px;
+    --radius-lg: 28px;
     --radius-pill: 999px;
 
-    /* Elevation in a world with one light source is a warm rim from above plus
-       a cool cast below -- not a grey blur in every direction. */
-    --lift: 0 1px 0 rgb(255 255 255 / 0.14) inset, 0 10px 30px -12px rgb(6 8 34 / 0.8);
-    --lift-lg: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 26px 60px -20px rgb(6 8 34 / 0.9);
+    /* Elevation under one light source is a warm rim above plus a coloured cast
+       below -- never a grey blur in every direction. */
+    --lift: 0 1px 0 #ffffff26 inset, 0 12px 32px -14px #05072acc;
+    --lift-lg: 0 1px 0 #ffffff33 inset, 0 30px 70px -24px #05072ae6;
+
+    --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 /* ---------------------------------------------------------------- base ---- */
 
-html {
-    background: var(--void);
-}
+html { background: var(--void-deep); }
 
 body {
-    /* The ground is a vertical journey in itself: violet at the top where the
-       light is, deepening to indigo at the foot of the page. Fixed attachment
-       so it belongs to the window rather than to the document -- a scrolling
-       gradient on a long Journey page visibly bands. */
+    /* The ground is a journey in itself: violet overhead where the light is,
+       deepening to indigo at the foot of the page. Fixed attachment, so it
+       belongs to the window rather than to the document -- a scrolling gradient
+       on a long map visibly bands. */
     background:
-        radial-gradient(120% 70% at 50% -10%, var(--void-3) 0%, transparent 62%),
-        radial-gradient(90% 60% at 85% 8%, #2a1a66 0%, transparent 55%),
-        linear-gradient(178deg, var(--void-2) 0%, var(--void) 55%, #0c1030 100%);
+        radial-gradient(115% 62% at 50% -8%, #3b2f9e 0%, transparent 58%),
+        radial-gradient(85% 55% at 88% 12%, #2f5bb5 0%, transparent 52%),
+        radial-gradient(70% 50% at 8% 34%, #46277f 0%, transparent 55%),
+        linear-gradient(176deg, #1b2166 0%, var(--void) 48%, var(--void-deep) 100%);
     background-attachment: fixed;
     color: var(--text);
     font-family: var(--ui);
     font-size: var(--t-body);
-    line-height: 1.6;
+    line-height: 1.62;
     -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .journey-title, .home-topic, .welcome-title {
+h1, h2, h3,
+.journey-title, .home-topic, .welcome-title {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
     font-weight: 600;
     letter-spacing: -0.015em;
-    line-height: 1.08;
+    line-height: 1.06;
     text-wrap: balance;
 }
 
@@ -164,61 +169,62 @@ code, pre, .mono { font-family: var(--mono); }
     contain: strict;
 }
 
-/* Nebulae. Enormous, heavily blurred, and at low opacity -- the blur radius is
-   doing the work, so these read as cloud rather than as three coloured circles.
-   Each drifts on its own long period. */
+/* Nebulae. Enormous, heavily blurred, low opacity -- the blur radius does the
+   work, so these read as cloud rather than as three coloured circles. Each
+   drifts on its own long period, and no two periods share a factor, so the sky
+   never returns to an arrangement you have seen. */
 .cosmos-nebula {
     position: absolute;
     border-radius: 50%;
-    filter: blur(80px);
+    filter: blur(90px);
     will-change: transform;
 }
 
 .cosmos-nebula-violet {
-    top: -16vh;
-    left: -10vw;
-    width: 62vw;
-    height: 62vw;
-    background: radial-gradient(circle, rgb(138 92 246 / 0.42), transparent 66%);
+    top: -18vh;
+    left: -12vw;
+    width: 66vw;
+    height: 66vw;
+    background: radial-gradient(circle, #8b5cf680, transparent 66%);
     animation: drift-a 64s ease-in-out infinite;
 }
 
 .cosmos-nebula-teal {
-    top: 34vh;
-    right: -18vw;
-    width: 54vw;
-    height: 54vw;
-    background: radial-gradient(circle, rgb(61 219 217 / 0.24), transparent 66%);
+    top: 30vh;
+    right: -20vw;
+    width: 58vw;
+    height: 58vw;
+    background: radial-gradient(circle, #3fc8e459, transparent 66%);
     animation: drift-b 81s ease-in-out infinite;
 }
 
 .cosmos-nebula-magenta {
-    bottom: -24vh;
-    left: 18vw;
-    width: 58vw;
-    height: 58vw;
-    background: radial-gradient(circle, rgb(255 110 199 / 0.22), transparent 66%);
+    bottom: -26vh;
+    left: 14vw;
+    width: 62vw;
+    height: 62vw;
+    background: radial-gradient(circle, #ff789651, transparent 66%);
     animation: drift-c 97s ease-in-out infinite;
 }
 
 /* The galactic plane. One soft diagonal band; it gives the sky an up and a
-   down, which a uniform scatter of stars does not have. */
+   down, which a uniform scatter of stars has not got. */
 .cosmos-band {
     position: absolute;
-    top: 18%;
+    top: 16%;
     left: -20%;
     width: 140%;
-    height: 46%;
+    height: 48%;
     transform: rotate(-11deg);
     background: linear-gradient(
         180deg,
         transparent,
-        rgb(196 206 255 / 0.05) 34%,
-        rgb(214 224 255 / 0.09) 50%,
-        rgb(196 206 255 / 0.05) 66%,
+        #cdd8ff14 34%,
+        #e4ecff24 50%,
+        #cdd8ff14 66%,
         transparent
     );
-    filter: blur(22px);
+    filter: blur(24px);
 }
 
 .cosmos-stars {
@@ -229,10 +235,10 @@ code, pre, .mono { font-family: var(--mono); }
 }
 
 /* Hand-placed, never generated from a loop. Anything produced by a repeating
-   tile lands on a lattice and the eye finds a lattice instantly -- that is the
-   whole difference between a sky and starfield wallpaper. */
+   tile lands on a lattice, and the eye finds a lattice immediately -- that is
+   the whole difference between a sky and starfield wallpaper. */
 .cosmos-stars-far {
-    opacity: 0.55;
+    opacity: 0.6;
     animation: parallax-far 240s linear infinite;
     background-image:
         radial-gradient(1px 1px at 15% 34%, #fff9, transparent),
@@ -258,19 +264,20 @@ code, pre, .mono { font-family: var(--mono); }
 }
 
 /* The mid layer carries the palette. A sky of purely white points reads as
-   monochrome no matter how colourful the nebulae behind it are. */
+   monochrome however colourful the nebulae behind it are. */
 .cosmos-stars-mid {
-    opacity: 0.8;
+    opacity: 0.85;
     animation: parallax-mid 160s linear infinite;
     background-image:
         radial-gradient(1.6px 1.6px at 17% 27%, #ffffffcc, transparent),
         radial-gradient(1.6px 1.6px at 72% 12%, #ffffffb3, transparent),
-        radial-gradient(2px 2px at 88% 44%, #3ddbd9cc, transparent),
+        radial-gradient(2.2px 2.2px at 88% 44%, #5ee7f0dd, transparent),
         radial-gradient(1.6px 1.6px at 29% 58%, #ffffff99, transparent),
         radial-gradient(1.6px 1.6px at 58% 76%, #ffffff8c, transparent),
-        radial-gradient(2px 2px at 9% 88%, #a78bfacc, transparent),
+        radial-gradient(2.2px 2.2px at 9% 88%, #b9a7ffdd, transparent),
         radial-gradient(1.6px 1.6px at 43% 4%, #ffffff8c, transparent),
-        radial-gradient(2px 2px at 36% 66%, #ff6ec7aa, transparent),
+        radial-gradient(2.2px 2.2px at 36% 66%, #ff8098c4, transparent),
+        radial-gradient(2px 2px at 64% 28%, #ffd166b3, transparent),
         radial-gradient(1.6px 1.6px at 94% 63%, #ffffff80, transparent);
 }
 
@@ -280,10 +287,10 @@ code, pre, .mono { font-family: var(--mono); }
     opacity: 0.95;
     animation: twinkle 7s ease-in-out infinite;
     background-image:
-        radial-gradient(2.6px 2.6px at 21% 22%, #ffffff, transparent),
-        radial-gradient(2.4px 2.4px at 66% 34%, #ffe9a8, transparent),
-        radial-gradient(2.8px 2.8px at 82% 78%, #bfefff, transparent),
-        radial-gradient(2.2px 2.2px at 38% 88%, #ffffff, transparent);
+        radial-gradient(2.8px 2.8px at 21% 22%, #ffffff, transparent),
+        radial-gradient(2.6px 2.6px at 66% 34%, #ffe9a8, transparent),
+        radial-gradient(3px 3px at 82% 78%, #bfefff, transparent),
+        radial-gradient(2.4px 2.4px at 38% 88%, #ffffff, transparent);
 }
 
 .cosmos-dust { position: absolute; inset: 0; }
@@ -294,62 +301,66 @@ code, pre, .mono { font-family: var(--mono); }
     height: 3px;
     border-radius: 50%;
     background: #fff;
-    opacity: 0.3;
+    opacity: 0.32;
     will-change: transform;
 }
 
 .cosmos-mote-1 { top: 72%; left: 12%; animation: rise 28s linear infinite; }
-.cosmos-mote-2 { top: 88%; left: 34%; background: var(--jolt); animation: rise 37s linear 4s infinite; }
+.cosmos-mote-2 { top: 88%; left: 34%; background: var(--cyan); animation: rise 37s linear 4s infinite; }
 .cosmos-mote-3 { top: 64%; left: 58%; animation: rise 44s linear 9s infinite; }
-.cosmos-mote-4 { top: 92%; left: 77%; background: var(--magenta); animation: rise 33s linear 2s infinite; }
+.cosmos-mote-4 { top: 92%; left: 77%; background: var(--coral); animation: rise 33s linear 2s infinite; }
 .cosmos-mote-5 { top: 78%; left: 90%; animation: rise 51s linear 14s infinite; }
-.cosmos-mote-6 { top: 84%; left: 46%; background: var(--gold); animation: rise 41s linear 21s infinite; }
+.cosmos-mote-6 { top: 84%; left: 46%; background: var(--yellow); animation: rise 41s linear 21s infinite; }
 
 /* One long wait, one short streak. The odds are you are looking elsewhere when
    it happens, which is the point -- catching one should feel like catching one. */
 .cosmos-comet {
     position: absolute;
-    width: 11rem;
+    width: 12rem;
     height: 2px;
     opacity: 0;
     border-radius: 2px;
-    background: linear-gradient(90deg, transparent, #ffffffcc);
-    box-shadow: 0 0 8px 1px #ffffff80;
+    background: linear-gradient(90deg, transparent, #ffffffdd);
+    box-shadow: 0 0 10px 1px #ffffff99;
 }
 
-.cosmos-comet-a { top: 14%; left: 58%; animation: comet 37s linear infinite; }
-.cosmos-comet-b { top: 41%; left: 18%; animation: comet 61s linear 23s infinite; }
+.cosmos-comet-a { top: 13%; left: 56%; animation: comet 37s linear infinite; }
+.cosmos-comet-b { top: 42%; left: 16%; animation: comet 61s linear 23s infinite; }
+
+/* Decorative constellations, parked in the corners of the sky. */
+.cosmos .constellation { position: absolute; opacity: 0.5; }
+.cosmos-con-a { top: 12%; left: 6%; animation: breathe 24s ease-in-out infinite; }
+.cosmos-con-b { bottom: 16%; right: 8%; animation: breathe 31s ease-in-out 6s infinite; }
+
+.cosmos .asteroid { position: absolute; opacity: 0.55; }
+.cosmos-rock-a { top: 62%; left: 7%; animation: tumble 78s linear infinite; }
+.cosmos-rock-b { top: 24%; right: 11%; animation: tumble 104s linear reverse infinite; }
 
 /* ------------------------------------------------------------ 3. the shell */
 
 .app { position: relative; z-index: 0; }
 
 /*
-   NAVIGATION, REIMAGINED.
+   NAVIGATION.
 
-   It was a row of four text links, a username and a button -- the same masthead
-   every web app has. It is now a floating instrument panel: detached from the
-   page edges, glass over the moving sky, with the destinations as icon-and-label
-   pills. Floating rather than flush is the deliberate part: a bar welded to the
-   top of the window is chrome, and a panel with sky visible all round it is an
-   object inside the world.
+   NOT a card. The previous pass made it a frosted pill floating over the sky,
+   which is glassmorphism and which turned the most-seen element on every screen
+   into the one that most looked like a generic app. It is now barely there: the
+   mark, the destinations as icon-and-word, a hairline beneath, and sky
+   everywhere else. What makes it feel like an instrument is the type and the
+   icons, not a container drawn around them.
 */
 .site-header {
-    position: sticky;
-    top: 0.85rem;
+    position: relative;
     z-index: 40;
-    margin: 0.85rem auto 2rem;
-    width: min(64rem, calc(100% - 2rem));
+    margin: 0 auto 2.5rem;
+    width: min(66rem, calc(100% - 2.5rem));
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 0.65rem 0.5rem 1.1rem;
-    border: 1px solid rgb(255 255 255 / 0.12);
-    border-radius: var(--radius-pill);
-    background: linear-gradient(180deg, rgb(48 54 124 / 0.72), rgb(23 27 74 / 0.72));
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
-    box-shadow: var(--lift);
+    gap: 1.25rem;
+    padding: 1.1rem 0 0.9rem;
+    border-bottom: 1px solid var(--hairline);
+    background: none;
 }
 
 .site-header .brand { margin-right: auto; display: flex; align-items: center; }
@@ -357,43 +368,61 @@ code, pre, .mono { font-family: var(--mono); }
 .site-header nav {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.35rem;
     flex-wrap: wrap;
 }
 
-/* One pill per destination. The icon is not decoration -- at this size the
-   shape is what you actually navigate by once you know the app. */
 .site-header nav a:not(.button) {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.45rem 0.8rem;
-    border-radius: var(--radius-pill);
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--radius-sm);
     font-family: var(--ui);
     font-size: var(--t-small);
     font-weight: 500;
-    color: var(--text-2);
+    color: var(--muted);
     text-decoration: none;
-    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    transition: color 0.18s var(--ease), transform 0.18s var(--ease);
 }
 
 .site-header nav a:not(.button):hover {
-    background: rgb(255 255 255 / 0.09);
     color: var(--text);
     transform: translateY(-1px);
 }
 
-.site-header nav a .icon { opacity: 0.75; }
+/* The hover mark is a star under the label rather than a filled pill: the same
+   vocabulary as the sky, and it adds no box to a bar built to have none. */
+.site-header nav a:not(.button)::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -0.55rem;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--cyan);
+    opacity: 0;
+    transform: translate(-50%, 4px);
+    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.site-header nav a:not(.button):hover::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.site-header nav a .icon { opacity: 0.7; transition: opacity 0.18s var(--ease); }
 .site-header nav a:hover .icon { opacity: 1; }
 
-/* The pilot's own chip, set apart from the destinations by a hairline. */
 .nav-pilot {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    margin-left: 0.4rem;
-    padding-left: 0.85rem;
-    border-left: 1px solid rgb(255 255 255 / 0.14);
+    margin-left: 0.5rem;
+    padding-left: 1rem;
+    border-left: 1px solid var(--hairline);
     font-size: var(--t-small);
     color: var(--text-2);
 }
@@ -401,51 +430,47 @@ code, pre, .mono { font-family: var(--mono); }
 .nav-avatar {
     display: grid;
     place-items: center;
-    width: 1.85rem;
-    height: 1.85rem;
+    width: 1.9rem;
+    height: 1.9rem;
     border-radius: 50%;
-    background: linear-gradient(140deg, var(--jolt), var(--violet));
-    color: #0c1030;
+    background: linear-gradient(140deg, var(--cyan), var(--violet));
+    color: #0d1140;
     font-weight: 700;
     font-size: 0.82rem;
 }
 
 /*
-   BUTTONS, AS A NEW INTERACTION LANGUAGE.
+   BUTTONS.
 
-   The old primary was a flat violet rectangle. The new one is a lit object: a
-   warm rim along its top edge where the light strikes, a coloured shadow rather
-   than a grey one, and a sweep of light that crosses it on hover. Pressing it
-   moves it down and shortens its shadow -- the two things that actually happen
-   when you push a physical object.
+   A lit object rather than a coloured rectangle: a warm rim along the top edge
+   where the light strikes, a shadow in the button's own colour rather than
+   grey, and a highlight that sweeps across on hover. Pressing moves it down and
+   shortens its shadow, which is what happens when you push a physical thing.
 */
 .button {
     font-family: var(--ui);
     font-weight: 600;
-    letter-spacing: 0.005em;
     border-radius: var(--radius-pill);
     border: 1px solid transparent;
-    transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.3, 1), box-shadow 0.16s ease, filter 0.16s ease;
+    transition: transform 0.16s var(--ease), box-shadow 0.16s ease, filter 0.16s ease;
 }
 
 .button.primary {
     position: relative;
     overflow: hidden;
-    color: #08122c;
-    background: linear-gradient(135deg, #7ff0ee 0%, var(--jolt) 44%, var(--jolt-deep) 100%);
-    border-color: rgb(255 255 255 / 0.3);
+    color: #08163a;
+    background: linear-gradient(135deg, #9ff6fb 0%, var(--cyan) 46%, var(--cyan-deep) 100%);
+    border-color: #ffffff4d;
     box-shadow:
-        0 1px 0 rgb(255 255 255 / 0.5) inset,
-        0 10px 26px -10px rgb(61 219 217 / 0.75);
+        0 1px 0 #ffffff8c inset,
+        0 12px 28px -10px #5ee7f0bf;
 }
 
-/* The sweep. A single highlight that crosses the face on hover, parked off the
-   left edge the rest of the time. */
 .button.primary::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(105deg, transparent 32%, rgb(255 255 255 / 0.42) 50%, transparent 68%);
+    background: linear-gradient(105deg, transparent 32%, #ffffff6b 50%, transparent 68%);
     transform: translateX(-120%);
     transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1);
 }
@@ -454,339 +479,337 @@ code, pre, .mono { font-family: var(--mono); }
 
 .button.primary:hover {
     transform: translateY(-2px);
-    box-shadow:
-        0 1px 0 rgb(255 255 255 / 0.55) inset,
-        0 16px 34px -10px rgb(61 219 217 / 0.9);
+    box-shadow: 0 1px 0 #ffffff99 inset, 0 18px 38px -10px #5ee7f0e6;
 }
 
 .button.primary:active {
     transform: translateY(0);
-    box-shadow: 0 1px 0 rgb(255 255 255 / 0.4) inset, 0 4px 12px -6px rgb(61 219 217 / 0.8);
+    box-shadow: 0 1px 0 #ffffff66 inset, 0 5px 14px -6px #5ee7f0cc;
 }
 
-.button.big {
-    padding: 0.95rem 2rem;
-    font-size: 1.0625rem;
-}
+.button.big { padding: 1rem 2.15rem; font-size: 1.0625rem; }
 
 .button.ghost {
-    background: rgb(255 255 255 / 0.06);
-    border-color: rgb(255 255 255 / 0.16);
+    background: #ffffff0f;
+    border-color: var(--hairline);
     color: var(--text-2);
 }
 
-.button.ghost:hover {
-    background: rgb(255 255 255 / 0.12);
-    color: var(--text);
-    transform: translateY(-1px);
-}
+.button.ghost:hover { background: #ffffff1c; color: var(--text); transform: translateY(-1px); }
 
-/* Focus is one ring everywhere, and it is the brand colour rather than the
-   browser's. */
 a:focus-visible,
 button:focus-visible,
 .button:focus-visible {
-    outline: 2px solid var(--jolt);
+    outline: 2px solid var(--cyan);
     outline-offset: 3px;
-    border-radius: var(--radius-pill);
 }
 
 /*
-   CARDS, REDUCED.
+   PANELS.
 
-   The old look put a border, a fill, a radius and a shadow on every block,
-   which flattens hierarchy -- if everything is lifted, nothing is. Panels are
-   now glass: tinted by the sky behind them, with a lit top edge, and no heavy
-   outline. The things that still need to read as separate objects get the lift;
-   the rest just get space.
+   Solid, and used sparingly. The old rule put a border, a fill, a radius and a
+   shadow on every block, which flattens hierarchy: if everything is lifted,
+   nothing is.
 */
 .panel {
-    border: 1px solid rgb(255 255 255 / 0.1);
+    border: 1px solid var(--hairline);
     border-radius: var(--radius-lg);
-    background: linear-gradient(180deg, rgb(46 52 120 / 0.5), rgb(22 26 70 / 0.5));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: var(--surface);
     box-shadow: var(--lift);
 }
 
-/* ------------------------------------------------------- 4. the front door */
+/*
+   PAGE ARRIVAL.
+
+   Every route fades up a little as it mounts, so moving between Home, the map
+   and a lesson reads as travelling rather than as replacing a document. The
+   cosmos behind it does NOT remount, so the sky holds still while the content
+   moves -- that difference is what sells it as one continuous place.
+*/
+.route { animation: arrive 0.42s var(--ease) both; }
+
+/* -------------------------------------------------------- 4. the front door */
 
 .welcome {
     position: relative;
-    max-width: 52rem;
+    max-width: 54rem;
     margin: 0 auto;
-    padding: 3rem 1.5rem 6rem;
+    padding: 1rem 1.5rem 6rem;
     text-align: center;
 }
 
-/* The hero is the world itself: a planet rising from below with the craft
-   climbing away from it. It is the most characteristic thing Jolt has, so it
-   opens the page rather than sitting under a headline. */
+/* The hero is the world itself. It is the most characteristic thing Jolt has,
+   so it opens the page rather than sitting underneath a headline. */
 .welcome-stage {
     position: relative;
-    height: 15rem;
-    margin-bottom: 1.5rem;
+    height: 17rem;
+    margin-bottom: 1.75rem;
     display: grid;
     place-items: center;
 }
 
 .welcome-stage .planet {
-    filter: drop-shadow(0 18px 48px rgb(61 219 217 / 0.35));
+    filter: drop-shadow(0 20px 56px #5ee7f04d);
     animation: bob 9s ease-in-out infinite;
 }
 
 .welcome-stage .ship {
     position: absolute;
-    top: 6%;
-    right: 24%;
-    animation: bob 6.5s ease-in-out 0.6s infinite;
+    top: 8%;
+    right: 26%;
+    animation: cruise 7s ease-in-out infinite;
+}
+
+.welcome-stage .landmark {
+    position: absolute;
+    bottom: 6%;
+    left: 12%;
+    opacity: 0.9;
+    animation: cruise 11s ease-in-out 1.5s infinite;
 }
 
 .welcome-title {
     font-size: var(--t-hero);
-    margin: 0 0 1rem;
-    /* The gradient runs teal → white → magenta across the line, so the accent
-       is spent here, in one place, and everything around it can stay quiet. */
-    background: linear-gradient(100deg, var(--jolt) 0%, #ffffff 46%, var(--magenta) 100%);
+    /* Never hyphenate or split "JavaScript" -- the word is the product. */
+    overflow-wrap: normal;
+    word-break: keep-all;
+    margin: 0 0 1.15rem;
+    color: var(--text);
+}
+
+/* One word carries the colour. Gradient-filling the whole headline was the old
+   approach and it made the line read as an effect; tinting the verb makes it
+   read as emphasis. */
+.welcome-title em {
+    font-style: normal;
+    background: linear-gradient(100deg, var(--cyan) 0%, var(--lavender) 55%, var(--coral) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
 }
 
 .welcome-lede {
-    max-width: 34rem;
-    margin: 0 auto 2.25rem;
-    font-size: 1.15rem;
+    max-width: 36rem;
+    margin: 0 auto 2.5rem;
+    font-size: 1.18rem;
     color: var(--text-2);
 }
 
-.welcome-note { margin-top: 1.25rem; color: var(--muted); font-size: var(--t-small); }
-.welcome-note a { color: var(--jolt); }
+.welcome-note { margin-top: 1.5rem; color: var(--muted); font-size: var(--t-small); }
+.welcome-note a { color: var(--cyan); }
 
-/* ------------------------------------------------------------ 4b. home ---- */
+/* ------------------------------------------------------------- 4b. home --- */
 
 /*
-   HOME IS A LOCATION, NOT A DASHBOARD.
+   HOME IS A LOCATION.
 
    It answers "where am I and what is next" by showing it: the world you are at,
-   your craft parked in its orbit, and a single lit control. The old page said
-   the same things in five stacked paragraphs.
+   your craft in its orbit, and one lit control. The version before this said
+   the same things in five stacked paragraphs and three stat cards.
 */
 .home {
-    max-width: 58rem;
+    max-width: 62rem;
     margin: 0 auto;
-    padding: 1rem 1.5rem 6rem;
+    padding: 0.5rem 1.5rem 6rem;
 }
 
 .home-sky {
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 2.5rem;
+    gap: 3rem;
     align-items: center;
-}
-
-@media (max-width: 46rem) {
-    .home-sky { grid-template-columns: 1fr; text-align: center; }
-    .home-orbit { justify-self: center; }
+    min-height: 24rem;
 }
 
 .home-greeting {
     font-family: var(--ui);
     font-size: var(--t-small);
     color: var(--muted);
-    margin: 0 0 0.35rem;
+    margin: 0 0 0.5rem;
 }
 
 .home-label {
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.16em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--jolt);
-    margin: 0 0 0.4rem;
+    color: var(--cyan);
+    margin: 0 0 0.5rem;
 }
 
 .home-topic {
     font-size: var(--t-title);
-    margin: 0 0 0.6rem;
-    color: var(--text);
+    margin: 0 0 0.7rem;
 }
 
 .home-principle {
     max-width: 38ch;
-    margin: 0 0 1.5rem;
+    margin: 0 0 1.75rem;
     color: var(--text-2);
-    font-size: 1.05rem;
+    font-size: 1.08rem;
 }
 
-/* The craft sits in a drawn orbit around the current world. The ring is a real
-   ellipse on a tilt, so the ship reads as going round the planet rather than
-   sitting beside it. */
+/* The craft in a drawn orbit. The ring is a real ellipse on a tilt, so the ship
+   reads as going round the planet rather than as sitting beside it. */
 .home-orbit {
     position: relative;
-    width: 17rem;
-    height: 17rem;
+    width: 20rem;
+    height: 20rem;
     display: grid;
     place-items: center;
 }
 
-.home-orbit::before {
+.home-orbit::before,
+.home-orbit::after {
     content: "";
     position: absolute;
-    inset: 4%;
-    border: 1px dashed rgb(255 255 255 / 0.18);
     border-radius: 50%;
-    transform: rotateX(68deg);
-    animation: spin 46s linear infinite;
+    border: 1px dashed #ffffff2b;
 }
 
+.home-orbit::before { inset: 2%; transform: rotateX(70deg); animation: spin 46s linear infinite; }
+.home-orbit::after { inset: 16%; transform: rotateX(70deg) rotate(40deg); border-style: dotted; opacity: 0.6; }
+
 .home-orbit .planet {
-    filter: drop-shadow(0 16px 44px rgb(167 139 250 / 0.4));
+    filter: drop-shadow(0 18px 50px #b9a7ff59);
     animation: bob 11s ease-in-out infinite;
 }
 
 .home-orbit .ship {
     position: absolute;
-    top: 2%;
-    right: 12%;
-    filter: drop-shadow(0 6px 14px rgb(8 12 40 / 0.7));
-    animation: bob 7s ease-in-out infinite;
+    top: 3%;
+    right: 14%;
+    filter: drop-shadow(0 6px 16px #05072acc);
+    animation: cruise 8s ease-in-out infinite;
+}
+
+.home-orbit .landmark {
+    position: absolute;
+    bottom: 4%;
+    right: 6%;
+    animation: cruise 12s ease-in-out 2s infinite;
 }
 
 .home-next {
     font-family: var(--ui);
     color: var(--muted);
     font-size: var(--t-small);
-    margin: 0 0 0.75rem;
+    margin: 0 0 1rem;
 }
 
 .home-next strong { color: var(--text); font-weight: 600; }
-
 .home-action { min-width: 15rem; }
 
-/* Progress as distance travelled, not as a percentage bar. */
+/*
+   PROGRESS AS A FLIGHT LOG, NOT A DASHBOARD.
+
+   Three stat cards in a grid was a dashboard, which is a listed non-goal. This
+   is one line of prose with the numbers set in the display face -- the same
+   facts, read as a sentence about yourself rather than as telemetry.
+*/
 .home-log {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    align-items: baseline;
+    gap: 0.5rem 1.5rem;
     margin-top: 2.5rem;
-}
-
-.home-stat {
-    flex: 1 1 10rem;
-    padding: 0.9rem 1.1rem;
-    border-radius: var(--radius);
-    border: 1px solid rgb(255 255 255 / 0.1);
-    background: rgb(255 255 255 / 0.045);
-}
-
-.home-stat-value {
-    display: block;
-    font-family: var(--display);
-    font-variation-settings: var(--display-soft);
-    font-size: 1.85rem;
-    font-weight: 600;
-    line-height: 1;
-    color: var(--gold);
-    font-variant-numeric: tabular-nums;
-}
-
-.home-stat-label {
-    font-size: var(--t-label);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--hairline);
+    font-size: var(--t-small);
     color: var(--muted);
 }
 
+.home-stat { display: inline-flex; align-items: baseline; gap: 0.45rem; margin: 0; }
+
+.home-stat-value {
+    font-family: var(--display);
+    font-variation-settings: var(--display-soft);
+    font-size: 1.7rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--yellow);
+    font-variant-numeric: tabular-nums;
+}
+
+.home-stat:nth-child(2) .home-stat-value { color: var(--mint); }
+.home-stat:nth-child(3) .home-stat-value { color: var(--lavender); }
+
 .home-aside {
-    margin-top: 1.75rem;
+    margin-top: 1.5rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 1.25rem;
+    gap: 1.5rem;
     font-size: var(--t-small);
 }
 
 .home-aside a {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
     color: var(--text-2);
     text-decoration: none;
+    transition: color 0.18s var(--ease);
 }
 
-.home-aside a:hover { color: var(--jolt); }
+.home-aside a:hover { color: var(--cyan); }
 
-/* ------------------------------------------------------- 4c. the map ------ */
+/* --------------------------------------------------------- 4c. the map ---- */
 
 /*
    THE JOURNEY IS A MAP.
 
-   It was an ordered list with ✓ → ○ glyphs down the left margin -- a checklist
-   of a syllabus. It is now a route through a star system: every topic is a
-   world at a point on a drawn path, the path behind you is lit and the path
-   ahead is faint, and your craft is parked at the world you are on.
+   It was an ordered list with tick/arrow/circle glyphs -- a checklist of a
+   syllabus. Everything true about a learner's progress was in it and none of it
+   felt like anything.
 
-   The geometry lives in atlas.ts so that Home and the map cannot disagree about
-   where a world is. The SVG route and the positioned worlds read from the same
-   `stationAt`, which is why the planets sit exactly on the line.
+   It is now a route through a star system. Each topic is a world on a drawn
+   path; the road behind you is lit and carries a pulse travelling the way you
+   came, the road ahead is dashed and dim; your craft flies in to the world you
+   are on when the map loads. Progress is DISTANCE -- there is no bar and no
+   percentage anywhere on this page.
+
+   Geometry lives in atlas.ts and is shared with the route drawing, so a world
+   and the road it sits on cannot disagree about where it is.
 */
 .journey {
-    max-width: 58rem;
+    max-width: 62rem;
     margin: 0 auto;
-    padding: 1rem 1.5rem 6rem;
+    padding: 0.5rem 1.5rem 7rem;
 }
 
-.journey-head { text-align: center; margin-bottom: 2rem; }
+.journey-head { text-align: center; margin-bottom: 1rem; }
 
 .journey-eyebrow {
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--jolt);
-    margin: 0 0 0.5rem;
+    color: var(--cyan);
+    margin: 0 0 0.6rem;
 }
 
-.journey-title {
-    font-size: var(--t-title);
-    margin: 0 0 0.75rem;
-}
+.journey-title { font-size: var(--t-title); margin: 0 0 1rem; }
 
+/* One line of prose, not a row of pills. */
 .journey-legend {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-}
-
-.journey-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.4rem 0.9rem;
-    border-radius: var(--radius-pill);
-    border: 1px solid rgb(255 255 255 / 0.12);
-    background: rgb(255 255 255 / 0.05);
+    margin: 0 0 1.75rem;
     font-size: var(--t-small);
-    color: var(--text-2);
+    color: var(--muted);
 }
 
-.journey-chip b {
+.journey-legend b {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    color: var(--gold);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--yellow);
     font-variant-numeric: tabular-nums;
 }
 
-/* The map canvas. Height is set inline from the number of stations, because
-   only the component knows how many worlds there are. */
-.journey-map {
-    position: relative;
-    margin: 2.5rem auto 0;
-    max-width: 46rem;
-}
+.journey-legend b + b { color: var(--mint); }
+
+.journey-map { position: relative; margin: 3rem auto 0; max-width: 48rem; }
 
 .journey-route {
     position: absolute;
@@ -797,49 +820,47 @@ button:focus-visible,
     pointer-events: none;
 }
 
-/* Travelled road: solid, lit, and carrying a slow pulse of light in the
-   direction of travel. Road ahead: dashed and dim. The difference between the
-   two is the progress indicator -- there is no bar anywhere on this page. */
 .journey-road-done {
     fill: none;
     stroke: url(#journey-road-gradient);
-    stroke-width: 2.2;
+    stroke-width: 2.4;
     stroke-linecap: round;
 }
 
 .journey-road-todo {
     fill: none;
-    stroke: rgb(255 255 255 / 0.16);
+    stroke: #ffffff2e;
     stroke-width: 1.6;
     stroke-linecap: round;
-    stroke-dasharray: 3 6;
+    stroke-dasharray: 3 7;
 }
 
 .journey-road-pulse {
     fill: none;
-    stroke: var(--jolt);
-    stroke-width: 3;
+    stroke: var(--cyan);
+    stroke-width: 3.2;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 5px var(--jolt));
+    filter: drop-shadow(0 0 6px var(--cyan));
     animation: travel 5.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 
-/* One station.
-   The box is the PLANET and nothing else -- its caption and its callout are
-   absolutely placed and contribute no height. That is what lets the station be
-   centred on its point on the road: with the label inside the flow, a station
-   with an open callout pushed its own planet off the line and its text down
-   into the world below it. */
+/* One station. The box is the PLANET and nothing else -- caption and callout
+   are absolutely placed and contribute no height. That is what lets a station
+   sit centred on its point on the road: with the label in the flow, a station
+   with an open callout pushed its own planet off the line. */
 .journey-station {
     position: absolute;
     transform: translate(-50%, -50%);
     display: grid;
     place-items: center;
+    /* Each world fades up in turn as the map loads, so the route assembles
+       itself from the start rather than appearing all at once. */
+    animation: arrive 0.5s var(--ease) both;
 }
 
 .journey-station .planet {
     display: block;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+    transition: transform 0.3s var(--ease);
 }
 
 .journey-world {
@@ -854,19 +875,25 @@ button:focus-visible,
 }
 
 .journey-world:disabled { cursor: default; }
-.journey-world:not(:disabled):hover .planet { transform: scale(1.09) translateY(-3px); }
+.journey-world:not(:disabled):hover .planet { transform: scale(1.09) translateY(-4px); }
 
-/* Name and status, hung below the world without affecting its centring. */
+.journey-station .landmark {
+    position: absolute;
+    bottom: -0.3rem;
+    left: -1.4rem;
+    z-index: 2;
+}
+
 .journey-caption {
     position: absolute;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    width: 11rem;
+    width: 12rem;
     display: grid;
     justify-items: center;
     gap: 0.15rem;
-    margin-top: 0.4rem;
+    margin-top: 0.5rem;
     text-align: center;
     pointer-events: none;
 }
@@ -874,7 +901,7 @@ button:focus-visible,
 /* The world you are at gets a live halo and the parked craft. Nothing else on
    the map glows, so the eye finds "here" before it reads a single word. */
 .journey-station.is-here .planet {
-    filter: drop-shadow(0 0 26px rgb(61 219 217 / 0.6));
+    filter: drop-shadow(0 0 30px #5ee7f099);
     animation: bob 8s ease-in-out infinite;
 }
 
@@ -883,26 +910,30 @@ button:focus-visible,
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 8.5rem;
-    height: 8.5rem;
+    width: 9rem;
+    height: 9rem;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1px solid rgb(61 219 217 / 0.35);
+    border: 1px solid #5ee7f066;
     animation: ping 3.4s ease-out infinite;
 }
 
+/* The craft flies in along its approach when the map mounts, then settles into
+   a hover. Arriving is the single most important motion on this page: it says
+   you got here, and it says the map is a place you move through. */
 .journey-station .ship {
     position: absolute;
-    top: -1.5rem;
-    right: -2.2rem;
+    top: -1.6rem;
+    right: -2.4rem;
     z-index: 3;
-    filter: drop-shadow(0 4px 10px rgb(8 12 40 / 0.8));
+    filter: drop-shadow(0 4px 12px #05072acc);
+    animation: approach 1.5s var(--ease) both, cruise 8s ease-in-out 1.5s infinite;
 }
 
 .journey-name {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 600;
     line-height: 1.2;
     color: var(--text);
@@ -917,52 +948,46 @@ button:focus-visible,
     gap: 0.3rem;
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
 }
 
-.journey-station.is-visited .journey-meta { color: var(--correct); }
+.journey-station.is-visited .journey-meta { color: var(--mint); }
 
-/* The current world's concepts, as a callout BESIDE it.
-   Beneath the planet, this panel is as tall as half a leg and crowds the next
-   world down the road. Beside it, the route stays evenly spaced however many
-   concepts a topic has. It opens toward the centre of the map -- a world near
-   the right margin opens left -- so it can never hang off the edge. */
+/*
+   The current world's concepts, as a callout BESIDE it.
+
+   Under the planet, this panel is half a leg tall and crowds the next world
+   down the road; beside it, the route stays evenly spaced however many concepts
+   a topic has. It opens toward the centre of the map -- a world near the right
+   margin opens left -- so it can never hang off the edge. Solid, not frosted.
+*/
 .journey-stops {
     position: absolute;
     top: 50%;
     list-style: none;
     margin: 0;
-    padding: 0.7rem 0.9rem;
-    width: 13rem;
+    padding: 0.85rem 1rem;
+    width: 14rem;
     display: grid;
-    gap: 0.3rem;
+    gap: 0.35rem;
     justify-items: start;
     border-radius: var(--radius);
-    border: 1px solid rgb(255 255 255 / 0.14);
-    background: rgb(16 20 58 / 0.82);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--hairline);
+    background: var(--surface);
     box-shadow: var(--lift);
     text-align: left;
     z-index: 4;
 }
 
-.journey-stops.opens-left {
-    right: 100%;
-    transform: translate(-1.1rem, -50%);
-}
-
-.journey-stops.opens-right {
-    left: 100%;
-    transform: translate(1.1rem, -50%);
-}
+.journey-stops.opens-left { right: 100%; transform: translate(-1.4rem, -50%); }
+.journey-stops.opens-right { left: 100%; transform: translate(1.4rem, -50%); }
 
 .journey-stop {
     display: grid;
     grid-template-columns: 1.1rem 1fr;
-    gap: 0.5rem;
+    gap: 0.55rem;
     align-items: center;
     font-size: var(--t-small);
     color: var(--text-2);
@@ -970,74 +995,51 @@ button:focus-visible,
 }
 
 .journey-stop .icon { color: var(--dim); }
-.journey-stop.is-demonstrated .icon { color: var(--correct); }
+.journey-stop.is-demonstrated .icon { color: var(--mint); }
 .journey-stop.is-demonstrated { color: var(--muted); }
 .journey-stop.is-current { color: var(--text); font-weight: 600; }
-.journey-stop.is-current .icon { color: var(--jolt); }
+.journey-stop.is-current .icon { color: var(--cyan); }
 .journey-stop.is-locked { color: var(--dim); }
 .journey-stop a { color: inherit; text-decoration: none; }
-.journey-stop a:hover { color: var(--jolt); }
+.journey-stop a:hover { color: var(--cyan); }
 
 .journey-stop.journey-challenge {
-    margin-top: 0.3rem;
-    padding-top: 0.45rem;
-    border-top: 1px dashed rgb(255 255 255 / 0.14);
+    margin-top: 0.35rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #ffffff24;
 }
 
-.journey-stop.journey-challenge.is-current .icon { color: var(--gold); }
-
-/* Below ~46rem the sine has nowhere to swing, so the route straightens and the
-   worlds stack. The map stays a map; it just stops pretending to have width. */
-@media (max-width: 52rem) {
-    /* No width left to open sideways into, so the callout goes back under the
-       world. The extra height is absorbed by the leg, which is long enough. */
-    .journey-stops.opens-left,
-    .journey-stops.opens-right {
-        left: 50%;
-        right: auto;
-        top: 100%;
-        width: min(15rem, 76vw);
-        transform: translate(-50%, 3.2rem);
-    }
-}
+.journey-stop.journey-challenge.is-current .icon { color: var(--yellow); }
 
 /* --------------------------------------------------- 4d. the lesson space */
 
 /*
-   A LESSON IS A PLACE YOU ARE, NOT A DOCUMENT YOU READ.
+   A LESSON IS A PLACE YOU ARE.
 
-   The scene used to be text on the page background: a heading, a code box, some
-   buttons, in the same column as everything else in the app. It is now an
-   observation deck at the world you are learning on -- a glass panel hanging in
-   the same sky the map hangs in, with the planet named in its header and the
-   cosmos still drifting behind it.
+   Not a frosted deck -- that was glassmorphism and it is gone. The lesson is
+   now open space with one solid object in it: the program. Everything else
+   (the world you are on, the question, the outcome) is type sitting directly
+   in the sky.
 
-   That is not decoration. The single most important thing this redesign does
-   for learning is make the CODE the loudest object on the screen. It was body
-   sized, in a bordered box, visually equal to the prose around it. In a product
-   about JavaScript, the JavaScript should dominate.
+   THE CODE IS THE HERO. It was body-sized text in a bordered box, visually
+   equal to the prose around it. In a product about JavaScript the JavaScript
+   should dominate, so it is larger than everything else on the page, on its
+   own lit slab, with real room around it.
 */
 .scene {
     position: relative;
-    max-width: 40rem;
+    max-width: 42rem;
     margin: 0 auto 4rem;
-    padding: 1.6rem 1.75rem 2.25rem;
-    border: 1px solid rgb(255 255 255 / 0.12);
-    border-radius: var(--radius-lg);
-    background: linear-gradient(180deg, rgb(43 49 116 / 0.58), rgb(20 24 66 / 0.62));
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
-    box-shadow: var(--lift-lg);
+    padding: 0 1.25rem;
 }
 
-/* The world, named, at the top of its own deck. */
 .scene-place {
     display: flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.6rem;
     padding-bottom: 1rem;
-    margin-bottom: 1.1rem;
-    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--hairline);
     font-family: var(--ui);
     font-size: var(--t-label);
     letter-spacing: 0.16em;
@@ -1045,31 +1047,23 @@ button:focus-visible,
 }
 
 .scene-place .planet { flex: none; }
-.scene-place-topic { color: var(--jolt); font-weight: 600; }
+.scene-place-topic { color: var(--cyan); font-weight: 600; }
 .scene-place-sep { color: var(--dim); }
 .scene-place-lesson { color: var(--muted); letter-spacing: 0.1em; }
 
-/*
-   PROGRESS IS THE SAME ROUTE THE MAP DRAWS.
-
-   It was four grey bars that filled in. It is now a line of stops joined by a
-   hairline -- the map's own language at lesson scale, so "where am I in this
-   lesson" and "where am I in the course" are visibly the same kind of fact.
-   Still beats rather than a percentage: a learner should see a handful of steps
-   left, not a number creeping toward 100.
-*/
+/* Progress in the map's own language: stops on a route, at lesson scale, so
+   "where am I in this lesson" and "where am I in the course" are visibly the
+   same kind of fact. */
 .scene-beats {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0;
     list-style: none;
-    margin: 0 0 1.9rem;
+    margin: 0 0 2.25rem;
     padding: 0 0.3rem;
 }
 
-/* The road they sit on, drawn once behind them all. */
 .scene-beats::before {
     content: "";
     position: absolute;
@@ -1077,43 +1071,34 @@ button:focus-visible,
     right: 0.5rem;
     top: 50%;
     height: 1px;
-    background: rgb(255 255 255 / 0.16);
+    background: #ffffff26;
 }
 
 .scene-beat {
     position: relative;
-    /* The rule this replaces used `flex: 1` on a 3px bar, so without an
-       explicit reset the stops inherit it and stretch into ellipses that run
-       past the edge of the deck. */
     flex: none;
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: rgb(16 20 58 / 1);
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.25);
+    background: var(--void);
+    box-shadow: 0 0 0 1px #ffffff3d;
     transition: background 240ms ease, box-shadow 240ms ease, transform 240ms ease;
 }
 
-.scene-beat.is-done {
-    background: var(--jolt);
-    box-shadow: 0 0 0 1px var(--jolt);
-}
+.scene-beat.is-done { background: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
 
-/* The stop you are at is the only lit one. */
 .scene-beat.is-now {
-    background: var(--jolt);
-    transform: scale(1.5);
-    box-shadow:
-        0 0 0 1px var(--jolt),
-        0 0 12px 2px rgb(61 219 217 / 0.7);
+    background: var(--cyan);
+    transform: scale(1.55);
+    box-shadow: 0 0 0 1px var(--cyan), 0 0 14px 2px #5ee7f0b3;
 }
 
 .scene-invite,
 .scene-ask {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     line-height: 1.55;
     color: var(--text);
-    margin: 0 0 1.25rem;
+    margin: 0 0 1.4rem;
 }
 
 .scene-ask { font-weight: 500; }
@@ -1122,81 +1107,64 @@ button:focus-visible,
    THE STAGE: code, a conduit, a console.
 
    Vertical on purpose. The output is BELOW the code with a lit channel between
-   them, so the spatial relationship -- this produced that -- is on the screen
-   before anyone says it in words. Side by side, they read as two panels.
+   them, so "this produced that" is on the screen before anyone says it in
+   words. Side by side, they read as two panels that happen to be adjacent.
 */
-.scene-stage {
-    display: grid;
-    justify-items: stretch;
-    gap: 0;
-    margin-bottom: 1.5rem;
-}
+.scene-stage { display: grid; gap: 0; margin-bottom: 1.75rem; }
 
-/* CODE, MADE PROMINENT.
-   Larger than body text, on its own near-black slab with a lit top edge. The
-   slab is darker than the deck it sits on, so the code reads as a screen inside
-   the room rather than as a paragraph with a border. */
 .scene-code,
 .teach-code,
 pre.code {
     font-family: var(--mono);
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     line-height: 1.7;
     margin: 0;
-    padding: 1.35rem 1.5rem;
-    color: #eaf2ff;
+    padding: 1.5rem 1.6rem;
+    color: #eef3ff;
     border-radius: var(--radius) var(--radius) 0 0;
-    border: 1px solid rgb(255 255 255 / 0.13);
-    background:
-        linear-gradient(180deg, rgb(255 255 255 / 0.07), transparent 42%),
-        rgb(7 10 32 / 0.92);
+    border: 1px solid #ffffff21;
+    /* Darker than the sky around it, so the program reads as a screen in the
+       room rather than as a paragraph with a border. */
+    background: linear-gradient(180deg, #ffffff12, transparent 40%), #0a0e33;
     box-shadow: var(--lift);
     overflow-x: auto;
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
-/* A quiet slab is one nothing is about to happen to -- a snippet being read in
-   a question rather than a program about to be run. It loses the conduit and
-   the lit edge, and gets its corners back. */
 .scene-code.is-quiet {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     border-radius: var(--radius);
-    background: rgb(7 10 32 / 0.7);
+    background: #0a0e33b3;
     box-shadow: none;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
-/* The moment RUN is pressed: the code lights up, because it is the thing
+/* The moment RUN is pressed: the program lights up, because it is the thing
    currently doing something. */
 .scene-code.is-running {
-    border-color: rgb(61 219 217 / 0.65);
-    box-shadow:
-        0 0 0 1px rgb(61 219 217 / 0.4),
-        0 0 34px -6px rgb(61 219 217 / 0.55);
+    border-color: #5ee7f0a6;
+    box-shadow: 0 0 0 1px #5ee7f066, 0 0 40px -6px #5ee7f08c;
 }
 
-/*
-   THE CONDUIT.
-
-   A channel between the code and the console, lit only while something is
-   travelling down it. It replaces the bare "↓" character, which read as
-   punctuation rather than as a path -- and a path is exactly the idea being
-   taught: the output CAME FROM the code.
-*/
+/* THE CONDUIT. A channel between the code and the console, lit only while
+   something is travelling down it. It replaces a bare "↓", which read as
+   punctuation rather than as a path -- and a path is the idea being taught. */
 .scene-arrow {
     position: relative;
-    height: 2rem;
+    height: 2.25rem;
     margin: 0;
     overflow: hidden;
-    border-left: 1px solid rgb(255 255 255 / 0.13);
-    border-right: 1px solid rgb(255 255 255 / 0.13);
-    background: linear-gradient(90deg, rgb(7 10 32 / 0.5), rgb(7 10 32 / 0.78), rgb(7 10 32 / 0.5));
-    /* The glyph itself carries no meaning now that the channel does. */
+    border-left: 1px solid #ffffff21;
+    border-right: 1px solid #ffffff21;
+    /* Solid, and the same colour as the slab above it. Semi-transparent let
+       the violet sky through, which made the channel read as a GAP splitting
+       the program from its output -- the exact opposite of the idea. It is one
+       object with a channel running down it. */
+    background: linear-gradient(180deg, #0a0e33, #070a26);
     font-size: 0;
     color: transparent;
 }
 
-/* The rail the pulse runs down. */
 .scene-arrow::before {
     content: "";
     position: absolute;
@@ -1205,85 +1173,67 @@ pre.code {
     bottom: 0;
     width: 1px;
     transform: translateX(-50%);
-    background: linear-gradient(
-        180deg,
-        rgb(255 255 255 / 0.05),
-        rgb(255 255 255 / 0.22),
-        rgb(255 255 255 / 0.05)
-    );
+    background: linear-gradient(180deg, #ffffff0d, #ffffff3d, #ffffff0d);
 }
 
-/* The pulse. Present only while running, so the channel is inert the rest of
-   the time -- a permanently animated conduit would be decoration. */
 .scene-arrow.is-travelling::after {
     content: "";
     position: absolute;
     left: 50%;
     top: 0;
     width: 3px;
-    height: 1.5rem;
+    height: 1.6rem;
     transform: translateX(-50%);
     border-radius: 3px;
-    background: linear-gradient(180deg, transparent, var(--jolt));
-    box-shadow: 0 0 12px 2px rgb(61 219 217 / 0.8);
+    background: linear-gradient(180deg, transparent, var(--cyan));
+    box-shadow: 0 0 14px 2px #5ee7f0cc;
     animation: conduit 0.72s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/*
-   THE CONSOLE.
-
-   An instrument readout: a recessed well, darker than the code above it, with
-   its label set in the same mono as the thing it reports. It is deliberately
-   present and empty before the first run -- "nothing yet" is a truer and
-   calmer statement than an absent panel that suddenly appears.
-*/
+/* THE CONSOLE. An instrument readout: recessed, darker than the code above it,
+   its label in the same mono as the thing it reports. Deliberately present and
+   empty before the first run -- "nothing yet" is truer and calmer than a panel
+   that springs into existence. */
 .scene-console {
     position: relative;
-    min-height: 4.75rem;
-    padding: 1.1rem 1.5rem 1.2rem;
-    border: 1px solid rgb(255 255 255 / 0.13);
+    min-height: 5rem;
+    padding: 1.15rem 1.6rem 1.3rem;
+    border: 1px solid #ffffff21;
     border-top: 0;
     border-radius: 0 0 var(--radius) var(--radius);
-    background:
-        linear-gradient(180deg, rgb(0 0 0 / 0.3), transparent 30%),
-        rgb(5 7 26 / 0.94);
-    box-shadow: inset 0 8px 18px -12px rgb(0 0 0 / 0.9);
+    background: #070a26;
+    box-shadow: inset 0 10px 20px -14px #000000e6;
 }
 
 .scene-console-tag {
     display: block;
     font-family: var(--mono);
     font-size: 0.68rem;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--dim);
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.5rem;
 }
 
-.scene-console-empty {
-    margin: 0;
-    font-family: var(--mono);
-    font-size: 1.05rem;
-    color: var(--dim);
-}
+.scene-console-empty { margin: 0; font-family: var(--mono); font-size: 1.05rem; color: var(--dim); }
 
-/* What the program said. Teal, because it is the one thing on the deck the
-   learner caused -- and larger than the prose, for the same reason the code is. */
+/* What the program said. Cyan, because it is the one thing on screen the
+   learner caused -- and as large as the code, for the same reason. */
 .scene-output {
     margin: 0;
     font-family: var(--mono);
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     line-height: 1.5;
-    color: var(--jolt);
-    text-shadow: 0 0 18px rgb(61 219 217 / 0.45);
-    animation: land 0.42s cubic-bezier(0.2, 0.9, 0.3, 1);
+    color: var(--cyan);
+    text-shadow: 0 0 20px #5ee7f080;
+    animation: land 0.42s var(--ease);
 }
 
 .scene-run { width: 100%; }
 
 .scene-after {
-    margin: 0 0 1.35rem;
-    font-size: 1.05rem;
+    margin: 0 0 1.5rem;
+    font-size: 1.08rem;
     line-height: 1.6;
     color: var(--text-2);
 }
@@ -1292,285 +1242,232 @@ pre.code {
    gets the reward colour and a lit underline rather than a form-field border. */
 .scene-slot {
     font-family: var(--mono);
-    font-size: 1.15rem;
-    color: var(--gold);
-    background: rgb(255 203 71 / 0.12);
+    font-size: 1.2rem;
+    color: var(--yellow);
+    background: #ffd1661f;
     border: 0;
-    border-bottom: 2px solid var(--gold);
+    border-bottom: 2px solid var(--yellow);
     border-radius: 6px 6px 0 0;
     padding: 0.05rem 0.5rem;
     min-width: 6ch;
 }
 
-.scene-slot::placeholder { color: rgb(255 203 71 / 0.45); }
-.scene-slot:focus {
-    outline: 2px solid var(--gold);
-    outline-offset: 2px;
-    background: rgb(255 203 71 / 0.2);
-}
+.scene-slot::placeholder { color: #ffd16673; }
+.scene-slot:focus { outline: 2px solid var(--yellow); outline-offset: 2px; background: #ffd16633; }
+.scene-slot:disabled { opacity: 1; -webkit-text-fill-color: var(--yellow); }
 
-.scene-slot:disabled {
-    opacity: 1;
-    -webkit-text-fill-color: var(--gold);
-}
+/* ---- choices ---- */
 
-/* ---- choices -------------------------------------------------------------
-   The same interaction language as the buttons: a lit object that lifts when
-   you reach for it. Answers are code, so they are set in mono at code size --
-   a choice typeset in the UI face is a sentence about the code rather than the
-   code itself. */
 .scene-choices,
 .lesson-choices {
     list-style: none;
     display: grid;
-    gap: 0.6rem;
-    margin: 0 0 1.5rem;
+    gap: 0.65rem;
+    margin: 0 0 1.75rem;
     padding: 0;
 }
 
 .scene-choice {
     width: 100%;
     text-align: left;
-    padding: 0.95rem 1.2rem;
+    padding: 1rem 1.25rem;
     border-radius: var(--radius);
-    border: 1px solid rgb(255 255 255 / 0.15);
-    background: rgb(255 255 255 / 0.05);
+    border: 1px solid #ffffff26;
+    background: #ffffff0d;
     color: var(--text);
     cursor: pointer;
-    transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.3, 1), background 0.16s ease,
-        border-color 0.16s ease, box-shadow 0.16s ease;
+    transition: transform 0.16s var(--ease), background 0.16s ease, border-color 0.16s ease,
+        box-shadow 0.16s ease;
 }
 
-.scene-choice code {
-    font-family: var(--mono);
-    font-size: 1.05rem;
-    color: inherit;
-}
+.scene-choice code { font-family: var(--mono); font-size: 1.08rem; color: inherit; }
 
 .scene-choice:hover:not(:disabled) {
     transform: translateY(-2px);
-    background: rgb(255 255 255 / 0.1);
-    border-color: rgb(61 219 217 / 0.5);
-    box-shadow: 0 10px 26px -14px rgb(61 219 217 / 0.8);
+    background: #ffffff1a;
+    border-color: #5ee7f080;
+    box-shadow: 0 12px 28px -14px #5ee7f0cc;
 }
 
 .scene-choice:disabled { cursor: default; }
 
 /* The right answer is always marked, including when it was not the one picked
    -- being shown the answer is the point of getting it wrong. */
-.scene-choice.is-answer {
-    border-color: var(--correct);
-    background: rgb(74 222 128 / 0.12);
-}
+.scene-choice.is-answer { border-color: var(--mint); background: #6ee7b724; }
 
 .scene-choice.is-right {
-    border-color: var(--correct);
-    background: rgb(74 222 128 / 0.18);
-    box-shadow: 0 0 0 1px var(--correct), 0 0 28px -8px rgb(74 222 128 / 0.8);
+    border-color: var(--mint);
+    background: #6ee7b733;
+    box-shadow: 0 0 0 1px var(--mint), 0 0 32px -8px #6ee7b7cc;
 }
 
-.scene-choice.is-wrong {
-    border-color: var(--coral);
-    background: rgb(255 122 107 / 0.14);
-}
+.scene-choice.is-wrong { border-color: var(--coral); background: #ff809929; }
 
-/* ---- feedback ----------------------------------------------------------- */
+/* ---- feedback ---- */
 
 .scene-feedback {
-    padding: 1rem 1.2rem;
-    margin: 0 0 1.35rem;
+    padding: 1.1rem 1.3rem;
+    margin: 0 0 1.5rem;
     border-radius: var(--radius);
     border: 1px solid transparent;
-    /* Entering from slightly below reads as an answer arriving rather than a
-       panel that was always there and only just became visible. */
-    animation: land 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+    animation: land 0.32s var(--ease);
 }
 
-.scene-feedback.right {
-    border-color: rgb(74 222 128 / 0.4);
-    background: rgb(74 222 128 / 0.1);
-}
-
-.scene-feedback.wrong {
-    border-color: rgb(255 122 107 / 0.4);
-    background: rgb(255 122 107 / 0.1);
-}
+.scene-feedback.right { border-color: #6ee7b766; background: #6ee7b71a; }
+.scene-feedback.wrong { border-color: #ff809966; background: #ff80991a; }
 
 .scene-feedback-head {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 600;
-    margin: 0 0 0.3rem;
+    margin: 0 0 0.35rem;
 }
 
-.scene-feedback.right .scene-feedback-head { color: var(--correct); }
+.scene-feedback.right .scene-feedback-head { color: var(--mint); }
 .scene-feedback.wrong .scene-feedback-head { color: var(--coral); }
 
-.scene-feedback-body {
-    margin: 0;
-    color: var(--text-2);
-    line-height: 1.6;
-}
+.scene-feedback-body { margin: 0; color: var(--text-2); line-height: 1.6; }
 
 .scene-aside {
-    margin: 0.7rem 0 0;
-    padding-top: 0.7rem;
-    border-top: 1px solid rgb(255 255 255 / 0.12);
+    margin: 0.75rem 0 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--hairline);
     font-size: var(--t-small);
     color: var(--muted);
 }
 
-/* ---- moments -------------------------------------------------------------
-   A moment is the one beat with nothing to operate: a statement, and a way on.
-   It gets the display face at full size and the whole width of the deck, so it
-   lands as a title card rather than as a paragraph. */
-.scene-moment {
-    text-align: center;
-    padding: 1.5rem 0 0.5rem;
-}
+/* ---- moments ----
+   The one beat with nothing to operate: a statement, and a way on. It gets the
+   display face at full size and the whole width, so it lands as a title card
+   rather than as a paragraph. */
+.scene-moment { text-align: center; padding: 2rem 0 0.5rem; }
 
 .scene-eyebrow {
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.2em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--jolt);
-    margin: 0 0 0.9rem;
+    color: var(--cyan);
+    margin: 0 0 1rem;
 }
 
 .scene-moment-head {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    font-size: clamp(1.9rem, 5.5vw, 3rem);
     font-weight: 600;
-    line-height: 1.08;
-    margin: 0 0 1.1rem;
+    line-height: 1.06;
+    margin: 0 0 1.25rem;
     text-wrap: balance;
 }
 
 .scene-moment-line {
     max-width: 30rem;
-    margin: 0 auto 0.75rem;
-    font-size: 1.1rem;
+    margin: 0 auto 0.8rem;
+    font-size: 1.12rem;
     line-height: 1.6;
     color: var(--text-2);
 }
 
-.scene-moment .button { margin-top: 1.5rem; min-width: 12rem; }
+.scene-moment .button { margin-top: 1.75rem; min-width: 12rem; }
 
 .scene-headline {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: 1.7rem;
-    margin: 0 0 1.25rem;
+    font-size: 1.8rem;
+    margin: 0 0 1.4rem;
 }
 
-/* ---- the reveal ----------------------------------------------------------
-   The glossary of parts, set as a legend: the piece in mono on the left, what
-   it means in prose on the right. A definition list, and it looks like one. */
-.scene-parts {
-    margin: 0 0 1.75rem;
-    display: grid;
-    gap: 0.1rem;
-}
+/* ---- the reveal ---- */
+
+.scene-parts { margin: 0 0 2rem; display: grid; gap: 0.1rem; }
 
 .scene-part {
     display: grid;
     grid-template-columns: minmax(6rem, auto) 1fr;
-    gap: 1rem;
+    gap: 1.1rem;
     align-items: baseline;
-    padding: 0.8rem 0;
-    border-bottom: 1px solid rgb(255 255 255 / 0.09);
+    padding: 0.85rem 0;
+    border-bottom: 1px solid #ffffff17;
 }
 
 .scene-part:last-child { border-bottom: 0; }
+.scene-part dt code { font-family: var(--mono); font-size: 1.08rem; color: var(--yellow); }
+.scene-part dd { margin: 0; color: var(--text-2); line-height: 1.55; }
 
-.scene-part dt code {
-    font-family: var(--mono);
-    font-size: 1.05rem;
-    color: var(--gold);
-}
-
-.scene-part dd {
-    margin: 0;
-    color: var(--text-2);
-    line-height: 1.55;
-}
-
-/* ---- arriving -----------------------------------------------------------
-   THE REWARD IS AN ARRIVAL.
-
-   It was a green tick, a line of text and a number. It is now the world you
-   just finished with your craft alongside it: the same two objects as the map
-   and Home, which is what makes finishing a lesson read as having got
-   somewhere rather than as having closed a dialog. */
+/* ---- arriving ----
+   THE REWARD IS AN ARRIVAL: the world you just finished, with your craft
+   alongside. The same two objects as the map and Home, which is what makes
+   finishing a lesson read as having got somewhere rather than as having closed
+   a dialog. No confetti, no burst -- the celebration is that the place now has
+   lights on it. */
 .complete {
     position: relative;
-    max-width: 34rem;
+    max-width: 36rem;
     margin: 0 auto;
-    padding: 1rem 1.5rem 5rem;
+    padding: 0.5rem 1.5rem 5rem;
     text-align: center;
 }
 
 .complete-arrival {
     position: relative;
-    height: 11rem;
+    height: 13rem;
     display: grid;
     place-items: center;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
 .complete-arrival .planet {
-    filter: drop-shadow(0 0 40px rgb(255 203 71 / 0.35));
+    filter: drop-shadow(0 0 46px #ffd1664d);
     animation: bob 9s ease-in-out infinite;
 }
 
 .complete-arrival .ship {
     position: absolute;
-    top: 14%;
-    right: 26%;
-    animation: bob 6.5s ease-in-out 0.4s infinite;
+    top: 12%;
+    right: 24%;
+    animation: depart 1.2s var(--ease) both, cruise 6.5s ease-in-out 1.2s infinite;
 }
 
 .complete-label {
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--jolt);
-    margin: 0 0 0.5rem;
+    color: var(--cyan);
+    margin: 0 0 0.6rem;
 }
 
 .complete-capability {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: clamp(1.6rem, 4.5vw, 2.3rem);
+    font-size: clamp(1.7rem, 4.8vw, 2.5rem);
     font-weight: 600;
-    line-height: 1.12;
-    margin: 0 0 1.5rem;
+    line-height: 1.1;
+    margin: 0 0 1.75rem;
     text-wrap: balance;
 }
 
-/* Gold is spent here and almost nowhere else. That is what keeps it meaning
-   "you earned something" rather than meaning "this is a highlight". */
+/* Warm yellow is spent here and almost nowhere else. That is what keeps it
+   meaning "you earned something" rather than "this is a highlight". */
 .complete-points {
     display: inline-flex;
     align-items: baseline;
-    gap: 0.45rem;
-    padding: 0.5rem 1.15rem;
-    margin: 0 0 2rem;
+    gap: 0.5rem;
+    padding: 0.55rem 1.25rem;
+    margin: 0 0 2.25rem;
     border-radius: var(--radius-pill);
-    border: 1px solid rgb(255 203 71 / 0.35);
-    background: rgb(255 203 71 / 0.1);
-    color: var(--gold);
+    border: 1px solid #ffd16659;
+    background: #ffd1661a;
+    color: var(--yellow);
     font-size: var(--t-small);
 }
 
 .complete-plus {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
@@ -1580,33 +1477,17 @@ pre.code {
 .complete-next {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-size: 1.25rem;
-    margin: 0 0 1.5rem;
+    font-size: 1.3rem;
+    margin: 0 0 1.75rem;
     color: var(--text);
 }
 
-.complete-aside {
-    margin-top: 1.5rem;
-    font-size: var(--t-small);
-}
-
+.complete-aside { margin-top: 1.75rem; font-size: var(--t-small); }
 .complete-aside a { color: var(--muted); }
-.complete-aside a:hover { color: var(--jolt); }
-
-@media (max-width: 40rem) {
-    .scene {
-        padding: 1.25rem 1.1rem 1.75rem;
-        border-radius: var(--radius);
-    }
-
-    .scene-code,
-    .scene-output { font-size: 1.05rem; }
-}
+.complete-aside a:hover { color: var(--cyan); }
 
 /* ------------------------------------------------------------- 5. motion  */
 
-/* The nebulae. Each drifts and breathes on its own period; none of the three
-   periods share a factor, so the sky never repeats an arrangement. */
 @keyframes drift-a {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
     50% { transform: translate3d(6vw, 4vh, 0) scale(1.1); }
@@ -1623,8 +1504,8 @@ pre.code {
 }
 
 /* Parallax: the far layer crawls, the mid layer moves about twice as fast.
-   Small distances -- this should be something you notice after a minute, not
-   something that pulls the eye off the page. */
+   Small distances -- something you notice after a minute, not something that
+   pulls the eye off the page. */
 @keyframes parallax-far {
     0% { transform: translate3d(0, 0, 0); }
     100% { transform: translate3d(-2%, 1.4%, 0); }
@@ -1637,7 +1518,17 @@ pre.code {
 
 @keyframes twinkle {
     0%, 100% { opacity: 0.95; }
-    50% { opacity: 0.6; }
+    50% { opacity: 0.62; }
+}
+
+@keyframes breathe {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.22; }
+}
+
+@keyframes tumble {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    100% { transform: translate3d(3vw, -8vh, 0) rotate(360deg); }
 }
 
 @keyframes rise {
@@ -1647,37 +1538,53 @@ pre.code {
     100% { transform: translate3d(2rem, -46vh, 0); opacity: 0; }
 }
 
-/* 2.4% of the cycle is lit: at 37s that is about nine tenths of a second of
-   streak, then half a minute of empty sky. */
 @keyframes comet {
     0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(16deg) scaleX(0.3); }
     0.4% { opacity: 1; }
-    2.4% { opacity: 0; transform: translate3d(34rem, 10rem, 0) rotate(16deg) scaleX(1); }
-    100% { opacity: 0; transform: translate3d(34rem, 10rem, 0) rotate(16deg) scaleX(1); }
+    2.4% { opacity: 0; transform: translate3d(36rem, 11rem, 0) rotate(16deg) scaleX(1); }
+    100% { opacity: 0; transform: translate3d(36rem, 11rem, 0) rotate(16deg) scaleX(1); }
 }
 
-/* Everything that hangs in space breathes. Small amplitude and long periods --
-   the moment this is fast enough to read as "animated" it reads as cheap. */
+/* Everything hanging in space breathes. Small amplitude, long period -- the
+   moment this is fast enough to read as "animated" it reads as cheap. */
 @keyframes bob {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-9px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* The craft's idle: a bob with a slight roll, so it reads as holding position
+   under power rather than as floating inert. */
+@keyframes cruise {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-11px) rotate(-3deg); }
+}
+
+/* Arriving at a world: in from below and behind, decelerating. */
+@keyframes approach {
+    0% { opacity: 0; transform: translate(-3.5rem, 3rem) rotate(-14deg) scale(0.8); }
+    100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+}
+
+/* Leaving one: the mirror, used on the completion screen. */
+@keyframes depart {
+    0% { opacity: 0; transform: translate(0.6rem, 2.2rem) scale(0.85); }
+    100% { opacity: 1; transform: translate(0, 0) scale(1); }
 }
 
 @keyframes spin {
-    0% { transform: rotateX(68deg) rotate(0deg); }
-    100% { transform: rotateX(68deg) rotate(360deg); }
+    0% { transform: rotateX(70deg) rotate(0deg); }
+    100% { transform: rotateX(70deg) rotate(360deg); }
 }
 
-/* The halo at "you are here": expands and fades, once every few seconds. */
 @keyframes ping {
     0% { transform: translate(-50%, -50%) scale(0.82); opacity: 0.85; }
-    70% { transform: translate(-50%, -50%) scale(1.25); opacity: 0; }
-    100% { transform: translate(-50%, -50%) scale(1.25); opacity: 0; }
+    70% { transform: translate(-50%, -50%) scale(1.28); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1.28); opacity: 0; }
 }
 
-/* Light running down the travelled road, in the direction of travel. The dash
-   array and offset are set inline from the measured path length, because only
-   the browser knows how long the route is. */
+/* Light running the travelled road, in the direction of travel. The dash array
+   and offset are set inline from the measured path length, because only the
+   browser knows how long the route is. */
 @keyframes travel {
     0% { stroke-dashoffset: var(--road-length); opacity: 0; }
     12% { opacity: 1; }
@@ -1685,9 +1592,8 @@ pre.code {
     100% { stroke-dashoffset: 0; opacity: 0; }
 }
 
-/* The pulse running the conduit between the code and the console. It starts
-   above the channel and ends below it, so it enters and leaves rather than
-   appearing and vanishing. */
+/* The pulse down the conduit: starts above the channel and ends below it, so it
+   enters and leaves rather than appearing and vanishing. */
 @keyframes conduit {
     0% { transform: translate(-50%, -100%); opacity: 0; }
     20% { opacity: 1; }
@@ -1695,16 +1601,30 @@ pre.code {
     100% { transform: translate(-50%, 160%); opacity: 0; }
 }
 
-/* Something arriving: up from slightly below, fading in. Used by the console
-   output and by answer feedback -- both are things that did not exist until
-   the learner caused them. */
+/* Something arriving: up from slightly below, fading in. The console output and
+   answer feedback both use it -- both are things that did not exist until the
+   learner caused them. */
 @keyframes land {
-    0% { opacity: 0; transform: translateY(6px); }
+    0% { opacity: 0; transform: translateY(7px); }
     100% { opacity: 1; transform: translateY(0); }
 }
 
-/* The engine plume, which flickers rather than pulses -- three uneven steps,
-   because a smooth sine reads as a glow and not as combustion. */
+/* A route mounting. */
+@keyframes arrive {
+    0% { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* The beacon lamp, and the engine plume. The plume flickers in uneven steps
+   rather than pulsing on a sine -- a smooth sine reads as a glow, not as
+   combustion. */
+@keyframes lamp {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+.beacon-lamp { animation: lamp 2.8s ease-in-out infinite; transform-origin: center; }
+
 @keyframes flicker {
     0%, 100% { opacity: 0.9; transform: scaleY(1); }
     30% { opacity: 0.6; transform: scaleY(0.82); }
@@ -1720,108 +1640,100 @@ pre.code {
 /*
    REDUCED MOTION.
 
-   Not "slower" -- off. Everything above is ambient, which means none of it
-   carries information, which means removing it costs the user nothing. The sky
-   keeps every colour and every star; it simply stops moving. Keeping a token
-   amount of drift for people who asked for no motion would be the worst of both.
+   Not "slower" -- off. All of the above is ambient or confirmatory, none of it
+   carries information the learner cannot get from the still frame, so removing
+   it costs nothing. The sky keeps every colour and every star; it stops moving.
+   A token amount of drift for someone who asked for none is the worst of both.
 */
 @media (prefers-reduced-motion: reduce) {
     .cosmos-nebula,
     .cosmos-stars,
     .cosmos-mote,
     .cosmos-comet,
+    .cosmos .constellation,
+    .cosmos .asteroid,
     .home-orbit::before,
+    .journey-station,
     .journey-station.is-here::before,
+    .journey-station.is-here .planet,
+    .journey-station .ship,
     .journey-road-pulse,
-    .ship.is-thrusting .ship-flame,
     .welcome-stage .planet,
     .welcome-stage .ship,
     .home-orbit .planet,
     .home-orbit .ship,
-    .journey-station.is-here .planet,
     .complete-arrival .planet,
     .complete-arrival .ship,
-    .scene-arrow.is-travelling::after {
-        animation: none !important;
-    }
-
-    /* These two carry no information, and a learner who asked for no motion
-       should still see the output and the feedback land -- just instantly. */
+    .beacon-lamp,
+    .ship.is-thrusting .ship-flame,
     .scene-output,
-    .scene-feedback {
+    .scene-feedback,
+    .route {
         animation: none !important;
     }
 
-    /* Without its animation the pulse would sit parked in the channel, so it
-       goes entirely; the lit code and the arriving output already say that
-       something ran. */
-    .scene-arrow.is-travelling::after { display: none; }
-
-    /* The comets and the road pulse are invisible at rest, so switching the
-       animation off would leave them permanently hidden -- fine for the comet,
-       but the travelled road must still be visible. */
+    /* Both of these are invisible at rest, so switching the animation off would
+       leave them permanently hidden. The road must still read as travelled; the
+       comet can simply go. */
     .journey-road-pulse { opacity: 1; stroke-dashoffset: 0; }
     .cosmos-comet { display: none; }
+    .scene-arrow.is-travelling::after { display: none; }
 
     .button,
     .button.primary::after,
-    .journey-station .planet {
-        transition: none;
-    }
+    .journey-station .planet,
+    .scene-choice { transition: none; }
 }
 
-/* ------------------------------------------------------------ narrow ---- */
+/* ------------------------------------------------------------ 6. narrow --- */
+
+@media (max-width: 52rem) {
+    /* No width left to open sideways into, so the callout goes back under the
+       world. The extra height is absorbed by the leg, which is long enough. */
+    .journey-stops.opens-left,
+    .journey-stops.opens-right {
+        left: 50%;
+        right: auto;
+        top: 100%;
+        width: min(15rem, 76vw);
+        transform: translate(-50%, 3.4rem);
+    }
+
+    .home-sky { grid-template-columns: 1fr; text-align: center; min-height: 0; }
+    .home-orbit { justify-self: center; width: 16rem; height: 16rem; }
+    .home-principle { margin-left: auto; margin-right: auto; }
+    .home-log, .home-aside { justify-content: center; }
+}
 
 /*
    THE INSTRUMENT PANEL ON A PHONE.
 
-   At 375px the panel wrapped: "Log in" broke onto its own line and sat over the
-   brand. Rather than let it wrap, the destinations drop their text and keep
-   their icons -- which is the payoff for having built one consistent icon set
-   in the first place. `aria-label` on each link carries the accessible name, so
-   nothing is lost to a screen reader; only the redundant glyph-plus-word is.
+   At 375px the destinations drop their text and keep their icons -- which is
+   the payoff for having built one consistent icon set. `aria-label` on each
+   link carries the accessible name, so nothing is lost to a screen reader; only
+   the redundant glyph-plus-word goes.
 */
 @media (max-width: 40rem) {
     .site-header {
-        gap: 0.5rem;
-        padding: 0.45rem 0.5rem 0.45rem 0.9rem;
-        width: calc(100% - 1.5rem);
+        gap: 0.6rem;
+        width: calc(100% - 1.75rem);
+        padding: 0.9rem 0 0.75rem;
+        margin-bottom: 1.75rem;
     }
 
-    .site-header nav {
-        gap: 0.1rem;
-        flex-wrap: nowrap;
-    }
+    .site-header nav { gap: 0.15rem; flex-wrap: nowrap; }
+    .site-header nav a:not(.button) { padding: 0.45rem 0.5rem; }
+    .nav-label, .nav-pilot .nav-name { display: none; }
+    .nav-pilot { margin-left: 0.25rem; padding-left: 0.6rem; }
+    .site-header nav .button.small { padding: 0.45rem 0.9rem; font-size: 0.85rem; }
 
-    .site-header nav a:not(.button) { padding: 0.5rem 0.55rem; }
-
-    .nav-label,
-    .nav-pilot .nav-name { display: none; }
-
-    .nav-pilot {
-        margin-left: 0.2rem;
-        padding-left: 0.5rem;
-    }
-
-    .site-header nav .button.small { padding: 0.45rem 0.85rem; font-size: 0.85rem; }
-
-    /* The hero gives back the space the type needs. */
-    .welcome { padding: 1.5rem 1.25rem 4rem; }
-    .welcome-stage { height: 11rem; }
-    .home { padding: 0.5rem 1.25rem 4rem; }
+    .welcome { padding: 0.5rem 1.25rem 4rem; }
+    .welcome-stage { height: 12rem; }
+    .home, .journey, .scene { padding-left: 1.1rem; padding-right: 1.1rem; }
+    .scene-code, .scene-output { font-size: 1.05rem; }
 }
 
-/* Below about 350px there is genuinely not enough width for a brand, a link and
-   a call to action on one line, and squeezing them further clips the button's
-   own label. At that point the panel is allowed to become two rows -- which is
-   the failure mode that looks deliberate rather than broken. */
 @media (max-width: 22rem) {
-    .site-header {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.35rem;
-        border-radius: var(--radius-lg);
-    }
-
+    .site-header { flex-wrap: wrap; justify-content: center; }
     .site-header .brand { margin-right: 0; }
 }

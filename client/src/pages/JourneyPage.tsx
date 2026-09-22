@@ -4,6 +4,8 @@ import { ApiError, api } from "../api/client.js";
 import { Planet } from "../world/Planet.js";
 import { Ship } from "../world/Ship.js";
 import { Icon } from "../world/Icon.js";
+import { WorldLandmark } from "../world/Objects.js";
+import { worldFor } from "../world/atlas.js";
 import { LEG, routeSegment, stationAt } from "../world/atlas.js";
 import type { JourneyPathResponse } from "../api/types.js";
 
@@ -215,7 +217,11 @@ export function JourneyPage() {
                         <div
                             key={topic.slug}
                             className={`journey-station is-${state}`}
-                            style={{ left: `${at.x}%`, top: at.y }}
+                            style={{
+                                left: `${at.x}%`,
+                                top: at.y,
+                                animationDelay: `${Math.min(i * 70, 700)}ms`
+                            }}
                         >
                             {/* The craft, parked. Not thrusting: it is in orbit,
                                 not in transit, and a burning engine at a world
@@ -234,6 +240,14 @@ export function JourneyPage() {
                                           : "ahead"
                                 }`}
                             />
+
+                            {/* Built structures appear only at worlds you have
+                                reached. A station in orbit at a place you have
+                                never been would say the opposite of
+                                "unexplored". */}
+                            {state !== "ahead" && (
+                                <WorldLandmark kind={worldFor(topic.slug).landmark} size={26} />
+                            )}
 
                             <div className="journey-caption">
                                 <p className="journey-name">{topic.name}</p>

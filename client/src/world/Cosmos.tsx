@@ -23,6 +23,19 @@
  * whole sky costs no layout and no paint while it runs. All of it stops under
  * `prefers-reduced-motion`; see world.css.
  */
+import { Asteroid, Constellation } from "./Objects.js";
+
+/* Two star patterns, hand-set. Real constellations are arbitrary shapes someone
+   decided to see, which is a reasonable thing for a learning product to have on
+   its walls -- and they give the eye something to find in the corners. */
+const PLOUGH: ReadonlyArray<[number, number]> = [
+    [0.05, 0.62], [0.24, 0.72], [0.44, 0.66], [0.6, 0.78], [0.72, 0.5], [0.88, 0.36], [0.98, 0.1]
+];
+
+const KITE: ReadonlyArray<[number, number]> = [
+    [0.5, 0.04], [0.12, 0.4], [0.5, 0.96], [0.9, 0.44], [0.5, 0.04]
+];
+
 export function Cosmos() {
     return (
         <div className="cosmos" aria-hidden="true">
@@ -56,6 +69,14 @@ export function Cosmos() {
                 catching one feels like catching one. */}
             <span className="cosmos-comet cosmos-comet-a" />
             <span className="cosmos-comet cosmos-comet-b" />
+
+            {/* Objects, not just points of light. Two constellations parked in
+                opposite corners and two rocks tumbling through: the difference
+                between a starfield and somewhere with things in it. */}
+            <Constellation points={PLOUGH} className="cosmos-con-a" width={150} height={70} />
+            <Constellation points={KITE} className="cosmos-con-b" width={90} height={100} />
+            <Asteroid className="cosmos-rock-a" size={26} />
+            <Asteroid className="cosmos-rock-b" size={18} />
         </div>
     );
 }
