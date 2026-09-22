@@ -35,7 +35,7 @@ export function ReactionResultsPage() {
                 <p className="form-error" role="alert">
                     {error}
                 </p>
-                <Link className="button primary" to="/">
+                <Link className="button primary" to="/play">
                     Back to Jolt
                 </Link>
             </section>
@@ -136,7 +136,7 @@ export function ReactionResultsPage() {
                 <Link className="button primary" to="/reaction">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/">
+                <Link className="button ghost" to="/play">
                     Pick another Jolt
                 </Link>
             </div>

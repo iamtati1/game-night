@@ -304,3 +304,88 @@ describe("dealing spreads across curriculum units", () => {
         expect(dealSession(mixed, 2)).toHaveLength(2);
     });
 });
+
+/**
+ * The focus topic is what makes the learning loop's Reinforce beat deterministic
+ * rather than hoped for. Without it a unit introduced at beat 1 might never come
+ * back in the same run, which is exactly the failure the loop exists to prevent.
+ */
+describe("dealing with a focus topic", () => {
+    const bank = [
+        ...Array.from({ length: 6 }, (_, i) => ({
+            id: `v${i}`,
+            difficulty: (i % 4) + 1,
+            topic: "variables"
+        })),
+        // Topic and difficulty are deliberately decorrelated. Deriving both from
+        // i % 4 made every tier-2 question the same topic, so excluding the
+        // previous topic could empty a tier's pool -- a property of the fixture,
+        // not of the bank, and one that made the guard look broken when it was
+        // correctly falling back.
+        ...Array.from({ length: 40 }, (_, i) => ({
+            id: `o${i}`,
+            difficulty: (i % 4) + 1,
+            topic: ["loops", "arrays", "objects", "functions"][i % 5 % 4]!
+        }))
+    ];
+
+    it("introduces the focus topic at the first beat", () => {
+        const dealt = dealSession(bank, 10, Math.random, "variables");
+
+        expect(dealt[0]!.topic).toBe("variables");
+    });
+
+    it("reserves both an introduction slot and a reinforcement slot", () => {
+        const dealt = dealSession(bank, 10, Math.random, "variables");
+
+        // The two reserved beats, far enough apart that practice happens between
+        // them. The curve may also deal the unit incidentally in other slots --
+        // that is extra practice on the focus topic and entirely welcome; what
+        // matters is that these two are never left to chance.
+        expect(dealt[0]!.topic).toBe("variables");
+        expect(dealt[5]!.topic).toBe("variables");
+    });
+
+    it("never puts the focus topic in back-to-back beats", () => {
+        // Reserving slots must not defeat the existing same-topic guard, or the
+        // run opens by drilling one unit twice.
+        for (let run = 0; run < 40; run += 1) {
+            const dealt = dealSession(bank, 10, Math.random, "variables");
+
+            for (let i = 1; i < dealt.length; i += 1) {
+                expect(dealt[i]!.topic === "variables" && dealt[i - 1]!.topic === "variables").toBe(
+                    false
+                );
+            }
+        }
+    });
+
+    it("introduces at the easiest available tier, so first contact is winnable", () => {
+        const dealt = dealSession(bank, 10, Math.random, "variables");
+        const onTopic = bank.filter((q) => q.topic === "variables");
+        const easiest = Math.min(...onTopic.map((q) => q.difficulty));
+
+        expect(dealt[0]!.difficulty).toBe(easiest);
+    });
+
+    it("deals exactly as before when no focus topic is asked for", () => {
+        const dealt = dealSession(bank, 10, Math.random, null);
+
+        expect(dealt).toHaveLength(10);
+        expect(new Set(dealt.map((q) => q.id)).size).toBe(10);
+    });
+
+    it("degrades quietly when the focus topic has too few questions", () => {
+        const thin = [
+            { id: "s1", difficulty: 1, topic: "scope" },
+            ...bank.filter((q) => q.topic !== "variables")
+        ];
+        const dealt = dealSession(thin, 10, Math.random, "scope");
+
+        // One reserved slot filled, the other left to the curve. A thin unit must
+        // not produce a short run or a duplicated question.
+        expect(dealt).toHaveLength(10);
+        expect(new Set(dealt.map((q) => q.id)).size).toBe(10);
+        expect(dealt[0]!.topic).toBe("scope");
+    });
+});

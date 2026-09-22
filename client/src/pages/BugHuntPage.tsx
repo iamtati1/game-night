@@ -737,25 +737,47 @@ function IncidentScreen({
                 />
             )}
 
-            <div className="bh-report">
-                <p className="bh-theme">
-                    {incident.theme}
-                    {/* Severity was being dropped entirely: the server sends
-                        difficulty 1-5 and nothing rendered it. A word sets
-                        expectations where a number out of five would not. */}
-                    <span className={`bh-severity sev-${incident.difficulty}`}>
-                        {severityLabel(incident.difficulty)}
-                    </span>
-                </p>
-                <h1 className="bh-incident-title">{incident.title}</h1>
-                <p className="bh-bug-report">{incident.bugReport}</p>
+            {/* Two presentations, chosen by whether the curriculum knows what
+                this incident teaches.
 
-                {incident.errorLog && (
-                    <pre className="bh-error-log">
-                        <code>{incident.errorLog}</code>
-                    </pre>
-                )}
-            </div>
+                A curriculum-linked incident gets the beginner layout: one line
+                saying what should have happened, and then the code. The theme,
+                the severity word, the incident title and the error log are all
+                removed -- not restyled -- because each one is something a
+                learner has to read and discard before reaching the only thing
+                that can actually be debugged. The concept's name is the single
+                orienting label, and it says what is being learned rather than
+                which fictional service is on fire.
+
+                A legacy incident keeps the report it was written for. Fifty of
+                them open on a production narrative that carries real
+                information, and stripping that would leave them incoherent. */}
+            {incident.concept ? (
+                <div className="bh-report is-learning">
+                    <p className="bh-learning-concept">{incident.concept.name}</p>
+                    <p className="bh-expected">{incident.bugReport}</p>
+                </div>
+            ) : (
+                <div className="bh-report">
+                    <p className="bh-theme">
+                        {incident.theme}
+                        {/* Severity was being dropped entirely: the server sends
+                            difficulty 1-5 and nothing rendered it. A word sets
+                            expectations where a number out of five would not. */}
+                        <span className={`bh-severity sev-${incident.difficulty}`}>
+                            {severityLabel(incident.difficulty)}
+                        </span>
+                    </p>
+                    <h1 className="bh-incident-title">{incident.title}</h1>
+                    <p className="bh-bug-report">{incident.bugReport}</p>
+
+                    {incident.errorLog && (
+                        <pre className="bh-error-log">
+                            <code>{incident.errorLog}</code>
+                        </pre>
+                    )}
+                </div>
+            )}
 
             {unsupported ? (
                 // Loud, not silent. Rendering the wrong interaction would leave the
@@ -1059,14 +1081,24 @@ function FeedbackPanel({
     feedback: Feedback;
     incident: BugHuntIncident;
 }) {
-    const heading =
-        feedback.outcome === "resolved"
-            ? "Patch successful"
+    // Plain words for a curriculum incident. "Patch rejected" is in-world and
+    // fine for an ops narrative, but a learner who has just misread three lines
+    // of JavaScript is being told off in a vocabulary they came here to learn.
+    const learning = incident.concept !== null;
+
+    const heading = learning
+        ? feedback.outcome === "resolved"
+            ? "That's it"
             : feedback.outcome === "retry"
-              ? "Patch rejected"
-              : feedback.timedOut
-                ? "Incident unresolved — out of time"
-                : "Incident unresolved";
+              ? "Not quite — look again"
+              : "Here's what was happening"
+        : feedback.outcome === "resolved"
+          ? "Patch successful"
+          : feedback.outcome === "retry"
+            ? "Patch rejected"
+            : feedback.timedOut
+              ? "Incident unresolved — out of time"
+              : "Incident unresolved";
 
     // One line from the system, chosen by position and outcome rather than at
     // random, so a run never repeats itself and a test can pin what it says.
@@ -1092,10 +1124,23 @@ function FeedbackPanel({
                 {heading}
             </p>
 
-            <p className="bh-feedback-voice">
-                <span className="bh-voice-tag">System</span>
-                {voice}
-            </p>
+            {/* The in-world system voice is flavour. On a curriculum incident it
+                sits between the learner and the explanation that teaches them
+                something, so it is dropped rather than shortened -- the
+                explanation below is the feedback. */}
+            {!learning && (
+                <p className="bh-feedback-voice">
+                    <span className="bh-voice-tag">System</span>
+                    {voice}
+                </p>
+            )}
+
+            {/* The rule the code broke, in the curriculum's own words. Shown
+                whatever the outcome: a learner who guessed right still benefits
+                from being told why it was right. */}
+            {learning && (
+                <p className="bh-feedback-rule">{incident.concept!.meaning}</p>
+            )}
 
             {feedback.outcome === "resolved" && (
                 <p className="bh-feedback-score">

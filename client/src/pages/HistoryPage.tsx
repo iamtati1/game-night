@@ -96,7 +96,7 @@ export function HistoryPage() {
                 <p className="form-error" role="alert">
                     {error}
                 </p>
-                <Link className="button primary" to="/">
+                <Link className="button primary" to="/play">
                     Back home
                 </Link>
             </section>
@@ -118,7 +118,7 @@ export function HistoryPage() {
                 <p className="muted">
                     Your first Jolt is waiting. Most runs take a couple of minutes.
                 </p>
-                <Link className="button primary" to="/">
+                <Link className="button primary" to="/play">
                     Pick a game
                 </Link>
             </section>

@@ -68,8 +68,12 @@ function fakeApi({ signedIn = true, logoutStatus = 204 } = {}) {
 }
 
 const renderHub = () =>
+    // The game hub moved from "/" to "/play" when Home became the front door.
+    // These tests are about the HEADER surviving a logout, and the hub is simply
+    // the page they exercise it on -- so they follow it rather than being
+    // retargeted at the new landing page.
     render(
-        <MemoryRouter initialEntries={["/"]}>
+        <MemoryRouter initialEntries={["/play"]}>
             <AuthProvider>
                 <App />
             </AuthProvider>

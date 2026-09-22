@@ -1,0 +1,3944 @@
+{
+  "generated": "2026-09-13",
+  "purpose": "SCRATCH AUDIT ONLY — not database state, not tagged on any question row.",
+  "curriculumSource": "client/src/games/curriculum.ts",
+  "questionCount": 231,
+  "records": [
+    {
+      "questionId": 1,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "typeof",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 2,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "map",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 4,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "sort",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 5,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 6,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 7,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-copy-spread",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 8,
+      "legacyTopic": "variables",
+      "topic": "variables",
+      "concept": "declaration",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 10,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "filter",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 12,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "typeof",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "too-trivia-like"
+      ],
+      "notes": "Array.isArray is API recall more than type reasoning; thin learning value."
+    },
+    {
+      "questionId": 13,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 15,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "sort",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 21,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "typeof",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 22,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "reduce",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 23,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "method-chaining",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 24,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 26,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-copy-spread",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 27,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 28,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 32,
+      "legacyTopic": "variables",
+      "topic": "operators",
+      "concept": "truthy-falsy",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 33,
+      "legacyTopic": "variables",
+      "topic": "operators",
+      "concept": "truthy-falsy",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 34,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "shadowing",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 36,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "loop-variable-capture",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 38,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 39,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 40,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "optional-chaining",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 41,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 42,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 43,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 44,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 45,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 48,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "flat",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "flat() has no concept in the curriculum. Content exists, home does not."
+    },
+    {
+      "questionId": 49,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "callbacks",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 50,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "event-loop",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 51,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "event-loop",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 52,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 55,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 58,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 59,
+      "legacyTopic": "variables",
+      "topic": "variables",
+      "concept": "let-vs-const",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 60,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 61,
+      "legacyTopic": "variables",
+      "topic": "strings",
+      "concept": "template-literals",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 62,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 63,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-access",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "too-trivia-like"
+      ],
+      "notes": "Object.keys().length is API recall rather than object reasoning."
+    },
+    {
+      "questionId": 64,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 65,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "arrow-functions",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 66,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "arrow-functions",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 67,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "default-rest-params",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 68,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 69,
+      "legacyTopic": "variables",
+      "topic": "operators",
+      "concept": "truthy-falsy",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": "Near-identical to q32 (Boolean of a non-empty string)."
+    },
+    {
+      "questionId": 70,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-access",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 71,
+      "legacyTopic": "arrays",
+      "topic": "objects",
+      "concept": "destructuring",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept",
+        "wrong-difficulty"
+      ],
+      "notes": "Array destructuring; curriculum files destructuring under objects. Cross-topic by design."
+    },
+    {
+      "questionId": 72,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "destructuring",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 73,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "typeof",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": "Third typeof-of-a-primitive question; q1 and q21 already cover it."
+    },
+    {
+      "questionId": 74,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 75,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 76,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "sort",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 77,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "equality",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 78,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-copy-spread",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 79,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "method-chaining",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 80,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "reduce",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 81,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "find-some-every",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 82,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "find-some-every",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 83,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "find-some-every",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 84,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "optional-chaining",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 85,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 86,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "ambiguous"
+      ],
+      "notes": "Spread-with-override on objects. No object-spread concept; filed under references."
+    },
+    {
+      "questionId": 87,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "default-rest-params",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 88,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "destructuring",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 89,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "json-shape",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "low",
+      "quality": [
+        "too-trivia-like"
+      ],
+      "notes": "Object.entries shape recall, not reasoning about structured data."
+    },
+    {
+      "questionId": 90,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "method-chaining",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 91,
+      "legacyTopic": "functions",
+      "topic": "array-methods",
+      "concept": "for-each",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "forEach has no concept. The lesson (it returns undefined) is real; the home is missing."
+    },
+    {
+      "questionId": 92,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "flat",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "flat(2) — same missing concept as q48."
+    },
+    {
+      "questionId": 93,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 94,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "functions-as-values",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 95,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 96,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "built-in-collections",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Set is not in the curriculum at all."
+    },
+    {
+      "questionId": 97,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 98,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 99,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "sort",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 100,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "filter",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 101,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-access",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 102,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 103,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 104,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "loop-variable-capture",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 105,
+      "legacyTopic": "variables",
+      "topic": "scope",
+      "concept": "hoisting-tdz",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled variables; it is temporal dead zone, which is scope."
+    },
+    {
+      "questionId": 106,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "event-loop",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 107,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 108,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": "Same lesson as q28: reassigning a parameter does not affect the caller."
+    },
+    {
+      "questionId": 109,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 110,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "equality",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 111,
+      "legacyTopic": "conditionals",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "ambiguous"
+      ],
+      "notes": "Float precision. Sits between type-coercion and equality; judgement call."
+    },
+    {
+      "questionId": 112,
+      "legacyTopic": "objects",
+      "topic": "this-and-classes",
+      "concept": "this-binding",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 113,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "map",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 114,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "reduce",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 115,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "hoisting-tdz",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 116,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "method-chaining",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 117,
+      "legacyTopic": "objects",
+      "topic": "functions",
+      "concept": "arrow-functions",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "ambiguous"
+      ],
+      "notes": "Arrow returning an object literal — parenthesis syntax, not really arrow semantics."
+    },
+    {
+      "questionId": 118,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "event-loop",
+      "stage": "order",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 119,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 120,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 121,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "error-propagation",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 122,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 123,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "error-propagation",
+      "stage": "reason",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 124,
+      "legacyTopic": "conditionals",
+      "topic": "objects",
+      "concept": "optional-chaining",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept",
+        "wrong-difficulty"
+      ],
+      "notes": "Labelled conditionals; it is an optional-chaining reasoning question."
+    },
+    {
+      "questionId": 125,
+      "legacyTopic": "objects",
+      "topic": "array-methods",
+      "concept": "reduce",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 126,
+      "legacyTopic": "functions",
+      "topic": "errors",
+      "concept": "try-catch",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled functions; it is try/catch/finally, which is errors."
+    },
+    {
+      "questionId": 127,
+      "legacyTopic": "functions",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "debug",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled functions; the lesson is array mutation through a shared reference."
+    },
+    {
+      "questionId": 128,
+      "legacyTopic": "objects",
+      "topic": "operators",
+      "concept": "truthy-falsy",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 129,
+      "legacyTopic": "async",
+      "topic": null,
+      "concept": null,
+      "stage": "reason",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": null,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "other"
+      ],
+      "notes": "ES modules. No topic exists for modules."
+    },
+    {
+      "questionId": 130,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "sort",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 131,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "functions-as-values",
+      "stage": "debug",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 132,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 133,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "promise-states",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 134,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "promise-all",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 135,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "error-propagation",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 136,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "loop-variable-capture",
+      "stage": "order",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Presented as an ordering question; the skill is var capture in a loop."
+    },
+    {
+      "questionId": 137,
+      "legacyTopic": "array-methods",
+      "topic": "this-and-classes",
+      "concept": "this-binding",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled array-methods; the lesson is `this` inside a non-arrow callback."
+    },
+    {
+      "questionId": 138,
+      "legacyTopic": "loops",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled loops; mutating an array while iterating it is array-mutation."
+    },
+    {
+      "questionId": 139,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "promise-all",
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 140,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "error-propagation",
+      "stage": "order",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 141,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "optional-chaining",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 142,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "reduce",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 143,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "built-in-collections",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Map is not in the curriculum at all."
+    },
+    {
+      "questionId": 144,
+      "legacyTopic": "array-methods",
+      "topic": "array-methods",
+      "concept": "method-chaining",
+      "stage": "combine",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 145,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 146,
+      "legacyTopic": "async",
+      "topic": null,
+      "concept": null,
+      "stage": "predict",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": null,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "other"
+      ],
+      "notes": "ES module live bindings. No topic exists for modules."
+    },
+    {
+      "questionId": 147,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 148,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "callbacks",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 149,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 150,
+      "legacyTopic": "arrays",
+      "topic": "async",
+      "concept": "promise-all",
+      "stage": "reason",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled arrays; it is Promise.allSettled, which is async."
+    },
+    {
+      "questionId": 151,
+      "legacyTopic": "conditionals",
+      "topic": "control-flow",
+      "concept": "if-else",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 152,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "while-loops",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "while loop. The curriculum has for-loop-anatomy but no while concept."
+    },
+    {
+      "questionId": 153,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 154,
+      "legacyTopic": "conditionals",
+      "topic": "control-flow",
+      "concept": "ternary",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 155,
+      "legacyTopic": "variables",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "low",
+      "quality": [
+        "other"
+      ],
+      "notes": "String concatenation with +. No concatenation concept; nearest home is string-methods."
+    },
+    {
+      "questionId": 156,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 157,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 158,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 159,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-access",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 160,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "comparison-operators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 161,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 162,
+      "legacyTopic": "variables",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 163,
+      "legacyTopic": "variables",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 164,
+      "legacyTopic": "arrays",
+      "topic": "strings",
+      "concept": "string-methods",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 165,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "function-declaration",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 166,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "parameters-arguments",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 167,
+      "legacyTopic": "variables",
+      "topic": "variables",
+      "concept": "reassignment",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 168,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "nested-objects",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 169,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "for-loop-anatomy",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 170,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 171,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 172,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 173,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "for-of-for-in",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 174,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "while-loops",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "while loop again — same missing concept as q152."
+    },
+    {
+      "questionId": 175,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 176,
+      "legacyTopic": "loops",
+      "topic": "scope",
+      "concept": "block-vs-function-scope",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled loops; the lesson is that let is block-scoped to the loop."
+    },
+    {
+      "questionId": 177,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 178,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 179,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 180,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 181,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "for-loop-anatomy",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 182,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "break-continue",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 183,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "break-continue",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 184,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 185,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "loop-conditions",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 186,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "nested-loops",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 187,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "nested-loops",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 188,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "loop-conditions",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 189,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "function-declaration",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 190,
+      "legacyTopic": "functions",
+      "topic": "values",
+      "concept": "typeof",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "typeof applied to a function and its result; values, not functions."
+    },
+    {
+      "questionId": 191,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "reason",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 192,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 193,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "function-declaration",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 194,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "function-declaration",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 195,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "arrow-functions",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 196,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "default-rest-params",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good",
+        "wrong-difficulty"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 197,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "function-declaration",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 198,
+      "legacyTopic": "functions",
+      "topic": "control-flow",
+      "concept": "guard-clauses",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 199,
+      "legacyTopic": "functions",
+      "topic": "loops",
+      "concept": "accumulators",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 200,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "functions-as-values",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 201,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "functions-as-values",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 202,
+      "legacyTopic": "functions",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "wrong-concept"
+      ],
+      "notes": "Labelled functions; returning a function that closes over a parameter is a closure."
+    },
+    {
+      "questionId": 203,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "comparison-operators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "duplicate"
+      ],
+      "notes": "Duplicate of q160's comparison-operator content."
+    },
+    {
+      "questionId": 204,
+      "legacyTopic": "conditionals",
+      "topic": "control-flow",
+      "concept": "else-if-chains",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 205,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 206,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 207,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 208,
+      "legacyTopic": "conditionals",
+      "topic": "control-flow",
+      "concept": "ternary",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 209,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "truthy-falsy",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 210,
+      "legacyTopic": "conditionals",
+      "topic": "control-flow",
+      "concept": "guard-clauses",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 211,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "logical-operators",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Short-circuit prevents the call. Reasoning about && , not tracing a value."
+    },
+    {
+      "questionId": 212,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 213,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 214,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 1,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 215,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-indexing",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "medium",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 216,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 217,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-copy-spread",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 218,
+      "legacyTopic": "arrays",
+      "topic": "arrays",
+      "concept": "array-mutation",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 219,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "promise-states",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 220,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 221,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 222,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "function-declaration",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 1,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 223,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 224,
+      "legacyTopic": "functions",
+      "topic": "array-methods",
+      "concept": "map",
+      "stage": "predict",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 225,
+      "legacyTopic": "functions",
+      "topic": "array-methods",
+      "concept": "map",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 226,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "reason",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 227,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Player predicts the printed booleans; it is predict, not reason."
+    },
+    {
+      "questionId": 228,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 229,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 230,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "error-propagation",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 231,
+      "legacyTopic": "async",
+      "topic": "async",
+      "concept": "async-await",
+      "stage": "predict",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": ""
+    },
+    {
+      "questionId": 232,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 233,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 234,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 235,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 236,
+      "legacyTopic": "variables",
+      "topic": "values",
+      "concept": "type-coercion",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 237,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "equality",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 238,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "equality",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 239,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "equality",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 240,
+      "legacyTopic": "objects",
+      "topic": "objects",
+      "concept": "object-references",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 241,
+      "legacyTopic": "conditionals",
+      "topic": "operators",
+      "concept": "equality",
+      "stage": "debug",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 242,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "loop-conditions",
+      "stage": "debug",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 243,
+      "legacyTopic": "loops",
+      "topic": "loops",
+      "concept": "loop-conditions",
+      "stage": "debug",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 244,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "debug",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 245,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "return-values",
+      "stage": "debug",
+      "difficulty": 2,
+      "difficultyTier": "beginner",
+      "stageDeclaredDifficulty": 2,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 246,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "functions-as-values",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 247,
+      "legacyTopic": "functions",
+      "topic": "functions",
+      "concept": "functions-as-values",
+      "stage": "reason",
+      "difficulty": 3,
+      "difficultyTier": "intermediate",
+      "stageDeclaredDifficulty": 3,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 248,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "explain",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 249,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "explain",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 250,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 251,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    },
+    {
+      "questionId": 252,
+      "legacyTopic": "scope",
+      "topic": "scope",
+      "concept": "closures",
+      "stage": "debug",
+      "difficulty": 4,
+      "difficultyTier": "advanced",
+      "stageDeclaredDifficulty": 4,
+      "currentChallengeType": "predict-output",
+      "game": "code-blitz",
+      "confidence": "high",
+      "quality": [
+        "good"
+      ],
+      "notes": "Added by seed 012 (reason/explain/debug). Stored topic follows the legacy nine-value CHECK; curriculum topic differs for type-coercion and equality."
+    }
+  ]
+}

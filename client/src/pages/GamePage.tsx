@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { activeGameFrom } from "../api/types.js";
 import type {
@@ -7,32 +7,45 @@ import type {
     CurrentQuestionResponse,
     ResumableResponse,
     ServedQuestion,
-    StartSessionResponse
+    StartSessionResponse,
+    Introduction,
+    IntroductionResponse
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
 import { PausedRun } from "../components/PausedRun.js";
 import { GetReady } from "../components/GetReady.js";
+import { learnBeatFor, learnBeatForConcept, type LearnBeat } from "../games/learnBeats.js";
 import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
 
 const QUESTION_TIME_LIMIT_MS = 35_000;
 /**
- * How long the result stays on screen before the next question arrives.
+ * A lapse still auto-advances, and only a lapse.
  *
- * Deliberately not one number. Dwell should scale with how much there is to
- * read: a correct answer carries no new information beyond "yes", so holding the
- * player there is dead time in a game called Blitz. A wrong answer names the
- * answer they missed, and that is the whole teaching moment -- cutting it short
- * to hit a uniform budget would throw away the reason the reveal exists.
+ * The timeout path has already fetched the next question by the time this
+ * runs -- that fetch is what adjudicates the expired one -- so its 35s clock
+ * is live. Holding the player on a button here would spend time they are
+ * about to need. There is also nothing to read: a lapse carries no
+ * explanation and names no answer, by design.
  */
-const DWELL_MS: Record<Feedback["outcome"], number> = {
-    correct: 900,
-    incorrect: 1600,
-    timed_out: 1400
-};
+const LAPSE_DWELL_MS = 1400;
+
+/**
+ * There is no dwell timer for an answered question.
+ *
+ * It used to be 900ms on a correct answer and 1600ms on a wrong one, scaled to
+ * how much there was to read. The problem is that the wrong-answer case is the
+ * teaching moment -- the explanation, the answer you missed -- and no fixed
+ * budget is right for reading it. A fast reader waits; a slow one loses it.
+ *
+ * The player advances instead. Safe to do here specifically because the next
+ * question is fetched on advance rather than bundled into the answer response,
+ * so its 35s clock starts when they ask for it, not while they are still
+ * reading. That ordering was already in place; this just uses it.
+ */
 
 /** Exit animation. Short enough to read as one motion with the entrance. */
 const EXIT_MS = 170;
@@ -88,8 +101,173 @@ const OPTION_GLYPH: Record<OptionState, string> = {
     "": ""
 };
 
+/**
+ * Your assembly against the right one, with the first divergent token marked.
+ *
+ * Deliberately not partial credit -- the answer is still right or wrong. This
+ * only answers "where did I go wrong", which for a sequence is a different
+ * question from "what was the answer", and the one worth showing.
+ */
+function AssemblyVerdict({ built, correct }: { built: string[]; correct: string }) {
+    const wanted = correct.split(" ");
+    const right = built.join(" ") === correct;
+
+    // A client-side lapse adjudicates through GET /sessions/current, whose
+    // response deliberately carries no correct answer -- so there is no second
+    // row to draw, and drawing the first one alone reads as "correct: nothing".
+    if (right || correct === "") {
+        return null;
+    }
+
+    // The first place the two sequences differ, or the point where the shorter
+    // one ran out.
+    const divergesAt = built.findIndex((token, i) => token !== wanted[i]);
+    const mark = divergesAt === -1 ? built.length : divergesAt;
+
+    return (
+        <div className="verdict-rows">
+            <p className="verdict-row">
+                <span className="verdict-label">You built</span>
+                {built.map((token, i) => (
+                    <span key={i} className={`verdict-token${i === mark ? " diverged" : ""}`}>
+                        {token}
+                    </span>
+                ))}
+            </p>
+            <p className="verdict-row">
+                <span className="verdict-label">Correct</span>
+                {wanted.map((token, i) => (
+                    <span key={i} className={`verdict-token${i === mark ? " diverged" : ""}`}>
+                        {token}
+                    </span>
+                ))}
+            </p>
+        </div>
+    );
+}
+
+/** The marker a complete-code prompt uses to say where the gap is. */
+const GAP = "/*?*/";
+
+/**
+ * The fewest tokens an answer can be, matching submitAnswerSchema.
+ *
+ * The server rejects a shorter sequence outright rather than scoring it, so a
+ * Submit that allowed one token turned a half-finished answer into an error
+ * banner instead of a wrong answer. Committing a short-but-valid assembly is
+ * still allowed, and is still simply wrong.
+ */
+const MIN_TOKENS = 2;
+
+/**
+ * The assembly stage: a snippet with a gap, and a bank to fill it from.
+ *
+ * The interaction is Memory's symbol bank and Flush's tile rack, which is
+ * deliberate -- a player who has played either already knows this gesture, and
+ * the mechanic is new enough without a new way of touching it.
+ *
+ * Placement is by tap, not drag. Dragging is worse on a phone, needs a pointer
+ * fallback, and buys nothing here: tokens go in one order, at one place.
+ */
+function Assembly({
+    question,
+    placed,
+    locked,
+    onPlace,
+    onRemove,
+    onSubmit
+}: {
+    question: ServedQuestion;
+    placed: string[];
+    locked: boolean;
+    onPlace: (id: string) => void;
+    onRemove: (at: number) => void;
+    onSubmit: () => void;
+}) {
+    const byId = new Map(question.options.map((o) => [o.id, o.text]));
+    const { code } = splitPrompt(question.prompt);
+
+    // A complete-code prompt always has a snippet and always marks its gap --
+    // both are enforced by the content tests -- so this only guards the types.
+    const [before, after] = (code ?? "").split(GAP);
+
+    return (
+        <div className="assembly">
+            <pre className="prompt assembly-code">
+                {before}
+                <span className={`assembly-gap${placed.length ? " filled" : ""}`}>
+                    {placed.length === 0 ? (
+                        <span className="assembly-placeholder">&nbsp;</span>
+                    ) : (
+                        placed.map((id, i) => (
+                            <button
+                                key={`${id}-${i}`}
+                                type="button"
+                                className="assembly-placed"
+                                onClick={() => onRemove(i)}
+                                disabled={locked}
+                                title="Remove"
+                            >
+                                {byId.get(id)}
+                            </button>
+                        ))
+                    )}
+                </span>
+                {after}
+            </pre>
+
+            <ul className="assembly-bank">
+                {question.options.map((option, index) => {
+                    const used = placed.includes(option.id);
+
+                    return (
+                        <li key={option.id}>
+                            <button
+                                type="button"
+                                className={`assembly-token${used ? " used" : ""}`}
+                                onClick={() => onPlace(option.id)}
+                                disabled={locked || used}
+                            >
+                                <kbd>{index + 1}</kbd>
+                                <span className="assembly-token-text">{option.text}</span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+
+            {/* Explicit, never automatic. Filling the last slot is not the same as
+                being finished -- the player should be able to take one back and
+                look again before committing. */}
+            <button
+                type="button"
+                className="button primary assembly-submit"
+                onClick={onSubmit}
+                disabled={locked || placed.length < MIN_TOKENS}
+            >
+                Submit
+                <span className="next-hint">Enter</span>
+            </button>
+        </div>
+    );
+}
+
 export function GamePage() {
     const navigate = useNavigate();
+    // ?focus=variables asks the dealer for an introduction slot and a
+    // reinforcement slot on that unit. Absent, Code Blitz deals exactly as
+    // before -- this is additive, not a new mode.
+    const [searchParams] = useSearchParams();
+    const focusTopic = searchParams.get("focus");
+    /**
+     * The concept the curriculum says to introduce next, decided server-side.
+     *
+     * Null until the entrance probe answers, and null for a learner who has met
+     * everything currently reachable. This is the Learn half of Learn -> Play:
+     * acknowledging it is what marks the concept encountered, which is what
+     * makes its practice content eligible to be dealt.
+     */
+    const [introduction, setIntroduction] = useState<Introduction | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [paused, setPaused] = useState(false);
     /** Counting in after Resume. The session is only resumed once the count
@@ -133,6 +311,15 @@ export function GamePage() {
      */
     const [streak, setStreak] = useState(0);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
+    /** Set once an answer is in. Holds what to do when the player advances. */
+    const [pendingAdvance, setPendingAdvance] = useState<
+        { complete: boolean; sessionId: string | null } | null
+    >(null);
+    /** The worked example to show before the run, when one applies. */
+    const [learning, setLearning] = useState(false);
+    /** Option ids placed into the gap, in the order the player placed them.
+     *  Only ever non-empty for a complete-code question. */
+    const [placed, setPlaced] = useState<string[]>([]);
     const [runningScore, setRunningScore] = useState(0);
     const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
     /** Bumped after abandoning, to re-run the start effect. */
@@ -143,6 +330,31 @@ export function GamePage() {
      *  award and score animations replay on a repeat of the same value -- two
      *  correct answers worth +130 in a row must animate twice, not once. */
     const [beat, setBeat] = useState(0);
+
+    /**
+     * The card shown before the run starts.
+     *
+     * Two sources, and the curriculum wins. A concept-keyed beat is the Learn
+     * half of the learning loop and completing it changes what the learner is
+     * dealt next; the ?focus= beat is the older, unrecorded path and stays
+     * exactly as it was.
+     *
+     * When the server offers an introduction no beat has been authored for, the
+     * concept's own one-line meaning stands in rather than the introduction
+     * silently disappearing -- which would leave its practice content
+     * permanently unreachable.
+     */
+    const learnBeat: LearnBeat | null =
+        learnBeatForConcept(introduction?.conceptSlug ?? null) ??
+        (introduction
+            ? {
+                  topic: introduction.topicSlug,
+                  title: introduction.conceptName,
+                  code: "",
+                  output: "",
+                  rule: introduction.meaning
+              }
+            : learnBeatFor(focusTopic));
 
     // Guards against the countdown firing while an answer is already in flight
     // or feedback is on screen.
@@ -291,6 +503,28 @@ export function GamePage() {
             } catch {
                 // 404 means no run in progress, which is the normal first arrival.
             }
+
+            if (!active) return;
+
+            // Nothing in progress, so the entrance is about to render. Ask what
+            // the curriculum wants introduced before it does.
+            //
+            // Deliberately last: a learner mid-run is returned to their question
+            // without this request happening at all, and a learner who is up to
+            // date gets null. Failure is silent for the same reason the resumable
+            // probe's is -- not knowing what to teach must never stop someone
+            // playing.
+            try {
+                const next = await api.get<IntroductionResponse>(
+                    "/api/curriculum/introduction"
+                );
+
+                if (!active) return;
+
+                setIntroduction(next.introduction);
+            } catch {
+                // Play on without an introduction.
+            }
         })();
 
         return () => {
@@ -298,12 +532,43 @@ export function GamePage() {
         };
     }, [finish, attempt]);
 
+    /**
+     * The learner has read the beat and pressed the button.
+     *
+     * Reported BEFORE the count-in, and awaited, because the count-in is
+     * followed immediately by POST /api/sessions -- and the concept has to be
+     * encountered by the time the dealer runs, or the practice this
+     * introduction just unlocked will not be in the candidate pool it sees.
+     *
+     * A failure here is not fatal and must not block play: the concept simply
+     * stays un-encountered and the beat is offered again next time. Losing a run
+     * to a failed bookkeeping request would be far worse than repeating one
+     * card.
+     */
+    const acknowledge = useCallback(async () => {
+        if (introduction) {
+            try {
+                await api.post(
+                    `/api/curriculum/introductions/${introduction.challengeId}/complete`
+                );
+            } catch {
+                // Offered again next time.
+            }
+        }
+
+        setLearning(false);
+        setCountingIn(true);
+    }, [introduction]);
+
     /** Starts the run. Only ever called by the entrance's button. */
     const begin = useCallback(async () => {
         setBeginning(true);
 
         try {
-            const data = await api.post<StartSessionResponse>("/api/sessions");
+            const data = await api.post<StartSessionResponse>(
+                "/api/sessions",
+                focusTopic ? { focusTopic } : undefined
+            );
 
             if (data.session) {
                 finish(data.session.id);
@@ -352,12 +617,75 @@ export function GamePage() {
 
             setQuestion(data.question ?? null);
             setRunningScore(data.scoreSoFar ?? 0);
+            setPlaced([]);
             settling.current = false;
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
         }
     }, [finish]);
+
+    /** The player is done reading. Animate out, then ask for the next question. */
+    const advance = useCallback(() => {
+        if (!pendingAdvance) return;
+
+        const pending = pendingAdvance;
+        setPendingAdvance(null);
+        setLeaving(true);
+
+        later(() => {
+            setLeaving(false);
+            setFeedback(null);
+
+            if (pending.complete) {
+                finish(pending.sessionId ?? "");
+                return;
+            }
+
+            void advanceToNext();
+        }, EXIT_MS);
+    }, [pendingAdvance, finish, advanceToNext]);
+
+    /**
+     * Sends an assembled answer.
+     *
+     * Shares everything after the request with submit(): the same feedback, the
+     * same pending-advance handoff, the same scoring. Only the shape of what is
+     * sent differs, because only the server decides whether it was right.
+     */
+    async function submitAssembly() {
+        if (!sessionId || !question || settling.current || placed.length < MIN_TOKENS) return;
+
+        settling.current = true;
+        setBusy(true);
+
+        try {
+            const result = await api.post<AnswerResponse>(`/api/sessions/${sessionId}/answers`, {
+                sessionQuestionId: question.sessionQuestionId,
+                selectedOptionIds: placed
+            });
+
+            setRunningScore(result.scoreSoFar);
+            setBeat((n) => n + 1);
+            setStreak((n) => (result.outcome === "correct" ? n + 1 : 0));
+            setFeedback({
+                outcome: result.outcome,
+                correctOption: result.correctOption,
+                explanation: result.explanation,
+                pointsAwarded: result.pointsAwarded,
+                selectedOptionId: null
+            });
+            setPendingAdvance({
+                complete: result.complete,
+                sessionId: result.session?.id ?? sessionId
+            });
+        } catch (err) {
+            settling.current = false;
+            setError(err instanceof ApiError ? err.detailText : "Could not submit your answer");
+        } finally {
+            setBusy(false);
+        }
+    }
 
     async function submit(optionId: string) {
         if (!sessionId || !question || settling.current) return;
@@ -382,27 +710,13 @@ export function GamePage() {
                 selectedOptionId: optionId
             });
 
-            // Hold the result, animate the question out, then fetch the next one.
-            //
-            // The next question is requested here rather than read off this
-            // response, because asking for it is what starts its clock. Bundling
-            // it in would hand the player a question whose 35s began while they
-            // were still reading why the last one was wrong.
-            later(() => {
-                setLeaving(true);
-
-                later(() => {
-                    setLeaving(false);
-                    setFeedback(null);
-
-                    if (result.complete) {
-                        finish(result.session?.id ?? sessionId);
-                        return;
-                    }
-
-                    void advanceToNext();
-                }, EXIT_MS);
-            }, DWELL_MS[result.outcome]);
+            // Stop here. `settling.current` stays true until the player advances,
+            // which is what keeps the expiry handler from firing underneath the
+            // feedback they are still reading.
+            setPendingAdvance({
+                complete: result.complete,
+                sessionId: result.session?.id ?? sessionId
+            });
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Could not submit your answer");
@@ -444,9 +758,14 @@ export function GamePage() {
                     setLeaving(false);
                     setFeedback(null);
                     setQuestion(data.question ?? null);
+                    // The lapse path serves the next question itself rather than
+                    // going through advanceToNext, so it has to clear the gap too.
+                    // Without this, tokens placed on a question that timed out
+                    // arrive on the next one, where their ids belong to nothing.
+                    setPlaced([]);
                     settling.current = false;
                 }, EXIT_MS);
-            }, DWELL_MS.timed_out);
+            }, LAPSE_DWELL_MS);
         } catch (err) {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
@@ -456,9 +775,44 @@ export function GamePage() {
     // Number keys 1-4 answer the question -- it is called Blitz for a reason.
     useEffect(() => {
         function onKey(event: KeyboardEvent) {
+            // Once an answer is in, the only key that does anything is the one
+            // that moves on. Enter and Space both, because both are what people
+            // reach for, and neither should scroll the page instead.
+            if (pendingAdvance) {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    advance();
+                }
+                return;
+            }
+
             if (!question || settling.current) return;
 
             const index = Number(event.key) - 1;
+
+            // Assembly: the same number keys place a token rather than answering
+            // outright, Backspace takes the last one back, Enter commits.
+            if (question.challengeType === "complete-code") {
+                if (event.key === "Backspace") {
+                    event.preventDefault();
+                    setPlaced((ids) => ids.slice(0, -1));
+                    return;
+                }
+
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    void submitAssembly();
+                    return;
+                }
+
+                const token = question.options[index];
+
+                if (token && !placed.includes(token.id)) {
+                    setPlaced((ids) => [...ids, token.id]);
+                }
+
+                return;
+            }
 
             if (Number.isInteger(index) && index >= 0 && index < question.options.length) {
                 void submit(question.options[index]!.id);
@@ -516,6 +870,41 @@ export function GamePage() {
        blocked start still wins -- those are answers to "why can I not play", and
        the intro is only for "you have not started yet". */
     if (!entered) {
+        /* The Learn beat. Sits between Start and the count-in deliberately: no
+           session exists yet, so no question has been served and no 35s clock is
+           running behind it. The player reads for as long as they like and the
+           first challenge still arrives with its full time. */
+        if (learning && learnBeat) {
+            return (
+                <section className="game blitz learn-beat">
+                    <p className="learn-eyebrow">
+                        First up · {introduction?.conceptName ?? learnBeat.topic}
+                    </p>
+                    <h1 className="learn-title">{learnBeat.title}</h1>
+
+                    {learnBeat.code && (
+                        <>
+                            <pre className="learn-code">{learnBeat.code}</pre>
+
+                            <p className="learn-output">
+                                <span className="learn-arrow">prints</span> {learnBeat.output}
+                            </p>
+                        </>
+                    )}
+
+                    <p className="learn-rule">{learnBeat.rule}</p>
+
+                    <button
+                        type="button"
+                        className="button primary"
+                        onClick={() => void acknowledge()}
+                    >
+                        Got it — try one
+                    </button>
+                </section>
+            );
+        }
+
         if (countingIn) {
             return <GetReady label="Code Blitz" onDone={() => void begin()} />;
         }
@@ -535,7 +924,7 @@ export function GamePage() {
                 }
                 shape="10 questions · 35s each · difficulty climbs"
                 busy={beginning}
-                onStart={() => setCountingIn(true)}
+                onStart={() => (learnBeat ? setLearning(true) : setCountingIn(true))}
                 startLabel="Start blitz"
             />
         );
@@ -623,6 +1012,16 @@ export function GamePage() {
                     );
                 })()}
 
+                {question.challengeType === "complete-code" ? (
+                    <Assembly
+                        question={question}
+                        placed={placed}
+                        locked={busy || feedback !== null}
+                        onPlace={(id) => setPlaced((ids) => [...ids, id])}
+                        onRemove={(at) => setPlaced((ids) => ids.filter((_, i) => i !== at))}
+                        onSubmit={() => void submitAssembly()}
+                    />
+                ) : (
                 <ul className={`options${feedback?.outcome === "timed_out" ? " lapsed" : ""}`}>
                     {question.options.map((option, index) => {
                         const state = optionStateFor(feedback, option);
@@ -647,6 +1046,7 @@ export function GamePage() {
                         );
                     })}
                 </ul>
+                )}
             </div>
 
             <div className="feedback" role="status">
@@ -665,8 +1065,23 @@ export function GamePage() {
                 {/* The reason, when the question carries one. This is the whole
                     point of the bank: a player who got it wrong should leave the
                     round knowing something they did not know going in. */}
+                {/* An assembly answer is a sequence, so "not quite -- X" does not
+                    tell the player much. Showing both rows and marking where they
+                    first diverge names the one token that cost them the answer. */}
+                {feedback && question.challengeType === "complete-code" && (
+                    <AssemblyVerdict
+                        built={placed.map((id) => question.options.find((o) => o.id === id)?.text ?? "")}
+                        correct={feedback.correctOption}
+                    />
+                )}
                 {feedback?.explanation && (
                     <p className="feedback-why">{feedback.explanation}</p>
+                )}
+                {pendingAdvance && (
+                    <button type="button" className="button primary next-beat" onClick={advance}>
+                        {pendingAdvance.complete ? "See results" : "Next"}
+                        <span className="next-hint">Enter</span>
+                    </button>
                 )}
             </div>
         </section>

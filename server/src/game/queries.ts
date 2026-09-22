@@ -1,5 +1,9 @@
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
+import { demandCeilingCte } from "../curriculum/demand.js";
+import { journeyCte, withinJourney } from "../curriculum/journey.js";
+import { selectInOrder, type Candidate, type Ceilings } from "../curriculum/policy.js";
+import { curriculumCtes, curriculumSelects } from "../curriculum/selection.js";
 import { CODE_BLITZ } from "../games/constants.js";
 import { ELIGIBLE_QUESTION_PREDICATE } from "../questions/queries.js";
 import { QUESTIONS_PER_SESSION, scoreForSession } from "./scoring.js";
@@ -30,6 +34,9 @@ export interface SessionQuestionRow {
     question_id: string;
     display_order: number;
     prompt_text: string;
+    topic: string | null;
+    explanation: string | null;
+    challenge_type: string;
     status: string;
     served_at: Date | null;
     selected_option_id: string | null;
@@ -68,12 +75,172 @@ export async function findSessionForUser(
 }
 
 /**
+ * The candidate query, exported so the integration test runs this exact string.
+ *
+ * Same reason the introduction statements are constants: a test that retyped it
+ * would be testing its own copy of the pipeline rather than the one that ships.
+ *
+ * $1 session being created (excluded from its own lookback) · $2 user · $3 game slug
+ */
+export const CODE_BLITZ_CANDIDATES_SQL = `WITH recent AS (
+             SELECT sq.question_id
+             FROM session_questions sq
+             WHERE sq.game_session_id IN (
+                 SELECT gs.id
+                 FROM game_sessions gs
+                 WHERE gs.user_id = $2
+                   AND gs.game_id = (SELECT id FROM games WHERE slug = $3)
+                   AND gs.id <> $1
+                 ORDER BY gs.started_at DESC
+                 LIMIT ${RECENT_SESSIONS_AVOIDED}
+             )
+         ),
+         ${curriculumCtes("$2")},
+         ${demandCeilingCte("$2")},
+         ${journeyCte("$2", QUESTIONS_PER_SESSION)}
+         SELECT q.id, q.difficulty, q.topic, q.prompt,
+                q.challenge_id                                       AS challenge_id,
+                ch.concept_id                                        AS concept_id,
+                ch.role                                              AS role,
+                ch.difficulty                                        AS challenge_difficulty,
+                d.display_order                                      AS demand_order,
+                dc.ceiling                                           AS difficulty_ceiling,
+                mc.ceiling_order                                     AS demand_ceiling,
+                (q.id IN (SELECT question_id FROM recent))           AS seen_recently
+         FROM questions q
+         LEFT JOIN challenges ch        ON ch.id = q.challenge_id
+         LEFT JOIN demands d            ON d.id  = ch.demand_id
+         LEFT JOIN difficulty_ceiling dc ON dc.concept_id = ch.concept_id
+         LEFT JOIN demand_ceiling mc    ON mc.concept_id = ch.concept_id
+         WHERE ${ELIGIBLE_QUESTION_PREDICATE}
+           AND ${curriculumSelects("q")}
+           AND ${withinJourney("q")}
+         ORDER BY (q.id IN (SELECT question_id FROM recent)) ASC, RANDOM()`;
+
+/**
+ * One row of the Code Blitz candidate query.
+ *
+ * The first four columns are what dealSession has always read. The rest are the
+ * curriculum's, and are NULL for every untagged question -- which is most of
+ * them, deliberately, and for as long as the migration takes.
+ */
+interface CandidateRow {
+    id: string;
+    /** questions.difficulty -- PACING. Never the curriculum's number. */
+    difficulty: number | null;
+    topic: string | null;
+    prompt: string;
+    challenge_id: string | null;
+    concept_id: string | null;
+    role: string | null;
+    /** challenges.difficulty -- CURRICULUM. Never pacing. */
+    challenge_difficulty: number | null;
+    demand_order: number | null;
+    difficulty_ceiling: number | null;
+    demand_ceiling: number | null;
+    seen_recently: boolean;
+}
+
+/**
+ * Orders the candidate array so the dealer meets curriculum-linked questions
+ * first, without changing what the dealer does with them.
+ *
+ * WHY ORDERING IS THE WHOLE INTEGRATION. dealSession already treats the array's
+ * order as a preference -- for each slot it filters to the pacing tier it wants
+ * and takes the first acceptable match. So putting a curriculum-preferred
+ * question earlier means "when the curve asks for a tier this question can fill,
+ * prefer it", and means nothing otherwise. The curve still decides how hard each
+ * slot is; the curriculum decides which question fills it. No change to
+ * curve.ts, to questions.difficulty, to scoring or to session length.
+ *
+ * TWO SORT KEYS, IN THIS ORDER:
+ *
+ *   1. seen_recently  -- the pre-existing anti-repeat, untouched. A question
+ *                        from the player's last three runs still sorts last,
+ *                        curriculum-linked or not. Losing this would have the
+ *                        one tagged question dealt every single game.
+ *   2. curriculum     -- within a recency class, policy-ranked tagged questions
+ *                        come before untagged ones.
+ *
+ * Legacy questions keep the SQL's RANDOM() order among themselves, because the
+ * sort is stable and they all share a rank.
+ *
+ * HOW TAGGED AND UNTAGGED COEXIST. An untagged question has no challenge, so it
+ * has no concept, no rung and no ceiling; the policy never sees it and it never
+ * acquires curriculum state. It is transitional fallback content: fully
+ * playable, sorted after the curriculum's picks, and invisible to every
+ * curriculum derivation. Serving one records a session_questions row that no
+ * curriculum CTE will ever join to, because those all go through
+ * questions.challenge_id. That is what makes this an incremental migration
+ * rather than a cutover -- 230 of the 232 dealable questions are untagged today
+ * and every one of them still plays.
+ */
+export function byCurriculumPreference(rows: readonly CandidateRow[]): CandidateRow[] {
+    const tagged = rows.filter(
+        (r): r is CandidateRow & { concept_id: string } => r.concept_id !== null
+    );
+
+    // Ceilings are per concept. The demand ceiling is raised to at least the
+    // deepest rung the concept actually has content at -- see the note in
+    // createSessionWithQuestions on why demand cannot gate yet.
+    const ceilings = new Map<string, Ceilings>();
+
+    for (const row of tagged) {
+        const seen = ceilings.get(row.concept_id);
+        const demandOrder = Math.max(
+            row.demand_ceiling ?? 0,
+            row.demand_order ?? 0,
+            seen?.demandOrder ?? 0
+        );
+
+        ceilings.set(row.concept_id, {
+            difficulty: row.difficulty_ceiling ?? row.challenge_difficulty ?? 1,
+            demandOrder
+        });
+    }
+
+    const asCandidate = (row: CandidateRow & { concept_id: string }): Candidate => ({
+        challengeId: row.challenge_id!,
+        conceptId: row.concept_id,
+        demandOrder: row.demand_order ?? 0,
+        difficulty: row.challenge_difficulty ?? 1,
+        role: row.role ?? "practise"
+    });
+
+    const rank = new Map<string, number>();
+
+    selectInOrder(
+        tagged.map(asCandidate),
+        (conceptId) => ceilings.get(conceptId) ?? { difficulty: 1, demandOrder: 0 }
+    ).forEach((candidate, index) => rank.set(candidate.challengeId, index));
+
+    const keyOf = (row: CandidateRow) => [
+        row.seen_recently ? 1 : 0,
+        row.challenge_id === null
+            ? Number.MAX_SAFE_INTEGER
+            : (rank.get(row.challenge_id) ?? Number.MAX_SAFE_INTEGER - 1)
+    ];
+
+    // Stable, so untagged questions keep the RANDOM() order the query gave them.
+    return [...rows].sort((a, b) => {
+        const [aSeen, aRank] = keyOf(a);
+        const [bSeen, bRank] = keyOf(b);
+
+        return aSeen! - bSeen! || aRank! - bRank!;
+    });
+}
+
+/**
  * Creates the session and its full question plan atomically. A transaction is
  * mandatory here: pool.query() may hand out a different connection per call, so
  * BEGIN/COMMIT must run on one dedicated client. Without it a crash mid-loop
  * would leave a session with 4 of its 10 questions.
  */
-export async function createSessionWithQuestions(userId: string): Promise<GameSessionRow> {
+export async function createSessionWithQuestions(
+    userId: string,
+    /** Guarantees this topic an introduction slot and a reinforcement slot. */
+    focusTopic: string | null = null
+): Promise<GameSessionRow> {
     const client: PoolClient = await pool.connect();
 
     try {
@@ -136,33 +303,48 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
         // past position ten. The ordering still matters and is still the point --
         // unseen questions come first, randomised within that, and the dealer
         // takes the first acceptable match so both properties survive.
-        const candidates = await client.query<{
-            id: string;
-            difficulty: number | null;
-            topic: string | null;
-            prompt: string;
-        }>(
-            `WITH recent AS (
-                 SELECT sq.question_id
-                 FROM session_questions sq
-                 WHERE sq.game_session_id IN (
-                     SELECT gs.id
-                     FROM game_sessions gs
-                     WHERE gs.user_id = $2
-                       AND gs.game_id = (SELECT id FROM games WHERE slug = $3)
-                       AND gs.id <> $1
-                     ORDER BY gs.started_at DESC
-                     LIMIT ${RECENT_SESSIONS_AVOIDED}
-                 )
-             )
-             SELECT q.id, q.difficulty, q.topic, q.prompt
-             FROM questions q
-             WHERE ${ELIGIBLE_QUESTION_PREDICATE}
-             ORDER BY (q.id IN (SELECT question_id FROM recent)) ASC, RANDOM()`,
-            [sessionId, userId, CODE_BLITZ]
+        //
+        // CURRICULUM SELECTION IS APPLIED HERE, not in the dealer.
+        //
+        // Two fragments, four separate questions, ANDed in one pass:
+        //
+        //   ELIGIBLE_QUESTION_PREDICATE  is this row playable at all?
+        //   curriculumSelects            the three curriculum layers, composed
+        //                                in curriculum/selection.ts --
+        //                                prerequisites, then role, then the
+        //                                practice difficulty frontier
+        //
+        // The JOURNEY gate is what makes a beginner's run feel like a course
+        // rather than a sample of the bank: only topics the learner has reached
+        // are in the pool at all. See curriculum/journey.ts -- and note it is
+        // the one curriculum rule that counts untagged content, because
+        // otherwise it could never move.
+        //
+        // The demand ceiling is read but NOT used as a gate, and that is a
+        // measured decision rather than an oversight. A concept's demand ceiling
+        // starts at the shallowest rung it DECLARES, while content is authored
+        // at whatever rung it is authored at: primitive-types declares
+        // recognise and predict, its only exercise is at predict, so gating on
+        // demand would withhold the one piece of practice the Learn beat exists
+        // to unlock. The same holds for every tagged concept today. Demand
+        // therefore informs ordering and nothing else until shallow-rung content
+        // exists; see byCurriculumPreference.
+        //
+        // dealSession decides pacing -- which tier each slot wants, from
+        // questions.difficulty -- and must stay a pure function with no database
+        // access. What it is allowed to choose FROM is a different question,
+        // answered before the array ever reaches it. The curriculum's own
+        // difficulty (challenges.difficulty) is read there and never here: the
+        // two numbers mean different things and must not be conflated.
+        const candidates = await client.query<CandidateRow>(CODE_BLITZ_CANDIDATES_SQL,             [sessionId, userId, CODE_BLITZ]
         );
 
-        const dealt = dealSession(candidates.rows, QUESTIONS_PER_SESSION);
+        const dealt = dealSession(
+            byCurriculumPreference(candidates.rows),
+            QUESTIONS_PER_SESSION,
+            Math.random,
+            focusTopic
+        );
 
         for (const [index, question] of dealt.entries()) {
             await client.query(
@@ -187,12 +369,17 @@ export async function createSessionWithQuestions(userId: string): Promise<GameSe
 
 export async function listSessionQuestions(sessionId: string): Promise<SessionQuestionRow[]> {
     const result = await pool.query<SessionQuestionRow>(
-        `SELECT id, question_id, display_order, prompt_text, status, served_at,
-                selected_option_id, selected_option_text, correct_option_text,
-                is_correct, answered_at, timed_out_at
-         FROM session_questions
-         WHERE game_session_id = $1
-         ORDER BY display_order`,
+        // Joined to questions for topic and explanation. The snapshot columns
+        // above are still the record of what the player saw; these two are
+        // teaching metadata, which is allowed to improve after the fact.
+        `SELECT sq.id, sq.question_id, sq.display_order, sq.prompt_text, sq.status,
+                sq.served_at, sq.selected_option_id, sq.selected_option_text,
+                sq.correct_option_text, sq.is_correct, sq.answered_at, sq.timed_out_at,
+                q.topic, q.explanation, q.challenge_type
+         FROM session_questions sq
+         JOIN questions q ON q.id = sq.question_id
+         WHERE sq.game_session_id = $1
+         ORDER BY sq.display_order`,
         [sessionId]
     );
 
@@ -203,12 +390,14 @@ export async function findNextPendingQuestion(
     sessionId: string
 ): Promise<SessionQuestionRow | null> {
     const result = await pool.query<SessionQuestionRow>(
-        `SELECT id, question_id, display_order, prompt_text, status, served_at,
-                selected_option_id, selected_option_text, correct_option_text,
-                is_correct, answered_at, timed_out_at
-         FROM session_questions
-         WHERE game_session_id = $1 AND status = 'pending'
-         ORDER BY display_order
+        `SELECT sq.id, sq.question_id, sq.display_order, sq.prompt_text, sq.status,
+                sq.served_at, sq.selected_option_id, sq.selected_option_text,
+                sq.correct_option_text, sq.is_correct, sq.answered_at, sq.timed_out_at,
+                q.topic, q.explanation, q.challenge_type
+         FROM session_questions sq
+         JOIN questions q ON q.id = sq.question_id
+         WHERE sq.game_session_id = $1 AND sq.status = 'pending'
+         ORDER BY sq.display_order
          LIMIT 1`,
         [sessionId]
     );
@@ -221,11 +410,13 @@ export async function findSessionQuestion(
     sessionId: string
 ): Promise<SessionQuestionRow | null> {
     const result = await pool.query<SessionQuestionRow>(
-        `SELECT id, question_id, display_order, prompt_text, status, served_at,
-                selected_option_id, selected_option_text, correct_option_text,
-                is_correct, answered_at, timed_out_at
-         FROM session_questions
-         WHERE id = $1 AND game_session_id = $2`,
+        `SELECT sq.id, sq.question_id, sq.display_order, sq.prompt_text, sq.status,
+                sq.served_at, sq.selected_option_id, sq.selected_option_text,
+                sq.correct_option_text, sq.is_correct, sq.answered_at, sq.timed_out_at,
+                q.topic, q.explanation, q.challenge_type
+         FROM session_questions sq
+         JOIN questions q ON q.id = sq.question_id
+         WHERE sq.id = $1 AND sq.game_session_id = $2`,
         [sessionQuestionId, sessionId]
     );
 
@@ -284,6 +475,57 @@ export async function findOption(
 }
 
 /**
+ * The correct assembly for a complete-code question, in answer order.
+ *
+ * Reads answer_position rather than display_order: display order is shuffled at
+ * serve time so the bank does not give the answer away, and would be a different
+ * sequence every time it was asked.
+ */
+export async function findAssemblyAnswer(
+    questionId: string
+): Promise<{ ids: string[]; text: string }> {
+    const result = await pool.query<{ id: string; option_text: string }>(
+        `SELECT id, option_text
+         FROM question_options
+         WHERE question_id = $1 AND is_active AND answer_position IS NOT NULL
+         ORDER BY answer_position`,
+        [questionId]
+    );
+
+    return {
+        ids: result.rows.map((r) => r.id),
+        text: result.rows.map((r) => r.option_text).join(" ")
+    };
+}
+
+/**
+ * The submitted tokens, in the order the player placed them.
+ *
+ * Returns null if any id is not an option of this question, which is what stops
+ * a client assembling an answer out of another question's tokens. Preserves the
+ * submitted order rather than the database's -- the order IS the answer.
+ */
+export async function findOptionsInOrder(
+    optionIds: readonly string[],
+    questionId: string
+): Promise<{ id: string; optionText: string }[] | null> {
+    const result = await pool.query<{ id: string; option_text: string }>(
+        `SELECT id, option_text
+         FROM question_options
+         WHERE question_id = $1 AND is_active AND id = ANY($2::BIGINT[])`,
+        [questionId, optionIds]
+    );
+
+    const byId = new Map(result.rows.map((r) => [r.id, r.option_text]));
+
+    if (optionIds.some((id) => !byId.has(id))) {
+        return null;
+    }
+
+    return optionIds.map((id) => ({ id, optionText: byId.get(id)! }));
+}
+
+/**
  * The one-line explanation shown after the question is over.
  *
  * Read on the answer path rather than served with the question, for the same
@@ -313,7 +555,8 @@ export async function findCorrectOptionText(questionId: string): Promise<string 
 
 export async function recordAnswer(
     sessionQuestionId: string,
-    selectedOptionId: string,
+    /** Null for complete-code: the answer is a sequence, not one option. */
+    selectedOptionId: string | null,
     selectedOptionText: string,
     correctOptionText: string,
     isCorrect: boolean

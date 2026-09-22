@@ -16,6 +16,9 @@ const FIND_LINE: BugHuntIncident = {
     title: "Profile service returning incomplete data",
     theme: "profiles",
     bugReport: "Opening certain profiles crashes the page.",
+    // Legacy incident: no challenge attached, so the incident-report
+    // presentation is the one under test here.
+    concept: null,
     errorLog: "TypeError: Cannot read properties of undefined (reading 'name')",
     challengeType: "find_line",
     code: "function getDisplayName(users, id) {\n  const user = users.find(u => u.id === id);\n  return user.name;\n}",

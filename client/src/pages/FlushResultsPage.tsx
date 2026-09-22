@@ -36,7 +36,7 @@ export function FlushResultsPage() {
                 <p className="form-error" role="alert">
                     {error}
                 </p>
-                <Link className="button primary" to="/">
+                <Link className="button primary" to="/play">
                     Back home
                 </Link>
             </section>
@@ -122,7 +122,7 @@ export function FlushResultsPage() {
                 <Link className="button primary" to="/flush">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/">
+                <Link className="button ghost" to="/play">
                     Pick another Jolt
                 </Link>
             </div>

@@ -4,6 +4,7 @@ import { splitPrompt } from "../games/prompt.js";
 import { ApiError, api } from "../api/client.js";
 import type { SessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
+import { TopicStanding } from "../components/TopicStanding.js";
 import { useRunContext } from "../games/useRunContext.js";
 
 export function ResultsPage() {
@@ -35,7 +36,7 @@ export function ResultsPage() {
                 <p className="form-error" role="alert">
                     {error}
                 </p>
-                <Link className="button primary" to="/">
+                <Link className="button primary" to="/play">
                     Back home
                 </Link>
             </section>
@@ -50,6 +51,35 @@ export function ResultsPage() {
     // right, and it is exactly the kind of thing worth reviewing.
     const misses = session.questions.filter((q) => q.isCorrect !== true);
     const correctCount = session.questions.length - misses.length;
+
+    /**
+     * Per-unit tally for this run, strongest first.
+     *
+     * Computed here rather than asked of the server: it is a count over ten rows
+     * the page already holds, and a round trip for it would be a round trip for
+     * arithmetic. Questions written before topics existed are skipped rather than
+     * bucketed as "unknown", which would read as a tenth unit.
+     */
+    const practiced = Object.values(
+        session.questions.reduce<Record<string, { topic: string; correct: number; total: number }>>(
+            (acc, q) => {
+                if (!q.topic) return acc;
+
+                const row = (acc[q.topic] ??= { topic: q.topic, correct: 0, total: 0 });
+
+                row.total += 1;
+                if (q.isCorrect === true) row.correct += 1;
+
+                return acc;
+            },
+            {}
+        )
+    ).sort((a, b) => b.correct / b.total - a.correct / a.total);
+
+    /** The weakest unit of the run, and only when there is something to fix. */
+    const weakest = [...practiced]
+        .reverse()
+        .find((t) => t.correct < t.total) ?? null;
 
     return (
         <section className="results">
@@ -149,9 +179,47 @@ export function ResultsPage() {
                                 </span>
                             )}
                         </p>
+                        {/* The reason, not just the answer. Naming the right
+                            option tells a player they were wrong; this is the
+                            only thing on the page that tells them why. */}
+                        {q.explanation && <p className="review-why">{q.explanation}</p>}
                     </li>
                 ))}
             </ol>
+
+            {/* The Progress beat of the learning loop. Answers "what did I just
+                learn, and what next" in the curriculum's own terms, where the
+                tally below answers "how did this run go". The topic is fixed to
+                variables for this slice: it is where the journey gate holds a
+                beginner, so it is the only topic a new learner is working on. */}
+            <TopicStanding topic="variables" />
+
+            {/* What was practiced, and what to do about it. A run that ends with a
+                score is a game; a run that ends naming the weakest unit is a
+                lesson. The recommendation is deliberately one line -- the moment
+                it becomes a panel of numbers it is a dashboard. */}
+            {practiced.length > 0 && (
+                <div className="practiced">
+                    <p className="review-head">Practiced</p>
+                    <ul className="topic-tally">
+                        {practiced.map((t) => (
+                            <li key={t.topic} className={t.correct === t.total ? "all" : ""}>
+                                <span className="topic-name">{t.topic}</span>
+                                <span className="topic-score">
+                                    {t.correct}/{t.total}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                    {weakest && (
+                        <p className="next-up">
+                            <span className="next-label">Next</span> more practice on{" "}
+                            <strong>{weakest.topic}</strong> — {weakest.correct} of{" "}
+                            {weakest.total} this run.
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Two ways to keep going: the same game again, or a different one.
                 A single "home" link ends the session; this continues it. */}
@@ -159,7 +227,7 @@ export function ResultsPage() {
                 <Link className="button primary" to="/play">
                     Play again
                 </Link>
-                <Link className="button ghost" to="/">
+                <Link className="button ghost" to="/play">
                     Pick another Jolt
                 </Link>
             </div>

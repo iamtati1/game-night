@@ -1,29 +1,34 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
- * The curated modern-JavaScript bank, checked by running it.
+ * The question bank, checked by running it.
  *
  * Reading a snippet carefully is not verification. This project has twice
  * shipped content whose declared answer was wrong in a way that survived
  * review -- a Python bug written as JavaScript, and a Bug Hunt option that was
  * the correct answer in disguise -- and both were caught by executing the thing
- * rather than re-reading it. So every question here whose prompt asks what the
- * code produces is EXECUTED, and its real output compared against the option
- * marked correct.
+ * rather than re-reading it. So every question whose prompt asks what the code
+ * produces is EXECUTED, and its real output compared against what it claims.
  *
- * Covers the seeds that write their own questions -- 008 and the curriculum
- * questions in 010. The backfilled originals in 009 update rows seeded by 001
- * and 003, whose options are written as SQL arguments rather than JSON, so they
- * are checked structurally further down instead.
+ * Reads EVERY seed in the directory rather than a hardcoded list. The list used
+ * to name 008 and 010, which meant seed 012 shipped twenty-one questions that
+ * nothing here ever looked at -- the file silently stopped covering the bank the
+ * moment the bank grew. Seeds whose options are SQL arguments rather than JSON
+ * (001 and 003) have no $j$ block and are skipped here; they are checked
+ * structurally further down.
  */
-const SEED = ["008_code_blitz_modern_js.sql", "010_code_blitz_curriculum.sql"]
-    .map((name) => readFileSync(new URL(`../../seeds/${name}`, import.meta.url), "utf8"))
-    .join("\n");
+const SEEDS_DIR = new URL("../../seeds/", import.meta.url);
+
+const SEED_FILES = readdirSync(SEEDS_DIR)
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
 
 interface SeedOption {
     text: string;
     correct?: boolean;
+    /** Position in an assembly answer. Present only on complete-code tokens. */
+    pos?: number;
 }
 
 interface SeedQuestion {
@@ -32,6 +37,8 @@ interface SeedQuestion {
     topic: string;
     explanation: string;
     options: SeedOption[];
+    /** Which mechanic answers it. Derived from the seed helper that wrote it. */
+    challengeType: "predict-output" | "complete-code";
     /** The snippet, i.e. the prompt with its question line removed. */
     code: string;
 }
@@ -46,44 +53,68 @@ function unescape(literal: string): string {
 }
 
 function parseSeed(): SeedQuestion[] {
-    return SEED.split("SELECT seed_js_question(")
-        .slice(1)
-        .map((block) => {
-            const prompt = /^\s*E'((?:[^']|'')*)'/.exec(block);
+    const questions: SeedQuestion[] = [];
+
+    for (const name of SEED_FILES) {
+        const sql = readFileSync(new URL(name, SEEDS_DIR), "utf8");
+
+        // Splitting on a capturing group interleaves helper names with the
+        // blocks that follow them, so each question knows which helper wrote it.
+        const parts = sql.split(/SELECT (seed_[a-z_]+)\(/);
+
+        for (let i = 1; i < parts.length; i += 2) {
+            const helper = parts[i]!;
+            const block = parts[i + 1] ?? "";
+
+            // Only the helpers that take the JSONB option shape. Seeds 001 and
+            // 003 pass their options as separate SQL arguments and are checked
+            // structurally elsewhere.
+            if (!block.includes("$j$")) continue;
+
+            // Bug Hunt incidents also pass their options as $j$ JSONB, but they
+            // are not questions: no prompt, no difficulty-then-topic argument
+            // pair, and nothing to execute. The looser "$j$" guard above let
+            // them through and they only parsed by accident of argument order --
+            // an incident with a NULL error_log broke it. Skipped by name.
+            if (helper === "seed_bug_hunt_incident") continue;
+
+            const prompt = /^\s*E?'((?:[^']|'')*)'/.exec(block);
             const meta = /',\s*(\d),\s*'([a-z-]+)',\s*'((?:[^']|'')*)',/.exec(block);
             const options = /\$j\$([\s\S]*?)\$j\$/.exec(block);
 
             if (!prompt || !meta || !options) {
-                throw new Error(`Unparseable question block: ${block.slice(0, 80)}`);
+                throw new Error(`Unparseable question block in ${name}: ${block.slice(0, 80)}`);
             }
 
             const text = unescape(prompt[1]!);
+            const parsed = JSON.parse(options[1]!) as SeedOption[];
 
-            return {
+            questions.push({
                 prompt: text,
                 difficulty: Number(meta[1]),
                 topic: meta[2]!,
                 explanation: unescape(meta[3]!),
-                options: JSON.parse(options[1]!) as SeedOption[],
+                // A token carrying a position is by definition part of the answer.
+                options: parsed.map((o) => ({ ...o, correct: o.correct === true || o.pos !== undefined })),
+                challengeType: helper === "seed_complete_code" ? "complete-code" : "predict-output",
                 code: text.split("\n").slice(1).join("\n").trim()
-            };
-        });
+            });
+        }
+    }
+
+    return questions;
 }
 
-const QUESTIONS = parseSeed();
-
 /**
- * Renders a value the way the options are written.
+ * How a value is written when a question states what the code produced.
  *
- * Strings are quoted, including at the top level. That is the convention the
- * original bank used and it is the right one, because for a whole class of
+ * Strings are quoted, including at the top level, because for a whole class of
  * question the quotes ARE the answer: `1 + "1"` gives `"11"` and `1 + 1` gives
- * `2`, and an option written as a bare 11 cannot tell those apart -- which is
- * the entire point of asking. It also matches what a JavaScript REPL shows.
+ * `2`, and an option written as a bare 11 cannot tell those apart. It also
+ * matches what a JavaScript REPL shows.
  *
  * Deliberately not util.inspect: Node prints `[ 1, 2, 3 ]` with padding, and an
- * option that read that way would look wrong to a player. The options use the
- * spacing people actually write, so the comparison has to as well.
+ * option that read that way would look wrong to a player.
  */
 function render(value: unknown, quoteStrings = true): string {
     if (typeof value === "string") return quoteStrings ? `"${value}"` : value;
@@ -109,9 +140,16 @@ const renderInner = (value: unknown): string => render(value, true);
  * Async on purpose. Tier 3 asks about execution order, so a snippet may queue a
  * microtask or a zero-delay timer and log from it -- returning the moment the
  * synchronous part finished would silently drop exactly the lines those
- * questions are about, and every one of them would look wrong.
+ * questions are about.
  */
-async function run(code: string, joinWith = "\n", quoteStrings = true): Promise<string> {
+async function run(
+    code: string,
+    joinWith = "\n",
+    quoteStrings = true,
+    /** Time allowed for microtasks and 0ms timers. Zero for synchronous snippets,
+     *  which matters when one question is executed hundreds of times. */
+    settleMs = 25
+): Promise<string> {
     const logged: string[] = [];
     const capture = (...args: unknown[]) =>
         logged.push(args.map((a) => render(a, quoteStrings)).join(" "));
@@ -123,11 +161,12 @@ async function run(code: string, joinWith = "\n", quoteStrings = true): Promise<
         return error instanceof Error ? error.constructor.name : String(error);
     }
 
-    // Long enough for the microtask queue to drain and any 0ms timer to fire.
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    if (settleMs > 0) await new Promise((resolve) => setTimeout(resolve, settleMs));
 
     return logged.join(joinWith);
 }
+
+const QUESTIONS = parseSeed();
 
 /**
  * Questions that state an output, and how their answer is written.
@@ -157,6 +196,12 @@ const PREDICTIVE = QUESTIONS.filter((q) =>
     quoteStrings: !q.prompt.startsWith("In what order")
 }));
 
+/** Questions answered by picking one of four. Every question until now. */
+const PREDICT = QUESTIONS.filter((q) => q.challengeType === "predict-output");
+
+/** Questions answered by assembling tokens into a gap. */
+const ASSEMBLY = QUESTIONS.filter((q) => q.challengeType === "complete-code");
+
 describe("the bank is worth playing", () => {
     it("has questions", () => {
         expect(QUESTIONS.length).toBeGreaterThan(0);
@@ -180,13 +225,15 @@ describe("the bank is worth playing", () => {
 
 describe("every question can be answered", () => {
     it("offers exactly one correct option", () => {
-        for (const q of QUESTIONS) {
+        // predict-output only: an assembly answer is two to four correct tokens,
+        // which is the whole point of it.
+        for (const q of PREDICT) {
             expect(q.options.filter((o) => o.correct), q.prompt.slice(0, 40)).toHaveLength(1);
         }
     });
 
     it("offers four options, so a guess is worth 25% and no more", () => {
-        for (const q of QUESTIONS) {
+        for (const q of PREDICT) {
             expect(q.options, q.prompt.slice(0, 40)).toHaveLength(4);
         }
     });
@@ -225,7 +272,7 @@ describe("every question teaches", () => {
     });
 
     it("never explains by restating the answer and nothing else", () => {
-        for (const q of QUESTIONS) {
+        for (const q of PREDICT) {
             const answer = q.options.find((o) => o.correct)!.text.trim();
 
             expect(
@@ -466,6 +513,27 @@ describe("the bank is weighted toward learning, not toward difficulty", () => {
  * way and needs something structural in its path.
  */
 describe("the bank is a curriculum", () => {
+    /**
+     * Two different questions used to share one list, and adding the first
+     * `operators` question exposed the conflation:
+     *
+     *   "is this topic permitted?"      -> whatever migration 022 allows
+     *   "does this unit have depth?"    -> only the units that are meant to
+     *
+     * A brand new topic legitimately starts with one question, so applying an
+     * eight-question floor to it would block exactly the incremental authoring
+     * the curriculum slices are. The floors below therefore stay on the nine
+     * units that were the whole bank when they were written, and validity is
+     * checked against the migration instead.
+     */
+    const PERMITTED_TOPICS = [
+        ...readFileSync(
+            new URL("../../migrations/022_expand_question_topic_taxonomy.sql", import.meta.url),
+            "utf8"
+        ).matchAll(/^\s*'([a-z-]+)',?$/gm)
+    ].map((m) => m[1]!);
+
+    /** The units carrying depth floors. Not the whole curriculum. */
     const TOPICS = [
         "variables",
         "conditionals",
@@ -495,13 +563,29 @@ describe("the bank is a curriculum", () => {
 
     const inTopic = (t: string) => active.filter((q) => q.topic === t).length;
 
-    it("gives every active question a topic from the nine units", () => {
+    it("read the permitted topics from the migration", () => {
+        // Guards the regex above: an empty list would make the next test pass
+        // for every possible topic.
+        expect(PERMITTED_TOPICS.length).toBeGreaterThanOrEqual(16);
+        expect(PERMITTED_TOPICS).toContain("operators");
+        expect(PERMITTED_TOPICS).toContain("conditionals");
+    });
+
+    it("gives every active question a topic the schema permits", () => {
         for (const q of active) {
-            expect(TOPICS, `unknown topic "${q.topic}"`).toContain(q.topic);
+            expect(PERMITTED_TOPICS, `unknown topic "${q.topic}"`).toContain(q.topic);
         }
     });
 
-    it("teaches every unit, so none can quietly vanish", () => {
+    it("keeps every floored unit inside the permitted set", () => {
+        // If a floored unit were ever dropped from the migration, its floor
+        // would silently start asserting against content that cannot exist.
+        for (const topic of TOPICS) {
+            expect(PERMITTED_TOPICS, `${topic} is floored but not permitted`).toContain(topic);
+        }
+    });
+
+    it("teaches every floored unit, so none can quietly vanish", () => {
         for (const topic of TOPICS) {
             expect(inTopic(topic), `${topic} has almost nothing in it`).toBeGreaterThanOrEqual(8);
         }
@@ -678,5 +762,224 @@ describe("every question a seed creates is given a topic by a seed", () => {
         expect(BACKFILL).toMatch(/RAISE EXCEPTION/);
         expect(BACKFILL).toMatch(/WHERE is_active AND topic IS NULL/);
         expect(BACKFILL).toMatch(/VALIDATE CONSTRAINT questions_topic_required/);
+    });
+});
+
+/**
+ * complete-code: the assembly mechanic, checked by building every answer it
+ * could possibly produce and running them all.
+ *
+ * The risk this mechanic carries is not that the declared answer is wrong -- that
+ * is the easy case, and one execution catches it. The risk is that a SECOND
+ * arrangement of the same bank is also right, which no amount of re-reading
+ * reliably catches. `i < items.length` and `i <= items.length - 1` are the same
+ * condition written two ways, and a bank offering `<`, `<=`, `items.length` and
+ * `items.length - 1` quietly contains both. So every ordering and every
+ * same-length assembly the bank permits is executed, and exactly one of them is
+ * allowed to produce the declared result.
+ *
+ * The distinction that matters throughout: a wrong assembly SHOULD run cleanly.
+ * That is what makes it a distractor rather than a syntax error the player can
+ * discard without understanding anything. These tests fail on a wrong assembly
+ * only when it produces the RIGHT answer.
+ */
+const GAP = "/*?*/";
+
+/** What a complete-code prompt claims its answer produces. */
+function declaredResult(prompt: string): string {
+    const stated = /so it logs:\s*(.+)$/m.exec(prompt.split("\n")[0] ?? "");
+
+    if (!stated) {
+        throw new Error(`complete-code prompt must state "so it logs: ..." -- got: ${prompt.slice(0, 60)}`);
+    }
+
+    return stated[1]!.trim();
+}
+
+const tokensOf = (q: SeedQuestion) =>
+    q.options.filter((o) => o.pos !== undefined).sort((a, b) => a.pos! - b.pos!);
+
+const assemble = (code: string, texts: string[]) => code.replace(GAP, texts.join(" "));
+
+/** Nothing here queues work, so the 25ms settle is wasted on hundreds of runs. */
+const needsSettling = (code: string) =>
+    /setTimeout|setInterval|Promise|await|queueMicrotask/.test(code);
+
+function permutations<T>(items: readonly T[]): T[][] {
+    if (items.length <= 1) return [[...items]];
+
+    return items.flatMap((item, i) =>
+        permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest])
+    );
+}
+
+/** Every ordered selection of `size` distinct entries. */
+function arrangements<T>(items: readonly T[], size: number): T[][] {
+    if (size === 0) return [[]];
+
+    return items.flatMap((item, i) =>
+        arrangements([...items.slice(0, i), ...items.slice(i + 1)], size - 1).map((rest) => [
+            item,
+            ...rest
+        ])
+    );
+}
+
+describe("complete-code questions are assemblable exactly one way", () => {
+    it("has assembly questions to check", () => {
+        expect(ASSEMBLY.length).toBeGreaterThan(0);
+    });
+
+    it("marks a gap in every prompt, exactly once", () => {
+        for (const q of ASSEMBLY) {
+            expect(q.code.split(GAP).length - 1, q.prompt.slice(0, 40)).toBe(1);
+        }
+    });
+
+    it("states the result the player is building towards", () => {
+        // The player cannot assemble an answer they have not been shown, and the
+        // execution checks below have nothing to compare against without it.
+        for (const q of ASSEMBLY) {
+            expect(() => declaredResult(q.prompt), q.prompt.slice(0, 40)).not.toThrow();
+        }
+    });
+
+    it("gaps two to four tokens", () => {
+        // One token is a four-option question with a box drawn round it; five is
+        // transcription.
+        for (const q of ASSEMBLY) {
+            const n = tokensOf(q).length;
+
+            expect(n, `${q.prompt.slice(0, 40)}: ${n} tokens`).toBeGreaterThanOrEqual(2);
+            expect(n, `${q.prompt.slice(0, 40)}: ${n} tokens`).toBeLessThanOrEqual(4);
+        }
+    });
+
+    it("offers a bank of four to eight tokens", () => {
+        for (const q of ASSEMBLY) {
+            expect(q.options.length, q.prompt.slice(0, 40)).toBeGreaterThanOrEqual(4);
+            expect(q.options.length, q.prompt.slice(0, 40)).toBeLessThanOrEqual(8);
+        }
+    });
+
+    it("numbers the answer positions 1..n with no gaps or repeats", () => {
+        // The database can stop two tokens claiming one slot; it cannot see that
+        // the slots run 1, 2, 4. That is a cross-row fact and lives here.
+        for (const q of ASSEMBLY) {
+            const positions = tokensOf(q).map((o) => o.pos!);
+
+            expect(positions, q.prompt.slice(0, 40)).toEqual(
+                positions.map((_, i) => i + 1)
+            );
+        }
+    });
+
+    it("gives every correct token a position and no distractor one", () => {
+        for (const q of ASSEMBLY) {
+            for (const option of q.options) {
+                expect(
+                    option.correct,
+                    `${q.prompt.slice(0, 40)}: "${option.text}" position/correct disagree`
+                ).toBe(option.pos !== undefined);
+            }
+        }
+    });
+
+    it("produces the declared result when assembled in the declared order", async () => {
+        const wrong: string[] = [];
+
+        for (const q of ASSEMBLY) {
+            const expected = declaredResult(q.prompt);
+            const code = assemble(q.code, tokensOf(q).map((o) => o.text));
+            const actual = await run(code, ", ", true, needsSettling(code) ? 25 : 0);
+
+            if (actual !== expected) {
+                wrong.push(`\n  ${q.prompt.slice(0, 46)}\n    declared: ${expected}\n    actual:   ${actual}`);
+            }
+        }
+
+        expect(wrong.join(""), `${wrong.length} assembly question(s) declare the wrong result:`).toBe("");
+    });
+
+    it("offers no distractor that only ever produces a syntax error", async () => {
+        // A distractor is useless if placing it cannot produce a running program:
+        // the player discards it on shape alone, without understanding anything.
+        // "Somewhere it parses" rather than "everywhere", because an operand
+        // substituted for an operator legitimately will not.
+        const useless: string[] = [];
+
+        for (const q of ASSEMBLY) {
+            const tokens = tokensOf(q).map((o) => o.text);
+
+            for (const distractor of q.options.filter((o) => o.pos === undefined)) {
+                const parsesSomewhere = await Promise.all(
+                    tokens.map(async (_, i) => {
+                        const swapped = tokens.map((t, j) => (i === j ? distractor.text : t));
+                        const code = assemble(q.code, swapped);
+
+                        return (await run(code, ", ", true, 0)) !== "SyntaxError";
+                    })
+                );
+
+                if (!parsesSomewhere.some(Boolean)) {
+                    useless.push(`\n  ${q.prompt.slice(0, 46)}: "${distractor.text}"`);
+                }
+            }
+        }
+
+        expect(useless.join(""), `${useless.length} distractor(s) can never parse:`).toBe("");
+    });
+
+    it("accepts only one ordering of its own tokens", async () => {
+        const ambiguous: string[] = [];
+
+        for (const q of ASSEMBLY) {
+            const expected = declaredResult(q.prompt);
+            const tokens = tokensOf(q).map((o) => o.text);
+            const settle = needsSettling(q.code) ? 25 : 0;
+            const declared = tokens.join(" ");
+
+            for (const ordering of permutations(tokens)) {
+                if (ordering.join(" ") === declared) continue;
+
+                const actual = await run(assemble(q.code, ordering), ", ", true, settle);
+
+                if (actual === expected) {
+                    ambiguous.push(`\n  ${q.prompt.slice(0, 46)}\n    also correct: ${ordering.join(" ")}`);
+                }
+            }
+        }
+
+        expect(ambiguous.join(""), `${ambiguous.length} question(s) accept a second ordering:`).toBe("");
+    });
+
+    it("accepts only one assembly out of everything the bank can build", async () => {
+        // The broader check, and the one that catches an equivalent answer rather
+        // than a reordered one -- `<= items.length - 1` against `< items.length`.
+        const ambiguous: string[] = [];
+
+        for (const q of ASSEMBLY) {
+            const expected = declaredResult(q.prompt);
+            const tokens = tokensOf(q).map((o) => o.text);
+            const settle = needsSettling(q.code) ? 25 : 0;
+            const declared = tokens.join(" ");
+            let matches = 0;
+
+            for (const candidate of arrangements(q.options.map((o) => o.text), tokens.length)) {
+                const actual = await run(assemble(q.code, candidate), ", ", true, settle);
+
+                if (actual !== expected) continue;
+
+                matches += 1;
+
+                if (candidate.join(" ") !== declared) {
+                    ambiguous.push(`\n  ${q.prompt.slice(0, 46)}\n    also correct: ${candidate.join(" ")}`);
+                }
+            }
+
+            expect(matches, `${q.prompt.slice(0, 40)}: declared assembly does not win`).toBeGreaterThan(0);
+        }
+
+        expect(ambiguous.join(""), `${ambiguous.length} alternative assembly(s) also correct:`).toBe("");
     });
 });

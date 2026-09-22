@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
 import { FLUSH } from "../games/constants.js";
+import { isActiveSessionConflict, resolveSessionRace } from "../game/conflicts.js";
 import { longestStreak, type PlayedUnit } from "../games/progress.js";
 import {
     findActiveSession,
@@ -237,7 +238,78 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
         return;
     }
 
-    const session = await db.createSessionWithRounds(userId);
+    let session: db.FlushSessionRow;
+
+    try {
+        session = await db.createSessionWithRounds(userId);
+    } catch (err) {
+        // The check at the top of this route and this INSERT are not atomic, so
+        // the single active-session slot can change hands between them. The
+        // trigger seen in practice is a double-submitted start -- GetReady fires
+        // onDone from an effect keyed on a callback that is rebuilt every render,
+        // so two identical POSTs can be in flight at once -- but two tabs do it
+        // just as well.
+        //
+        // Without this the rejected INSERT reached the app error handler and the
+        // player was told "Internal Server Error" for a state this same route
+        // answers with a conflict fifty lines earlier. Code Blitz answers the
+        // same three outcomes; resolveSessionRace is shared and takes the game so
+        // neither has to restate the rule.
+        if (!isActiveSessionConflict(err)) {
+            throw err;
+        }
+
+        const winner = await findActiveSession(userId);
+
+        switch (resolveSessionRace(winner, FLUSH)) {
+            case "conflict":
+                // Another game took the slot. Identical to the pre-check's answer,
+                // and activeGame in the body is what raises the client's "one game
+                // at a time" dialog.
+                res.status(409).json(conflictBody(winner!));
+                return;
+
+            case "retry":
+                // The slot was held when the INSERT was rejected and is free now.
+                // Nothing to resume and no holder to name, so say what happened
+                // rather than report a fault the player cannot act on.
+                res.status(409).json({
+                    error: "Could not start the game",
+                    details: [
+                        {
+                            field: "game",
+                            message:
+                                "Another game was still finishing when this one tried to start. Try again."
+                        }
+                    ]
+                });
+                return;
+
+            case "resume": {
+                // The winner is this player's own Flush session -- the ordinary
+                // double-submit. Serving it is the correct outcome, and goes
+                // through the same helper the resume path above uses.
+                const full = await db.findFlushSessionForUser(winner!.id, userId);
+
+                if (!full) {
+                    res.status(409).json({
+                        error: "Could not start the game",
+                        details: [
+                            {
+                                field: "game",
+                                message: "That game ended as this one was starting. Try again."
+                            }
+                        ]
+                    });
+                    return;
+                }
+
+                await respondResumed(res, winner!.id, now);
+                return;
+            }
+        }
+    }
+
     const round = await nextPlayableRound(session.id, now);
 
     res.status(201).json({

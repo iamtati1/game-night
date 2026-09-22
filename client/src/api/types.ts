@@ -15,6 +15,10 @@ export interface QuestionOption {
 
 export interface ServedQuestion {
     sessionQuestionId: string;
+    /** Curriculum unit, so the client can name what is being practiced. */
+    topic: string | null;
+    /** Which mechanic answers it: pick one option, or assemble tokens into a gap. */
+    challengeType: string;
     questionNumber: number;
     totalQuestions: number;
     prompt: string;
@@ -27,6 +31,10 @@ export interface ServedQuestion {
 export interface SessionQuestionResult {
     displayOrder: number;
     prompt: string;
+    /** Curriculum unit, for the topic breakdown on the results screen. */
+    topic: string | null;
+    /** Why the answer is what it is. The teaching, carried into the review. */
+    explanation: string | null;
     status: "pending" | "answered" | "timed_out";
     selectedOption: string | null;
     correctOption: string | null;
@@ -404,6 +412,15 @@ export interface BugHuntOption {
 
 export type BugHuntChallengeType = "find_line" | "choose_patch";
 
+export interface IncidentConcept {
+    slug: string;
+    name: string;
+    /** The one-line rule, authored once in the curriculum. */
+    meaning: string;
+    objective: string;
+    demand: string;
+}
+
 export interface BugHuntIncident {
     roundId: string;
     incidentNumber: number;
@@ -417,6 +434,15 @@ export interface BugHuntIncident {
     code: string;
     codeLanguage: string;
     difficulty: number;
+    /**
+     * What the curriculum says this incident teaches, or null for a legacy
+     * incident with no challenge attached.
+     *
+     * Its presence is what switches the page to the beginner layout: the code
+     * carries the problem, and one line of expectation replaces the theme,
+     * severity, title and incident report.
+     */
+    concept: IncidentConcept | null;
     options: BugHuntOption[];
     /** Null on an untimed opening hunt. */
     timeLimitMs: number | null;
@@ -506,4 +532,72 @@ export interface BugHuntSessionSummary {
     systemIntegrity: number;
     incidents: BugHuntIncidentResult[];
     byCategory: { category: string; seen: number; resolved: number }[];
+}
+
+/**
+ * A curriculum concept the learner has not been introduced to yet.
+ *
+ * Chosen entirely by the server: an active `introduce` challenge whose
+ * prerequisites are satisfied and which this learner has not completed. The
+ * client renders it and reports the acknowledgement back; it never decides
+ * whether a concept is reachable or due.
+ */
+export interface Introduction {
+    challengeId: string;
+    conceptSlug: string;
+    conceptName: string;
+    /** Completes "I know how to ___". */
+    objective: string;
+    /** The one-line rule, authored in the curriculum. */
+    meaning: string;
+    topicSlug: string;
+}
+
+export interface IntroductionResponse {
+    /** Null when the learner has met everything currently reachable. */
+    introduction: Introduction | null;
+}
+
+/** Where the learner stands on one concept of the topic they are working on. */
+export interface ConceptStanding {
+    slug: string;
+    name: string;
+    objective: string;
+    status: "done" | "current" | "upcoming";
+}
+
+export interface TopicStandingResponse {
+    topic: string;
+    concepts: ConceptStanding[];
+    /** The one they are on now, or null once the topic is complete. */
+    current: ConceptStanding | null;
+}
+
+/** One concept on the JavaScript Journey. */
+export interface JourneyConcept {
+    slug: string;
+    name: string;
+    objective: string;
+    state: "demonstrated" | "current" | "locked";
+    neededRetry: boolean;
+}
+
+export interface JourneyTopic {
+    slug: string;
+    name: string;
+    /** The JavaScript idea the topic establishes. Empty until authored. */
+    principle: string;
+    order: number;
+    state: "complete" | "current" | "locked";
+    concepts: JourneyConcept[];
+    /** The cumulative checkpoint, or null for a topic with none authored. */
+    challenge: { state: "demonstrated" | "current" | "locked" } | null;
+}
+
+export interface JourneyPathResponse {
+    topics: JourneyTopic[];
+    /** The one concept the learner is on, or null once everything is done. */
+    current: (JourneyConcept & { topic: string }) | null;
+    /** Earned by demonstrating understanding. Derived, so it cannot be farmed. */
+    points: { total: number; concepts: number; challenges: number };
 }

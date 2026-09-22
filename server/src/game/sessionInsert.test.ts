@@ -70,8 +70,11 @@ describe("migration 007 keeps game attribution loud", () => {
 });
 
 describe("question selection resists memorisation", () => {
+    // The candidate SQL is a module-level constant now -- exported so the
+    // integration test can run the exact string that ships -- so the slice under
+    // inspection starts there rather than at the function.
     const insert = QUERIES.slice(
-        QUERIES.indexOf("export async function createSessionWithQuestions"),
+        QUERIES.indexOf("export const CODE_BLITZ_CANDIDATES_SQL"),
         QUERIES.indexOf("export async function listSessionQuestions")
     );
 
@@ -94,13 +97,22 @@ describe("question selection resists memorisation", () => {
         // every run would quietly fall back to whatever was near the top.
         // Only the candidate SELECT itself -- the `recent` CTE above it has its
         // own LIMIT, which bounds the lookback window and is meant to be there.
-        const candidateSelect = insert.slice(
-            insert.indexOf("SELECT q.id, q.difficulty, q.prompt"),
-            insert.indexOf("const dealt")
-        );
+        // Scoped to the SELECT itself, ending where the template literal does.
+        // Widening it past the constant would catch the prose below explaining
+        // that there is no LIMIT, which is not the same as there being none.
+        const selectStart = insert.indexOf("SELECT q.id, q.difficulty, q.topic, q.prompt");
+        const candidateSelect = insert.slice(selectStart, insert.indexOf("`;", selectStart));
 
+        expect(candidateSelect, "the slice must actually find the SELECT").not.toBe("");
         expect(candidateSelect).not.toMatch(/LIMIT/);
-        expect(insert).toMatch(/dealSession\(candidates\.rows, QUESTIONS_PER_SESSION\)/);
+
+        // The dealer still receives every candidate. byCurriculumPreference
+        // REORDERS the rows so curriculum-linked questions are met first -- it
+        // never drops one, which curriculumOrdering.test.ts asserts directly.
+        // Truncating here would still be the bug this test guards against.
+        expect(insert).toMatch(
+            /dealSession\(\s*byCurriculumPreference\(candidates\.rows\),\s*QUESTIONS_PER_SESSION\b/
+        );
     });
 
     it("deals one question per slot, in the order the curve produced", () => {

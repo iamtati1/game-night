@@ -1,4 +1,7 @@
 import type { PoolClient } from "pg";
+import { demandCeilingCte } from "../curriculum/demand.js";
+import { journeyCte, withinJourney } from "../curriculum/journey.js";
+import { curriculumCtes, curriculumSelects } from "../curriculum/selection.js";
 import { pool } from "../db.js";
 import type { NormalizedQuestion } from "./types.js";
 
@@ -17,9 +20,45 @@ export const ELIGIBLE_QUESTION_PREDICATE = `
          WHERE o.question_id = q.id AND o.is_active AND o.is_correct) = 1
 `;
 
+/**
+ * How big the playable bank is, for everyone.
+ *
+ * Deliberately NOT curriculum-aware: this is what the top-up decides against,
+ * and importing questions because one learner is prerequisite-gated would be
+ * the wrong reaction to the wrong signal. "Is the bank thin?" is a property of
+ * the bank. Use countDealableQuestions for "can this player start a game?".
+ */
 export async function countEligibleQuestions(): Promise<number> {
     const result = await pool.query<{ count: string }>(
         `SELECT COUNT(*) AS count FROM questions q WHERE ${ELIGIBLE_QUESTION_PREDICATE}`
+    );
+
+    return Number(result.rows[0]!.count);
+}
+
+/**
+ * How many questions THIS learner could actually be dealt.
+ *
+ * Must stay in step with the candidate query in game/queries.ts: an availability
+ * check that counts a larger pool than the dealer can draw from would let a
+ * session start and then come up short, which is a 503 the player would meet
+ * halfway through starting rather than before. Both compose the same two
+ * predicates over the same CTE, which is why neither is written out twice.
+ */
+export async function countDealableQuestions(
+    userId: string,
+    sessionSize: number
+): Promise<number> {
+    const result = await pool.query<{ count: string }>(
+        `WITH ${curriculumCtes("$1")},
+              ${demandCeilingCte("$1")},
+              ${journeyCte("$1", sessionSize)}
+         SELECT COUNT(*) AS count
+         FROM questions q
+         WHERE ${ELIGIBLE_QUESTION_PREDICATE}
+           AND ${curriculumSelects("q")}
+           AND ${withinJourney("q")}`,
+        [userId]
     );
 
     return Number(result.rows[0]!.count);

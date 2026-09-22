@@ -107,6 +107,16 @@ async function serveIncident(round: db.BugHuntRoundRow, now = new Date()) {
         code: incident.code,
         codeLanguage: incident.code_language,
         difficulty: incident.difficulty,
+        /**
+         * The curriculum's own words for what this incident teaches, or null for
+         * a legacy incident that carries no challenge.
+         *
+         * Present is what tells the client to render the beginner layout: code
+         * first, one line of expectation, and a teaching explanation on a wrong
+         * answer. Absent keeps the incident-report presentation the fifty
+         * existing incidents were written for.
+         */
+        concept: await db.findIncidentConcept(incident.id),
         // Mapped to camelCase rather than passed through: every other payload in
         // this API is camelCase, and a raw row shape would make the column names
         // part of the client contract.
@@ -292,7 +302,10 @@ bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response)
 
     // A run needs ten distinct incidents. Refusing up front beats dealing a
     // three-incident session that silently scores out of a different total.
-    const eligible = await db.countEligibleIncidents();
+    //
+    // Counted with the same curriculum eligibility the dealer applies, so this
+    // check and the candidate query can never disagree about the pool size.
+    const eligible = await db.countDealableIncidents(userId);
 
     if (eligible < BUG_HUNT_INCIDENTS_PER_SESSION) {
         res.status(503).json({

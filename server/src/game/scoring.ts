@@ -4,6 +4,23 @@
 import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 
 export const QUESTION_TIME_LIMIT_MS = 35_000;
+
+/**
+ * How long an assembly question gets.
+ *
+ * 35 seconds is calibrated for read-it-and-pick-one. complete-code asks the
+ * player to read the snippet, decide what belongs in the gap AND place several
+ * tokens in order, which is simply more to do. 45 seconds is a starting value
+ * from playtesting the design, not a measured one -- it is expected to move.
+ */
+export const ASSEMBLY_TIME_LIMIT_MS = 45_000;
+
+export type ChallengeType = "predict-output" | "complete-code" | "trace-value" | "match-concept";
+
+/** The clock a question runs on. Everything except assembly uses the base limit. */
+export function timeLimitFor(challengeType: string): number {
+    return challengeType === "complete-code" ? ASSEMBLY_TIME_LIMIT_MS : QUESTION_TIME_LIMIT_MS;
+}
 export const QUESTIONS_PER_SESSION = 10;
 
 const BASE_POINTS = 100;
@@ -34,7 +51,11 @@ export const FULL_SPEED_BONUS_MS = 8_000;
  * The floor is deliberate and unchanged -- a correct answer never scores less
  * than BASE_POINTS, however long it took.
  */
-export function pointsForAnswer(isCorrect: boolean, elapsedMs: number): number {
+export function pointsForAnswer(
+    isCorrect: boolean,
+    elapsedMs: number,
+    challengeType = "predict-output"
+): number {
     if (!isCorrect) {
         return 0;
     }
@@ -45,8 +66,11 @@ export function pointsForAnswer(isCorrect: boolean, elapsedMs: number): number {
         return BASE_POINTS + MAX_SPEED_BONUS;
     }
 
-    const decayWindow = QUESTION_TIME_LIMIT_MS - FULL_SPEED_BONUS_MS;
-    const remaining = Math.max(0, QUESTION_TIME_LIMIT_MS - elapsed);
+    // Decays across whatever window this question type actually has, so an
+    // assembly question is not judged against a clock it never ran on.
+    const limit = timeLimitFor(challengeType);
+    const decayWindow = limit - FULL_SPEED_BONUS_MS;
+    const remaining = Math.max(0, limit - elapsed);
     const bonus = Math.round((remaining / decayWindow) * MAX_SPEED_BONUS);
 
     return BASE_POINTS + bonus;
@@ -79,8 +103,8 @@ export function xpForSession(answers: ScoredAnswer[]): number {
     return correct * XP_PER_CORRECT + XP_COMPLETION_BONUS;
 }
 
-export function isExpired(servedAt: Date, now: Date): boolean {
-    return now.getTime() - servedAt.getTime() > QUESTION_TIME_LIMIT_MS;
+export function isExpired(servedAt: Date, now: Date, challengeType = "predict-output"): boolean {
+    return now.getTime() - servedAt.getTime() > timeLimitFor(challengeType);
 }
 
 // isResumable and SESSION_RESUME_WINDOW_MS were deleted when pause/resume landed.

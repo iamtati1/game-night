@@ -1,0 +1,294 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { PGlite } from "@electric-sql/pglite";
+
+/**
+ * A real PostgreSQL, built from the repository's own migrations and seeds.
+ *
+ * WHY THIS EXISTS. Every other SQL-shaped test here is source-level: it reads a
+ * query and asserts its shape, which is right when the interesting part is a
+ * decision that could have been written in TypeScript. The curriculum
+ * predicates cannot be tested that way and be worth anything -- no string match
+ * distinguishes a predicate that gates correctly from one that quietly matches
+ * every row. So these tests execute the real exported fragments instead.
+ *
+ * NOT A FRAMEWORK. Two test files use it, both under curriculum/. It is named
+ * *.fixture.ts rather than *.test.ts so vitest does not try to run it and so
+ * tsconfig can keep it out of the build -- @electric-sql/pglite is a
+ * devDependency and must never be reachable from dist/.
+ */
+export interface CurriculumFixture {
+    db: PGlite;
+
+    rows<T>(sql: string, params?: unknown[]): Promise<T[]>;
+
+    /** A learner with no history. */
+    insertUser(email: string): Promise<string>;
+
+    /** Runs a mutation and undoes it, so the seeded data is never disturbed. */
+    scenario<T>(fn: () => Promise<T>): Promise<T>;
+
+    /**
+     * Gives a concept an active challenge at `role`, realised by an existing
+     * untagged question so a learner can be given history against it.
+     *
+     * Every concept used as a fixture declares `predict`, which the composite
+     * foreign key to concept_demands requires.
+     */
+    challengeFor(
+        concept: string,
+        role?: "introduce" | "practise" | "reinforce",
+        /**
+         * `difficulty` is challenges.difficulty, normally derived by the
+         * curriculum from (tier, demand) and passed explicitly here so a test
+         * can build several practice rungs on one concept. `demand` must be one
+         * the concept declares -- the composite foreign key to concept_demands
+         * refuses anything else, which is itself worth a test.
+         */
+        options?: { difficulty?: number; demand?: string }
+    ): Promise<{ challengeId: string; questionId: string }>;
+
+    /**
+     * The same thing, named for what the prerequisite layer cares about.
+     *
+     * Any ACTIVE challenge makes a concept teachable -- the prerequisite rule
+     * never looks at role. Kept as a separate name so the prerequisite tests
+     * read as what they are testing.
+     */
+    makeTeachable(concept: string): Promise<{ challengeId: string; questionId: string }>;
+
+    /** Points an untagged Bug Hunt incident at a challenge, so it can be played. */
+    attachIncident(challengeId: string): Promise<string>;
+
+    /** Records that a learner faced a question, as a game would. */
+    encounter(
+        userId: string,
+        questionId: string,
+        status?: "answered" | "timed_out" | "pending"
+    ): Promise<void>;
+
+    /** Records that a learner faced a Bug Hunt incident. */
+    encounterIncident(
+        userId: string,
+        slug: string,
+        status?: "resolved" | "failed" | "pending"
+    ): Promise<void>;
+}
+
+export async function buildCurriculumFixture(): Promise<CurriculumFixture> {
+    const db = new PGlite();
+
+    for (const dir of ["migrations", "seeds"]) {
+        const base = new URL(`../../${dir}/`, import.meta.url);
+
+        for (const file of readdirSync(base).filter((f) => f.endsWith(".sql")).sort()) {
+            await db.exec(readFileSync(new URL(file, base), "utf8"));
+        }
+    }
+
+    async function rows<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+        return (await db.query<T>(sql, params)).rows;
+    }
+
+    async function insertUser(email: string): Promise<string> {
+        const [user] = await rows<{ id: string }>(
+            `INSERT INTO users (email, username, password_hash)
+             VALUES ($1, $1, 'x') RETURNING id`,
+            [email]
+        );
+
+        return user!.id;
+    }
+
+    async function scenario<T>(fn: () => Promise<T>): Promise<T> {
+        await db.exec("BEGIN");
+
+        try {
+            return await fn();
+        } finally {
+            await db.exec("ROLLBACK");
+        }
+    }
+
+    async function challengeFor(
+        concept: string,
+        role: "introduce" | "practise" | "reinforce" = "practise",
+        options: { difficulty?: number; demand?: string } = {}
+    ): Promise<{ challengeId: string; questionId: string }> {
+        const { difficulty = 1, demand = "predict" } = options;
+        // Migration 024 allows one ACTIVE introduction per concept, so a test
+        // that fabricates one for a concept the seeds already introduce is
+        // replacing it, not adding a second. Retiring the incumbent is what
+        // "this concept's introduction is now mine" means inside a scenario.
+        if (role === "introduce") {
+            await db.query(
+                `UPDATE challenges SET is_active = FALSE
+                 WHERE role = 'introduce' AND is_active
+                   AND concept_id = (SELECT id FROM concepts WHERE slug = $1)`,
+                [concept]
+            );
+        }
+
+        const [challenge] = await rows<{ id: string }>(
+            `INSERT INTO challenges (concept_id, demand_id, role, difficulty)
+             SELECT c.id, d.id, $2, $3
+             FROM concepts c, demands d
+             WHERE c.slug = $1 AND d.slug = $4
+             RETURNING id`,
+            [concept, role, difficulty, demand]
+        );
+
+        // Restricted to a question ELIGIBLE_QUESTION_PREDICATE would actually
+        // deal. Without this the helper can hand back a retired question or one
+        // with no single correct option, and a test asserting it is offered can
+        // never pass for a reason that has nothing to do with the curriculum.
+        const [question] = await rows<{ id: string }>(
+            `UPDATE questions SET challenge_id = $1
+             WHERE id = (
+                 SELECT q.id FROM questions q
+                 WHERE q.challenge_id IS NULL
+                   AND q.is_active
+                   AND (SELECT COUNT(*) FROM question_options o
+                        WHERE o.question_id = q.id AND o.is_active) >= 2
+                   AND (SELECT COUNT(*) FROM question_options o
+                        WHERE o.question_id = q.id AND o.is_active AND o.is_correct) = 1
+                 ORDER BY q.id LIMIT 1
+             )
+             RETURNING id`,
+            [challenge!.id]
+        );
+
+        return { challengeId: challenge!.id, questionId: question!.id };
+    }
+
+    async function attachIncident(challengeId: string): Promise<string> {
+        const [incident] = await rows<{ slug: string }>(
+            // Restricted to a playable type, so the incident the caller gets back
+            // is one ELIGIBLE_INCIDENT_PREDICATE would actually deal.
+            `UPDATE bug_hunt_incidents SET challenge_id = $1
+             WHERE id = (
+                 SELECT id FROM bug_hunt_incidents
+                 WHERE challenge_id IS NULL
+                   AND is_active
+                   AND challenge_type IN ('find_line', 'choose_patch')
+                 ORDER BY id LIMIT 1
+             )
+             RETURNING slug`,
+            [challengeId]
+        );
+
+        return incident!.slug;
+    }
+
+    /**
+     * Ended, not live: game_sessions_one_active_per_user_idx permits a single
+     * in-progress run per learner, and a learner with two encounters has two
+     * finished runs behind them.
+     */
+    async function endedSession(userId: string, game: string): Promise<string> {
+        const [session] = await rows<{ id: string }>(
+            `INSERT INTO game_sessions (user_id, game_id, status, completed_at)
+             VALUES ($1, (SELECT id FROM games WHERE slug = $2),
+                     'completed', CURRENT_TIMESTAMP)
+             RETURNING id`,
+            [userId, game]
+        );
+
+        return session!.id;
+    }
+
+    async function encounter(
+        userId: string,
+        questionId: string,
+        status: "answered" | "timed_out" | "pending" = "timed_out"
+    ): Promise<void> {
+        const sessionId = await endedSession(userId, "code-blitz");
+
+        if (status === "answered") {
+            await db.query(
+                `INSERT INTO session_questions
+                     (game_session_id, question_id, display_order, prompt_text, status,
+                      served_at, answered_at, is_correct, selected_option_id,
+                      selected_option_text, correct_option_text)
+                 SELECT $1, $2, 1, 'p', 'answered',
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, TRUE,
+                        o.id, o.option_text, o.option_text
+                 FROM question_options o WHERE o.question_id = $2 ORDER BY o.id LIMIT 1`,
+                [sessionId, questionId]
+            );
+            return;
+        }
+
+        if (status === "pending") {
+            await db.query(
+                `INSERT INTO session_questions
+                     (game_session_id, question_id, display_order, prompt_text, status, served_at)
+                 VALUES ($1, $2, 1, 'p', 'pending', CURRENT_TIMESTAMP)`,
+                [sessionId, questionId]
+            );
+            return;
+        }
+
+        await db.query(
+            `INSERT INTO session_questions
+                 (game_session_id, question_id, display_order, prompt_text, status,
+                  served_at, timed_out_at, correct_option_text)
+             VALUES ($1, $2, 1, 'p', 'timed_out', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'x')`,
+            [sessionId, questionId]
+        );
+    }
+
+    async function encounterIncident(
+        userId: string,
+        slug: string,
+        status: "resolved" | "failed" | "pending" = "failed"
+    ): Promise<void> {
+        const sessionId = await endedSession(userId, "bug-hunt");
+
+        if (status === "pending") {
+            await db.query(
+                `INSERT INTO bug_hunt_rounds
+                     (game_session_id, incident_id, display_order, time_limit_ms, status)
+                 SELECT $1, i.id, 1, 60000, 'pending'
+                 FROM bug_hunt_incidents i WHERE i.slug = $2`,
+                [sessionId, slug]
+            );
+            return;
+        }
+
+        if (status === "resolved") {
+            await db.query(
+                `INSERT INTO bug_hunt_rounds
+                     (game_session_id, incident_id, display_order, time_limit_ms, status,
+                      served_at, ended_at, attempts, selected_option_id)
+                 SELECT $1, i.id, 1, 60000, 'resolved',
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1,
+                        (SELECT o.id FROM bug_hunt_options o
+                         WHERE o.incident_id = i.id AND o.is_correct LIMIT 1)
+                 FROM bug_hunt_incidents i WHERE i.slug = $2`,
+                [sessionId, slug]
+            );
+            return;
+        }
+
+        await db.query(
+            `INSERT INTO bug_hunt_rounds
+                 (game_session_id, incident_id, display_order, time_limit_ms, status,
+                  served_at, ended_at)
+             SELECT $1, i.id, 1, 60000, 'failed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+             FROM bug_hunt_incidents i WHERE i.slug = $2`,
+            [sessionId, slug]
+        );
+    }
+
+    return {
+        db,
+        rows,
+        insertUser,
+        scenario,
+        challengeFor,
+        makeTeachable: (concept) => challengeFor(concept, "practise"),
+        attachIncident,
+        encounter,
+        encounterIncident
+    };
+}

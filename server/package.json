@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "import:questions": "tsx --env-file=.env scripts/import-questions.ts",
     "migrate:prod": "tsx scripts/migrate.ts",
-    "seed:prod": "tsx scripts/seed.ts"
+    "seed:prod": "tsx scripts/seed.ts",
+    "curriculum:generate": "tsx scripts/generate-curriculum.ts"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +32,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

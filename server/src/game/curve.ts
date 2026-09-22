@@ -142,18 +142,57 @@ export function difficultyCurve(
  * question is a shade easier than intended: the curve is a target, not a promise
  * the bank can always keep.
  */
+/**
+ * Slots reserved for a focus topic, when one is asked for.
+ *
+ * Two, not one, and deliberately far apart: the first is where the concept is
+ * introduced, the second is where it comes back. A concept met once and never
+ * revisited is the thing the learning loop exists to stop.
+ *
+ * Zero-indexed against the dealt order, so beat 1 and beat 6 of ten.
+ */
+const FOCUS_SLOTS = [0, 5] as const;
+
 export function dealSession<T extends Dealable>(
     candidates: readonly T[],
     questionCount: number,
-    random: () => number = Math.random
+    random: () => number = Math.random,
+    focusTopic: string | null = null
 ): T[] {
     const remaining = [...candidates];
     const curve = difficultyCurve(questionCount, random);
     const dealt: T[] = [];
 
+    // Reserve the focus slots up front. Taking them from the easiest end of the
+    // topic means the introduction is winnable, which is the whole point of a
+    // first contact; the reinforcement slot then takes whatever is next.
+    const reserved = new Map<number, T>();
+
+    if (focusTopic) {
+        const onTopic = remaining
+            .filter((q) => q.topic === focusTopic)
+            .sort((a, b) => (a.difficulty ?? UNTIERED_AS) - (b.difficulty ?? UNTIERED_AS));
+
+        for (const [i, slot] of FOCUS_SLOTS.entries()) {
+            const pick = onTopic[i];
+
+            if (slot < questionCount && pick) {
+                reserved.set(slot, pick);
+                remaining.splice(remaining.indexOf(pick), 1);
+            }
+        }
+    }
+
     const tierOf = (q: Dealable) => q.difficulty ?? UNTIERED_AS;
 
-    for (const want of curve) {
+    for (const [slot, want] of curve.entries()) {
+        const held = reserved.get(slot);
+
+        if (held) {
+            dealt.push(held);
+            continue;
+        }
+
         if (remaining.length === 0) break;
 
         const atTier = remaining.filter((q) => tierOf(q) === want);
@@ -173,7 +212,16 @@ export function dealSession<T extends Dealable>(
         // nothing else keeps the difficulty curve in charge. Structured
         // randomness, not a fixed rota.
         const lastTopic = dealt.length > 0 ? dealt[dealt.length - 1]!.topic : null;
-        const fresh = pool.filter((q) => q.topic !== lastTopic);
+
+        // Look forward as well as back. A reserved slot is pushed without
+        // consulting this guard, so filling the beat before it with the same
+        // topic would put the focus unit in two consecutive beats -- turning the
+        // reinforcement slot into a drill, which is the one thing the spacing is
+        // there to prevent.
+        const nextReservedTopic = reserved.get(slot + 1)?.topic ?? null;
+        const fresh = pool.filter(
+            (q) => q.topic !== lastTopic && q.topic !== nextReservedTopic
+        );
         const pick = (fresh.length > 0 ? fresh : pool)[0]!;
 
         dealt.push(pick);

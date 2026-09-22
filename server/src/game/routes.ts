@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
-import { countEligibleQuestions } from "../questions/queries.js";
+import { countDealableQuestions } from "../questions/queries.js";
 import { CODE_BLITZ } from "../games/constants.js";
 import { seededShuffle } from "../games/optionOrder.js";
 import {
@@ -14,15 +14,15 @@ import {
     findResumableSession,
     resumePausedSession
 } from "../sessions/queries.js";
-import { wantsFreshSession } from "../sessions/schemas.js";
+import { requestedFocusTopic, wantsFreshSession } from "../sessions/schemas.js";
 import { isActiveSessionConflict, resolveSessionRace } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
 import { submitAnswerSchema } from "./schemas.js";
 import {
     QUESTIONS_PER_SESSION,
-    QUESTION_TIME_LIMIT_MS,
     isExpired,
+    timeLimitFor,
     pointsForAnswer,
     scoreForSession,
     xpForSession
@@ -38,6 +38,11 @@ export const gameRouter = Router();
 interface ServedQuestion {
     sessionQuestionId: string;
     displayOrder: number;
+    /** The curriculum unit this question belongs to, so the client can name
+     *  what is being practised and decide whether to teach it first. */
+    topic: string | null;
+    /** Which mechanic answers it: pick one option, or assemble tokens. */
+    challengeType: string;
     questionNumber: number;
     totalQuestions: number;
     prompt: string;
@@ -78,6 +83,8 @@ function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[
         questions: questions.map((q) => ({
             displayOrder: q.display_order,
             prompt: q.prompt_text,
+            topic: q.topic,
+            explanation: q.explanation,
             status: q.status,
             selectedOption: q.selected_option_text,
             correctOption: q.correct_option_text,
@@ -166,7 +173,7 @@ async function nextPlayableQuestion(
             return null;
         }
 
-        if (question.served_at && isExpired(question.served_at, now)) {
+        if (question.served_at && isExpired(question.served_at, now, question.challenge_type)) {
             const correct = await db.findCorrectOptionText(question.question_id);
             await db.recordTimeout(question.id, correct ?? "(unavailable)");
             continue;
@@ -179,11 +186,13 @@ async function nextPlayableQuestion(
 async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQuestion> {
     const servedAt = question.served_at ?? (await db.markServed(question.id));
     const options = await db.listActiveOptions(question.question_id);
-    const deadline = servedAt.getTime() + QUESTION_TIME_LIMIT_MS;
+    const deadline = servedAt.getTime() + timeLimitFor(question.challenge_type);
 
     return {
         sessionQuestionId: question.id,
         displayOrder: question.display_order,
+        topic: question.topic,
+        challengeType: question.challenge_type,
         questionNumber: question.display_order,
         totalQuestions: QUESTIONS_PER_SESSION,
         prompt: question.prompt_text,
@@ -210,6 +219,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     const userId = req.user!.id;
     const now = new Date();
     const fresh = wantsFreshSession(req.body);
+    const focusTopic = requestedFocusTopic(req.body);
     const active = await findActiveSession(userId);
 
     // The one-active-session index is scoped to the user, not to (user, game).
@@ -261,7 +271,10 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     // pool is already healthy, and never turns a provider failure into a 500.
     await ensureQuestionPool();
 
-    const available = await countEligibleQuestions();
+    // Counted with the same curriculum eligibility the dealer applies, not the
+    // raw bank size. Checking the wider pool here would let a session start that
+    // the candidate query cannot actually fill.
+    const available = await countDealableQuestions(userId, QUESTIONS_PER_SESSION);
 
     if (available < QUESTIONS_PER_SESSION) {
         res.status(503).json({
@@ -279,7 +292,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     let session: db.GameSessionRow;
 
     try {
-        session = await db.createSessionWithQuestions(userId);
+        session = await db.createSessionWithQuestions(userId, focusTopic);
     } catch (err) {
         // The check at the top of this route and this INSERT are not atomic, so
         // the single active-session slot can change hands between them: a second
@@ -441,14 +454,20 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         return;
     }
 
-    const correctOptionText = (await db.findCorrectOptionText(question.question_id)) ?? "(unavailable)";
+    // For an assembly the "correct option" is the whole correct sequence, joined.
+    // findCorrectOptionText reads the single is_correct row, which a complete-code
+    // question does not have -- it has several, and their order matters.
+    const correctOptionText =
+        question.challenge_type === "complete-code"
+            ? (await db.findAssemblyAnswer(question.question_id)).text
+            : ((await db.findCorrectOptionText(question.question_id)) ?? "(unavailable)");
     // Null for questions written before explanations existed; the client simply
     // shows nothing extra for those rather than an empty panel.
     const explanation = await db.findExplanation(question.question_id);
 
     // The deadline is enforced here, against the server's own served_at. A late
     // answer is refused outright, not merely scored zero.
-    if (isExpired(question.served_at, now)) {
+    if (isExpired(question.served_at, now, question.challenge_type)) {
         await db.recordTimeout(question.id, correctOptionText);
 
         const remaining = await nextPlayableQuestion(session.id, now);
@@ -474,29 +493,79 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         return;
     }
 
-    const option = await db.findOption(parsed.data.selectedOptionId, question.question_id);
+    // Two answer shapes, one per challenge type. The question decides which is
+    // acceptable -- a client cannot choose to answer an assembly question with a
+    // single option id, or a four-option question with a sequence.
+    const isAssembly = question.challenge_type === "complete-code";
 
-    if (!option) {
-        res.status(400).json({ error: "Option does not belong to this question" });
-        return;
+    /** What the player answered, and whether it was right. Decided here, never by the client. */
+    let selectedOptionId: string | null;
+    let selectedText: string;
+    let isCorrect: boolean;
+
+    if (isAssembly) {
+        if (!parsed.data.selectedOptionIds) {
+            res.status(400).json({ error: "This question is answered by assembling tokens" });
+            return;
+        }
+
+        const placed = await db.findOptionsInOrder(
+            parsed.data.selectedOptionIds,
+            question.question_id
+        );
+
+        if (!placed) {
+            res.status(400).json({ error: "Option does not belong to this question" });
+            return;
+        }
+
+        const answer = await db.findAssemblyAnswer(question.question_id);
+
+        // Element by element, including length. Same tokens in another order is
+        // a different answer, and for several of these questions it is the whole
+        // point -- ++n and n++ are built from the same two tokens.
+        isCorrect =
+            placed.length === answer.ids.length &&
+            placed.every((option, i) => option.id === answer.ids[i]);
+
+        // No single option stands for an assembled answer, so the column that
+        // would hold one stays null and the text carries what was built.
+        selectedOptionId = null;
+        selectedText = placed.map((option) => option.optionText).join(" ");
+    } else {
+        if (!parsed.data.selectedOptionId) {
+            res.status(400).json({ error: "This question is answered by choosing one option" });
+            return;
+        }
+
+        const option = await db.findOption(parsed.data.selectedOptionId, question.question_id);
+
+        if (!option) {
+            res.status(400).json({ error: "Option does not belong to this question" });
+            return;
+        }
+
+        selectedOptionId = option.id;
+        selectedText = option.optionText;
+        isCorrect = option.isCorrect;
     }
 
     const answeredAt = await db.recordAnswer(
         question.id,
-        option.id,
-        option.optionText,
+        selectedOptionId,
+        selectedText,
         correctOptionText,
-        option.isCorrect
+        isCorrect
     );
 
     const elapsedMs = answeredAt.getTime() - question.served_at.getTime();
-    const pointsAwarded = pointsForAnswer(option.isCorrect, elapsedMs);
+    const pointsAwarded = pointsForAnswer(isCorrect, elapsedMs, question.challenge_type);
 
     const remaining = await nextPlayableQuestion(session.id, now);
     const finished = remaining ? null : await finishSession(session.id);
 
     res.status(200).json({
-        outcome: option.isCorrect ? "correct" : "incorrect",
+        outcome: isCorrect ? "correct" : "incorrect",
         pointsAwarded,
         scoreSoFar: await db.scoreSoFar(session.id),
         responseTimeMs: elapsedMs,

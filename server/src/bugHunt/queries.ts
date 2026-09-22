@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { curriculumCtes, curriculumSelects } from "../curriculum/selection.js";
 import { pool } from "../db.js";
 import { BUG_HUNT } from "../games/constants.js";
 import {
@@ -95,10 +96,23 @@ export const ELIGIBLE_INCIDENT_PREDICATE = `
     ) = 1
 `;
 
-export async function countEligibleIncidents(): Promise<number> {
+/**
+ * How many incidents THIS learner could actually be dealt.
+ *
+ * Per-learner rather than a bank total, because the candidate query in
+ * createSessionWithRounds is per-learner too: an availability check that counted
+ * the wider pool would clear a run the dealer cannot fill. Bug Hunt has no
+ * top-up path, so unlike Code Blitz there is no second caller that wants the
+ * unfiltered count -- hence one function rather than two.
+ */
+export async function countDealableIncidents(userId: string): Promise<number> {
     const result = await pool.query<{ count: string }>(
-        `SELECT COUNT(*) AS count FROM bug_hunt_incidents i
-         WHERE ${ELIGIBLE_INCIDENT_PREDICATE}`
+        `WITH ${curriculumCtes("$1")}
+         SELECT COUNT(*) AS count
+         FROM bug_hunt_incidents i
+         WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
+           AND ${curriculumSelects("i")}`,
+        [userId]
     );
 
     return Number(result.rows[0]!.count);
@@ -217,10 +231,12 @@ export async function createSessionWithRounds(userId: string): Promise<BugHuntSe
                      ORDER BY gs.started_at DESC
                      LIMIT ${RECENT_SESSIONS_AVOIDED}
                  )
-             )
+             ),
+             ${curriculumCtes("$1")}
              SELECT i.id, i.difficulty, i.code
              FROM bug_hunt_incidents i
              WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
+               AND ${curriculumSelects("i")}
              ORDER BY (i.id IN (SELECT incident_id FROM recent)) ASC, RANDOM()`,
             [userId, BUG_HUNT]
         );
@@ -601,4 +617,41 @@ export async function listRoundsForResults(sessionId: string): Promise<BugHuntRe
     );
 
     return result.rows;
+}
+
+/**
+ * What the curriculum says this incident is teaching, or null when it is one of
+ * the fifty legacy incidents that carry no challenge.
+ *
+ * The concept's own `meaning` is the teaching line -- authored once in
+ * client/src/games/curriculum.ts, projected here, and now shown at the moment a
+ * learner is looking at code that violates it. That is the whole point of
+ * tagging content to concepts: the explanation does not have to be written again
+ * per incident.
+ */
+export interface IncidentConcept {
+    slug: string;
+    name: string;
+    /** The one-line rule, from concepts.meaning. */
+    meaning: string;
+    /** Completes "I know how to ___", from concepts.objective. */
+    objective: string;
+    /** recall | recognise | predict | produce | diagnose | repair | explain */
+    demand: string;
+}
+
+export async function findIncidentConcept(
+    incidentId: string
+): Promise<IncidentConcept | null> {
+    const result = await pool.query<IncidentConcept>(
+        `SELECT c.slug, c.name, c.meaning, c.objective, d.slug AS demand
+         FROM bug_hunt_incidents i
+         JOIN challenges ch ON ch.id = i.challenge_id
+         JOIN concepts c    ON c.id  = ch.concept_id
+         JOIN demands d     ON d.id  = ch.demand_id
+         WHERE i.id = $1`,
+        [incidentId]
+    );
+
+    return result.rows[0] ?? null;
 }

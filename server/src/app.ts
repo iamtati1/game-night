@@ -6,6 +6,7 @@ import express, {
 } from "express";
 import { authRouter, meHandler } from "./auth/routes.js";
 import { bugHuntRouter } from "./bugHunt/routes.js";
+import { curriculumRouter } from "./curriculum/routes.js";
 import { pool } from "./db.js";
 import { flushRouter } from "./flush/routes.js";
 import { join, sep } from "node:path";
@@ -114,6 +115,10 @@ app.use("/api/reaction", reactionRouter);
 app.use("/api/memory", memoryRouter);
 
 app.use("/api/bug-hunt", bugHuntRouter);
+
+// The Learn half of the learning loop. Distinct prefix, and before the broad
+// /api mount, so gameRouter never sees these paths.
+app.use("/api/curriculum", curriculumRouter);
 
 app.use("/api", gameRouter);
 
