@@ -1093,15 +1093,44 @@ button:focus-visible,
     box-shadow: 0 0 0 1px var(--cyan), 0 0 14px 2px #5ee7f0b3;
 }
 
+/*
+   THE INSTRUCTION IS THE LOUDEST TEXT ON THE SCREEN.
+
+   Three tiers of prose, and only three:
+
+     INSTRUCTION   what you are being asked to do, or notice. Largest, heaviest,
+                   full-strength text colour. There is exactly one per screen.
+     CONSEQUENCE   what just happened, and what it means. Lighter weight, second
+                   text colour, smaller. It is read after the fact, not acted on.
+     META          labels, console tags, step counts. Small, spaced, muted.
+
+   The previous pass set the instruction at 1.15rem/500 and the consequence at
+   1.08rem/400 -- a difference of half a step and one weight, which reads as
+   "two paragraphs" rather than as "the thing to do, and a note about it". A
+   beginner scanning the screen could not tell which line was addressed to them.
+
+   Deliberately NOT bold everywhere. Weight is a finite resource: if the
+   consequence line and the feedback body were also 600, the instruction would
+   stop being findable, which is the whole thing this hierarchy buys.
+*/
 .scene-invite,
 .scene-ask {
-    font-size: 1.15rem;
-    line-height: 1.55;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.005em;
     color: var(--text);
-    margin: 0 0 1.4rem;
+    margin: 0 0 1.5rem;
+    text-wrap: balance;
 }
 
-.scene-ask { font-weight: 500; }
+/* Emphasis inside an instruction is weight, not colour. A coloured word in the
+   middle of a sentence reads as a link and gets clicked. */
+.scene-invite strong,
+.scene-ask strong {
+    font-weight: 700;
+    color: #ffffff;
+}
 
 /*
    THE STAGE: code, a conduit, a console.
@@ -1231,11 +1260,14 @@ pre.code {
 
 .scene-run { width: 100%; }
 
+/* CONSEQUENCE. What just happened, said plainly, after it happened. */
 .scene-after {
     margin: 0 0 1.5rem;
-    font-size: 1.08rem;
-    line-height: 1.6;
+    font-size: 1.05rem;
+    font-weight: 400;
+    line-height: 1.65;
     color: var(--text-2);
+    max-width: 56ch;
 }
 
 /* The slot the learner types into: the one live thing in the snippet, so it
@@ -1327,7 +1359,13 @@ pre.code {
 .scene-feedback.right .scene-feedback-head { color: var(--mint); }
 .scene-feedback.wrong .scene-feedback-head { color: var(--coral); }
 
-.scene-feedback-body { margin: 0; color: var(--text-2); line-height: 1.6; }
+.scene-feedback-body {
+    margin: 0;
+    font-size: 1.02rem;
+    color: var(--text-2);
+    line-height: 1.65;
+    max-width: 58ch;
+}
 
 .scene-aside {
     margin: 0.75rem 0 0;
@@ -1362,13 +1400,17 @@ pre.code {
     text-wrap: balance;
 }
 
+/* A moment has no instruction, so its prose carries the screen -- one step up
+   from a consequence line, still well below a heading. */
 .scene-moment-line {
-    max-width: 30rem;
-    margin: 0 auto 0.8rem;
-    font-size: 1.12rem;
+    max-width: 34rem;
+    margin: 0 auto 0.85rem;
+    font-size: 1.15rem;
     line-height: 1.6;
     color: var(--text-2);
 }
+
+.scene-moment-line strong { font-weight: 600; color: var(--text); }
 
 .scene-moment .button { margin-top: 1.75rem; min-width: 12rem; }
 
