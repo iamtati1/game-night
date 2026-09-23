@@ -2,6 +2,7 @@ import { pool } from "../db.js";
 import { curriculumEligible, metConceptsCte } from "./eligibility.js";
 import { journeyCte } from "./journey.js";
 import { roleEligible } from "./roles.js";
+import { curriculumCtes } from "./selection.js";
 
 /**
  * The Learn half of Learn -> Play.
@@ -184,7 +185,8 @@ export async function findJourney(
     sessionSize: number
 ): Promise<JourneyStep[]> {
     const result = await pool.query<JourneyStep>(
-        `WITH ${journeyCte("$1", sessionSize)}
+        `WITH ${curriculumCtes("$1")},
+              ${journeyCte("$1", sessionSize)}
          SELECT t.slug,
                 t.name,
                 t.tier,

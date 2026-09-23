@@ -24,20 +24,39 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
  */
 
 /** Unchanged from the previous slice: the raw playable bank. */
-const BASELINE_CANDIDATES = 234;
+/*
+ * These counts moved when seed 020 stocked the Values topic with twelve tagged
+ * practice questions. The bank is 246 dealable questions and 14 of them are
+ * tagged -- up from 234 and 2. Stated as numbers on purpose: the whole point of
+ * this work is that tagged coverage is growing, and a silent change to it is
+ * exactly what these tests exist to catch.
+ */
+const BASELINE_CANDIDATES = 246;
 
 /**
  * Questions carrying a challenge_id: equality's (seed 015) and
  * primitive-types' (seed 016). Both are `practise`, so both are withheld from a
  * learner who has met neither concept.
  */
-const TAGGED_QUESTIONS = 2;
+const TAGGED_QUESTIONS = 14;
 
 /** The two Bug Hunt incidents the equality slice tagged, both `practise`. */
 const TAGGED_INCIDENTS = ["order-lookup-string-id", "profile-clear-field-null"];
 
 /** A concept with no prerequisites, so only role can withhold its content. */
-const ROOT_CONCEPT = "primitive-types";
+/**
+ * The specimen this file isolates the ROLE layer on.
+ *
+ * It must be a concept nothing can prerequisite-gate, or failures here would be
+ * the layer above talking. That used to be primitive-types; once seed 019 gave
+ * every authored lesson an introduction, primitive-types' own prerequisite
+ * became teachable and started gating it -- correctly, and one layer up.
+ *
+ * console-output is the curriculum's single root and has no prerequisites at
+ * all, so it cannot be gated by anything, now or as coverage grows. The
+ * beforeAll below asserts that rather than trusting it.
+ */
+const ROOT_CONCEPT = "console-output";
 
 let fx: CurriculumFixture;
 let newLearner: string;
@@ -56,10 +75,9 @@ beforeAll(async () => {
 
     equalityQuestionId = question!.id;
 
-    // primitive-types gained one prerequisite when `console-output` was added
-    // ahead of it. The property this fixture needs is not "no prerequisites" but
-    // "nothing that can gate it" -- and an unteachable prerequisite never does,
-    // which is the rule eligibility.ts has always applied.
+    // The property this fixture needs is "nothing can gate it". Asserted rather
+    // than assumed, because the thing that broke the previous specimen was a
+    // prerequisite quietly becoming teachable.
     const [gating] = await fx.rows<{ n: number }>(
         `SELECT COUNT(*)::INT n
          FROM prerequisites p
@@ -308,6 +326,13 @@ describe("5 · role never overrides prerequisites", () => {
         // practice -- and the prerequisite layer withholds it anyway.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("r5@example.com");
+
+            // This file measures the role layer. equality's prerequisites both
+            // gained lessons in seed 019 and now gate it one layer up, which
+            // would mask every assertion below.
+            await fx.makeUnteachable("comparison-operators");
+            await fx.makeUnteachable("type-coercion");
+
             const intro = await fx.challengeFor("equality", "introduce");
 
             await fx.encounter(learner, intro.questionId, "answered");
@@ -443,13 +468,23 @@ describe("9 · the equality slice is withheld until equality is introduced", () 
         }
     });
 
-    it("still passes the prerequisite layer -- it is role that withholds it", async () => {
-        expect(await prerequisiteEligible(newLearner)).toContain(equalityQuestionId);
+    it("is withheld by the prerequisite layer too, now that it has one", async () => {
+        // This said the opposite while equality's prerequisites had no content.
+        // Both have lessons now, so BOTH layers withhold it -- which is why the
+        // scenarios above uncover them before measuring role in isolation.
+        expect(await prerequisiteEligible(newLearner)).not.toContain(equalityQuestionId);
     });
 
     it("releases all three once equality has been introduced", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("r9@example.com");
+
+            // This file measures the role layer. equality's prerequisites both
+            // gained lessons in seed 019 and now gate it one layer up, which
+            // would mask every assertion below.
+            await fx.makeUnteachable("comparison-operators");
+            await fx.makeUnteachable("type-coercion");
+
             const intro = await fx.challengeFor("equality", "introduce");
 
             await fx.encounter(learner, intro.questionId, "answered");
@@ -476,8 +511,14 @@ describe("10 · the layers below are unchanged", () => {
         expect(count!.n).toBe(BASELINE_CANDIDATES);
     });
 
-    it("leaves prerequisite eligibility at 234 for a new learner", async () => {
-        expect(await prerequisiteEligible(newLearner)).toHaveLength(BASELINE_CANDIDATES);
+    it("leaves the untagged bank untouched by the prerequisite layer", async () => {
+        // Was BASELINE_CANDIDATES exactly, when nothing tagged was gated. The
+        // prerequisite layer now removes the tagged content a new learner has
+        // not earned; everything untagged still flows through the escape hatch.
+        const eligible = await prerequisiteEligible(newLearner);
+
+        expect(eligible.length).toBeLessThan(BASELINE_CANDIDATES);
+        expect(eligible.length).toBeGreaterThan(BASELINE_CANDIDATES - 10);
     });
 
     it("removes every tagged practise question from the full stack", async () => {

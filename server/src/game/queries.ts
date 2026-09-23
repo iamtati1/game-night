@@ -207,18 +207,29 @@ export function byCurriculumPreference(rows: readonly CandidateRow[]): Candidate
         role: row.role ?? "practise"
     });
 
+    // Keyed by STRING on both sides, deliberately.
+    //
+    // challenge_id is a BIGINT, and a BIGINT reaches JavaScript as a number
+    // from some drivers and a string from others. Writing the key from
+    // `candidate.challengeId` and reading it with `row.challenge_id` therefore
+    // risked setting 1 and getting "1" -- every lookup missing, the rank map
+    // silently empty, and curriculum preference quietly doing nothing at all.
+    //
+    // That failure is invisible: no error, no wrong answer, just ordering that
+    // looks arbitrary. Normalising at both ends is the only thing that makes it
+    // impossible rather than unobserved.
     const rank = new Map<string, number>();
 
     selectInOrder(
         tagged.map(asCandidate),
         (conceptId) => ceilings.get(conceptId) ?? { difficulty: 1, demandOrder: 0 }
-    ).forEach((candidate, index) => rank.set(candidate.challengeId, index));
+    ).forEach((candidate, index) => rank.set(String(candidate.challengeId), index));
 
     const keyOf = (row: CandidateRow) => [
         row.seen_recently ? 1 : 0,
         row.challenge_id === null
             ? Number.MAX_SAFE_INTEGER
-            : (rank.get(row.challenge_id) ?? Number.MAX_SAFE_INTEGER - 1)
+            : (rank.get(String(row.challenge_id)) ?? Number.MAX_SAFE_INTEGER - 1)
     ];
 
     // Stable, so untagged questions keep the RANDOM() order the query gave them.

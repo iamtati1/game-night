@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { buildCurriculumFixture, type CurriculumFixture } from "./database.fixture.js";
 import { journeyCte, withinJourney } from "./journey.js";
+import { curriculumCtes } from "./selection.js";
 import { metConceptsCte } from "./eligibility.js";
 import { metDifficultiesCte } from "./frontier.js";
 import { CODE_BLITZ_CANDIDATES_SQL, byCurriculumPreference } from "../game/queries.js";
@@ -33,7 +34,9 @@ beforeAll(async () => {
 
 async function journey(userId: string) {
     const [row] = await fx.rows<{ reached: number; ceiling: number }>(
-        `WITH ${journeyCte("$1", QUESTIONS_PER_SESSION)} SELECT * FROM journey`,
+        `WITH ${curriculumCtes("$1")},
+              ${journeyCte("$1", QUESTIONS_PER_SESSION)}
+         SELECT * FROM journey`,
         [userId]
     );
 

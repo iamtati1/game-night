@@ -79,19 +79,42 @@ async function withinFrontierOnly(userId: string): Promise<string[]> {
     return found.map((r) => r.id);
 }
 
-/** A learner who has completed the concept's introduction, as a real one would. */
-async function introducedLearner(email: string): Promise<string> {
+/**
+ * A learner who has legitimately ARRIVED at the concept: they have completed
+ * its introduction and the introductions of everything it directly requires.
+ *
+ * The prerequisites matter now in a way they did not before. Seed 019 gave
+ * every concept with an authored lesson an introduction, so primitive-types'
+ * prerequisite is teachable, and an unmet teachable prerequisite withholds the
+ * concept's practice entirely -- correctly, and one layer above the one these
+ * tests are about. Completing them here isolates the frontier, which is what
+ * this file exists to measure; without it every assertion below fails for a
+ * reason that has nothing to do with difficulty rungs.
+ *
+ * Direct prerequisites only, matching curriculumEligible, which does not walk
+ * the graph.
+ */
+async function introducedLearner(email: string, concept: string = CONCEPT): Promise<string> {
     const learner = await fx.insertUser(email);
-    const [intro] = await fx.rows<{ id: string }>(
-        `SELECT ch.id FROM challenges ch
-         JOIN concepts c ON c.id = ch.concept_id
-         WHERE c.slug = $1 AND ch.role = 'introduce' AND ch.is_active`,
-        [CONCEPT]
-    );
 
     await fx.db.query(
-        `INSERT INTO introduction_completions (user_id, challenge_id) VALUES ($1, $2)`,
-        [learner, intro!.id]
+        `INSERT INTO introduction_completions (user_id, challenge_id)
+         SELECT $1, ch.id
+         FROM challenges ch
+         JOIN concepts c ON c.id = ch.concept_id
+         WHERE ch.role = 'introduce'
+           AND ch.is_active
+           AND (
+               c.slug = $2
+               OR c.id IN (
+                   SELECT p.requires_id
+                   FROM prerequisites p
+                   JOIN concepts target ON target.id = p.concept_id
+                   WHERE target.slug = $2
+               )
+           )
+         ON CONFLICT DO NOTHING`,
+        [learner, concept]
     );
 
     return learner;
@@ -508,7 +531,10 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
              FROM questions q WHERE ${ELIGIBLE_QUESTION_PREDICATE}`
         );
 
-        expect(spread).toEqual({ d1: 78, d2: 81, d3: 52, d4: 23 });
+        // d1 rose from 78 to 90 when seed 020 added twelve Values practice
+        // questions, all of which are pacing difficulty 1. Nothing EXISTING
+        // moved, which is what this test is actually guarding.
+        expect(spread).toEqual({ d1: 90, d2: 81, d3: 52, d4: 23 });
     });
 });
 
@@ -565,18 +591,16 @@ describe("8 · the layers below the frontier still behave", () => {
         // The one place the frontier bites on real seeded content: equality
         // ships a difficulty-1 question and two difficulty-2 incidents.
         await fx.scenario(async () => {
-            const learner = await fx.insertUser("f8e@example.com");
-            const intro = await fx.challengeFor("equality", "introduce");
+            // Arrives at equality properly: its own introduction plus those of
+            // comparison-operators and type-coercion, both of which gained
+            // lessons in seed 019 and would otherwise withhold equality's
+            // practice one layer above the frontier.
+            const learner = await introducedLearner("f8e@example.com", "equality");
             const [question] = await fx.rows<{ id: string }>(
                 `SELECT q.id FROM questions q
                  JOIN challenges ch ON ch.id = q.challenge_id
                  JOIN concepts c ON c.id = ch.concept_id
                  WHERE c.slug = 'equality'`
-            );
-
-            await fx.db.query(
-                `INSERT INTO introduction_completions (user_id, challenge_id) VALUES ($1, $2)`,
-                [learner, intro.challengeId]
             );
 
             expect(await selectable(learner), "rung 1 opens").toContain(question!.id);

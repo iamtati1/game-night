@@ -45,6 +45,10 @@ function assertUserParam(userParam: string, fn: string): void {
  *
  * Declares two CTEs:
  *
+ * REQUIRES metConceptsCte() TO BE DECLARED FIRST, because the stocked count now
+ * applies the eligibility and role gates and both read the `met` CTE. Every
+ * caller must place curriculumCtes() ahead of this one in the same WITH.
+ *
  *   question_journey (question_id, topic_order)
  *   journey          (ceiling, reached)
  *
@@ -89,6 +93,9 @@ function assertUserParam(userParam: string, fn: string): void {
  * @param userParam    positional placeholder holding the user id
  * @param minimumPool  questions a session needs; the floor guarantees this many
  */
+import { curriculumEligible } from "./eligibility.js";
+import { roleEligible } from "./roles.js";
+
 export function journeyCte(userParam: string, minimumPool: number): string {
     assertUserParam(userParam, "journeyCte");
 
@@ -110,6 +117,34 @@ export function journeyCte(userParam: string, minimumPool: number): string {
                                      ELSE q.topic
                                 END
     ),
+    journey_dealable AS (
+        -- Every question the DEALER could actually use, evaluated ONCE.
+        --
+        -- The floor has to count what can be dealt, not what the bank holds:
+        -- withinJourney is a hard gate, and the only thing that makes a hard
+        -- gate safe is the promise that the ceiling never settles on a topic
+        -- which cannot fill a session. Tagged practise content is withheld
+        -- until its concept has been met, so a topic can look fully stocked and
+        -- deal nothing -- invisible while the bank was untagged and everything
+        -- passed, and immediate once real content is attached.
+        --
+        -- MATERIALISED AS ITS OWN CTE, not inlined into the per-topic count
+        -- below. Inlined, the two predicates -- each carrying its own nested
+        -- EXISTS over challenges and prerequisites -- are re-evaluated for
+        -- every (topic, question) pair. At 16 topics and a few hundred
+        -- questions that took a single query from milliseconds to minutes.
+        -- Here they run once per question and the counting is a cheap join.
+        SELECT qj.question_id, qj.topic_order
+        FROM question_journey qj
+        JOIN questions q ON q.id = qj.question_id
+        WHERE q.is_active
+          AND (SELECT COUNT(*) FROM question_options o
+               WHERE o.question_id = q.id AND o.is_active) >= 2
+          AND (SELECT COUNT(*) FROM question_options o
+               WHERE o.question_id = q.id AND o.is_active AND o.is_correct) = 1
+          AND ${curriculumEligible("q")}
+          AND ${roleEligible("q")}
+    ),
     journey_stocked AS (
         -- Topics a learner could actually play something from, and how much the
         -- bank holds up to and including each one.
@@ -117,14 +152,8 @@ export function journeyCte(userParam: string, minimumPool: number): string {
             t.display_order,
             (
                 SELECT COUNT(*)
-                FROM question_journey qj
-                JOIN questions q ON q.id = qj.question_id
-                WHERE qj.topic_order <= t.display_order
-                  AND q.is_active
-                  AND (SELECT COUNT(*) FROM question_options o
-                       WHERE o.question_id = q.id AND o.is_active) >= 2
-                  AND (SELECT COUNT(*) FROM question_options o
-                       WHERE o.question_id = q.id AND o.is_active AND o.is_correct) = 1
+                FROM journey_dealable d
+                WHERE d.topic_order <= t.display_order
             ) AS cumulative,
             EXISTS (
                 SELECT 1 FROM question_journey qj

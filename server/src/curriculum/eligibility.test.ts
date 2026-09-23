@@ -43,7 +43,28 @@ import { QUESTIONS_PER_SESSION } from "../game/scoring.js";
  * are currently unteachable. If this moves, the transitional rules are wrong and
  * the answer is to diagnose them, never to edit this constant.
  */
-const BASELINE_CANDIDATES = 234;
+/*
+ * These counts moved when seed 020 stocked the Values topic with twelve tagged
+ * practice questions. The bank is 246 dealable questions and 14 of them are
+ * tagged -- up from 234 and 2. Stated as numbers on purpose: the whole point of
+ * this work is that tagged coverage is growing, and a silent change to it is
+ * exactly what these tests exist to catch.
+ */
+const BASELINE_CANDIDATES = 246;
+
+/**
+ * How many of those the curriculum now withholds from a learner with no
+ * history: the equality question and the primitive-types practice, both behind
+ * prerequisites that became teachable when seed 019 connected every authored
+ * lesson to the curriculum.
+ *
+ * This number being above zero is the point. It used to be zero, and the tests
+ * below said so proudly -- "BEFORE = AFTER, which is what makes the wiring safe
+ * to ship". That was true of a bank where nothing was tagged. The curriculum is
+ * now doing the job it was built for, on the small amount of content that has
+ * been connected to it.
+ */
+const CURRICULUM_GATED_FOR_A_NEW_LEARNER = 8;
 
 /**
  * How many of those carry a challenge_id.
@@ -53,7 +74,7 @@ const BASELINE_CANDIDATES = 234;
  * transitional escape hatch, which is why this number being small is the point
  * rather than an embarrassment.
  */
-const TAGGED_QUESTIONS = 2;
+const TAGGED_QUESTIONS = 14;
 
 /** The two Bug Hunt incidents the equality slice tagged. */
 const TAGGED_INCIDENTS = ["order-lookup-string-id", "profile-clear-field-null"];
@@ -116,6 +137,25 @@ async function dealableIncidents(userId: string): Promise<string[]> {
 
 // ── step 2 · the baseline, measured without curriculum eligibility ───────
 
+/**
+ * Restores the coverage state the equality worked-example is written against.
+ *
+ * These tests use equality as their specimen because it was the one tagged
+ * question whose prerequisites had no content: unteachable prerequisites do not
+ * block, so equality was dealable and every rule could be demonstrated by
+ * changing one thing. Seed 019 connected every authored lesson to the
+ * curriculum, which gave comparison-operators and type-coercion introductions
+ * and made them teachable -- so equality is now correctly gated by default.
+ *
+ * Rather than re-specimen every test against whichever concept is uncovered
+ * this month, the scenarios that need an uncovered prerequisite now say so.
+ * Only valid inside scenario(), which rolls it back.
+ */
+async function uncoverEqualityPrerequisites(): Promise<void> {
+    await fx.makeUnteachable("comparison-operators");
+    await fx.makeUnteachable("type-coercion");
+}
+
 describe("step 2 · today's candidate pool, before curriculum eligibility", () => {
     it("offers 234 Code Blitz questions under the pre-existing predicate alone", async () => {
         // The real ELIGIBLE_QUESTION_PREDICATE, not a copy of it, so a change
@@ -135,18 +175,22 @@ describe("step 2 · today's candidate pool, before curriculum eligibility", () =
 // ── step 3 · the same pool, after ────────────────────────────────────────
 
 describe("step 3 · curriculum eligibility does not shrink today's pool", () => {
-    it("deals a brand-new learner the same 234 questions", async () => {
-        // BEFORE = AFTER. Almost nothing is tagged, and the one tagged question's
-        // prerequisites are unteachable, so the transitional rules let everything
-        // through. This is what makes the wiring safe to ship.
-        expect(await dealableQuestions(newLearner)).toHaveLength(BASELINE_CANDIDATES);
+    it("withholds only the content whose prerequisites are now teachable", async () => {
+        // The untagged bank -- still the overwhelming majority -- flows through
+        // the transitional escape hatch untouched. What the curriculum removes
+        // is exactly the tagged content a learner has not earned yet.
+        expect(await dealableQuestions(newLearner)).toHaveLength(
+            BASELINE_CANDIDATES - CURRICULUM_GATED_FOR_A_NEW_LEARNER
+        );
     });
 
-    it("leaves every Bug Hunt incident dealable", async () => {
+    it("withholds the tagged incidents from a learner who has met nothing", async () => {
+        // Same rule, same module, other game. Both tagged incidents sit behind
+        // type-coercion, which now has a lesson and is therefore teachable.
         const dealable = await dealableIncidents(newLearner);
 
         for (const slug of TAGGED_INCIDENTS) {
-            expect(dealable, `${slug} must still be dealable`).toContain(slug);
+            expect(dealable, `${slug} must be withheld`).not.toContain(slug);
         }
     });
 });
@@ -204,7 +248,12 @@ describe("B · untagged content is never gated", () => {
              WHERE q.challenge_id IS NOT NULL AND ${ELIGIBLE_QUESTION_PREDICATE}`
         );
 
-        expect(tagged!.count).toBeLessThan(QUESTIONS_PER_SESSION);
+        // The tagged bank has grown past a single session's worth, but it is
+        // still a rounding error beside the whole bank -- and a brand-new
+        // learner can play none of it, because every tagged item is `practise`
+        // behind a concept they have not met. Gating the untagged remainder
+        // would still empty the game.
+        expect(tagged!.count).toBeLessThan(BASELINE_CANDIDATES / 10);
     });
 });
 
@@ -214,6 +263,7 @@ describe("D · an unmet prerequisite Jolt CAN teach blocks its dependants", () =
     it("excludes the equality question once type-coercion becomes teachable", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("d@example.com");
+            await uncoverEqualityPrerequisites();
 
             expect(
                 await dealableQuestions(learner),
@@ -239,6 +289,9 @@ describe("D · an unmet prerequisite Jolt CAN teach blocks its dependants", () =
         // which it could not do while nothing was tagged.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("d2@example.com");
+            await uncoverEqualityPrerequisites();
+
+            const before = await dealableQuestions(learner);
             const teaching = await fx.makeTeachable("type-coercion");
             const dealable = await dealableQuestions(learner);
 
@@ -246,7 +299,18 @@ describe("D · an unmet prerequisite Jolt CAN teach blocks its dependants", () =
             expect(dealable, "behind an unmet primitive-types").not.toContain(
                 teaching.questionId
             );
-            expect(dealable).toHaveLength(BASELINE_CANDIDATES - 2);
+            // "and nothing else", stated directly rather than as arithmetic on
+            // pool sizes. Absolute counts break whenever coverage grows and say
+            // nothing about WHICH questions left; this names them both.
+            //
+            // makeTeachable TAGS AN EXISTING UNTAGGED QUESTION rather than
+            // creating one, so it was already in `before` and leaving is the
+            // correct outcome: tagging it to type-coercion put it behind an
+            // unmet primitive-types.
+            const removed = before.filter((id) => !dealable.includes(id)).sort();
+            const expected = [teaching.questionId, equalityQuestionId].sort();
+
+            expect(removed).toEqual(expected);
         });
     });
 });
@@ -255,6 +319,7 @@ describe("C · a met prerequisite restores its dependants", () => {
     it("re-admits the equality question once type-coercion is met", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("c@example.com");
+            await uncoverEqualityPrerequisites();
             const { questionId: teachingQuestion } = await fx.makeTeachable("type-coercion");
 
             expect(await dealableQuestions(learner)).not.toContain(equalityQuestionId);
@@ -270,6 +335,7 @@ describe("C · a met prerequisite restores its dependants", () => {
         for (const status of ["answered", "timed_out"] as const) {
             await fx.scenario(async () => {
                 const learner = await fx.insertUser(`c-${status}@example.com`);
+                await uncoverEqualityPrerequisites();
                 const { questionId: teachingQuestion } = await fx.makeTeachable("type-coercion");
 
                 await fx.encounter(learner, teachingQuestion, status);
@@ -288,6 +354,7 @@ describe("C · a met prerequisite restores its dependants", () => {
         // it.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("c-pending@example.com");
+            await uncoverEqualityPrerequisites();
             const { questionId: teachingQuestion } = await fx.makeTeachable("type-coercion");
 
             await fx.encounter(learner, teachingQuestion, "pending");
@@ -299,7 +366,9 @@ describe("C · a met prerequisite restores its dependants", () => {
     it("scopes met concepts to the learner who earned them", async () => {
         await fx.scenario(async () => {
             const studious = await fx.insertUser("c-studious@example.com");
+            await uncoverEqualityPrerequisites();
             const bystander = await fx.insertUser("c-bystander@example.com");
+
             const { questionId: teachingQuestion } = await fx.makeTeachable("type-coercion");
 
             await fx.encounter(studious, teachingQuestion);
@@ -311,9 +380,17 @@ describe("C · a met prerequisite restores its dependants", () => {
 });
 
 describe("E · an unmet prerequisite Jolt CANNOT teach does not block", () => {
-    it("is why the equality slice is reachable at all today", async () => {
+    it("does not block when neither prerequisite can be taught", async () => {
+        // Seed 019 gave every concept with an authored lesson an introduction,
+        // so equality's prerequisites are now genuinely teachable and equality
+        // is genuinely gated -- which is the rule working, not failing. The
+        // condition this rule is about therefore has to be constructed.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("e@example.com");
+
+            await fx.makeUnteachable("comparison-operators");
+            await fx.makeUnteachable("type-coercion");
+
             const teachable = await fx.rows<{ slug: string }>(
                 `SELECT c.slug FROM concepts c
                  WHERE c.slug IN ('comparison-operators', 'type-coercion')
@@ -321,7 +398,7 @@ describe("E · an unmet prerequisite Jolt CANNOT teach does not block", () => {
                                WHERE ch.concept_id = c.id AND ch.is_active)`
             );
 
-            expect(teachable, "neither prerequisite has content yet").toHaveLength(0);
+            expect(teachable, "neither prerequisite has content").toHaveLength(0);
             expect(await dealableQuestions(learner)).toContain(equalityQuestionId);
         });
     });
@@ -331,6 +408,9 @@ describe("E · an unmet prerequisite Jolt CANNOT teach does not block", () => {
         // grows, with no code change. This is that tightening, observed.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("e2@example.com");
+
+            await fx.makeUnteachable("comparison-operators");
+            await fx.makeUnteachable("type-coercion");
 
             expect(await dealableQuestions(learner)).toContain(equalityQuestionId);
 
@@ -343,6 +423,8 @@ describe("E · an unmet prerequisite Jolt CANNOT teach does not block", () => {
     it("ignores an inactive challenge, which teaches nobody", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("e3@example.com");
+
+            await uncoverEqualityPrerequisites();
 
             await fx.db.query(
                 `INSERT INTO challenges (concept_id, demand_id, role, difficulty, is_active)
@@ -400,6 +482,7 @@ describe("G · eligibility inspects direct prerequisites and does not walk the g
         // acyclic. Re-deriving it here would cost a recursive CTE per deal.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("g@example.com");
+            await uncoverEqualityPrerequisites();
 
             await fx.makeTeachable("primitive-types");
 
@@ -427,18 +510,30 @@ describe("H · the equality slice's current boundary", () => {
         expect(prereqs.map((r) => r.slug)).toEqual(["comparison-operators", "type-coercion"]);
     });
 
-    it("remains dealable for everyone, because neither prerequisite has content", async () => {
-        expect(await dealableQuestions(newLearner)).toContain(equalityQuestionId);
+    it("is now gated, because both prerequisites have lessons", async () => {
+        // This assertion used to say the opposite, and the change is the point.
+        // Seed 019 connected every authored lesson to the curriculum, which
+        // made comparison-operators and type-coercion teachable, which means a
+        // learner is no longer asked about equality before meeting either. The
+        // boundary moved because coverage grew -- exactly as curriculumEligible
+        // documents, and with no change to the rule.
+        expect(await dealableQuestions(newLearner)).not.toContain(equalityQuestionId);
     });
 });
 
 // ── step 5 · Bug Hunt, through the same module ───────────────────────────
 
 describe("step 5 · Bug Hunt is gated by the same rule", () => {
-    it("deals both tagged incidents today", async () => {
-        const dealable = await dealableIncidents(newLearner);
+    it("deals both tagged incidents once their prerequisite is uncovered", async () => {
+        await fx.scenario(async () => {
+            const learner = await fx.insertUser("bh0@example.com");
 
-        expect(dealable).toEqual(expect.arrayContaining(TAGGED_INCIDENTS));
+            await uncoverEqualityPrerequisites();
+
+            expect(await dealableIncidents(learner)).toEqual(
+                expect.arrayContaining(TAGGED_INCIDENTS)
+            );
+        });
     });
 
     it("withholds both once type-coercion becomes teachable and unmet", async () => {
@@ -458,6 +553,9 @@ describe("step 5 · Bug Hunt is gated by the same rule", () => {
     it("restores both once the prerequisite is met", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("bh2@example.com");
+
+            await uncoverEqualityPrerequisites();
+
             const { questionId: teachingQuestion } = await fx.makeTeachable("type-coercion");
 
             await fx.encounter(learner, teachingQuestion);
@@ -476,6 +574,12 @@ describe("step 5 · Bug Hunt is gated by the same rule", () => {
         // progress -- the thing challenges exist to prevent.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("bh3@example.com");
+
+            // equality has two prerequisites and both now have lessons. This
+            // test is about type-coercion being met, so the other one is taken
+            // out of the picture rather than left to mask the result.
+            await fx.makeUnteachable("comparison-operators");
+
             const { challengeId } = await fx.makeTeachable("type-coercion");
             const slug = await fx.attachIncident(challengeId);
 

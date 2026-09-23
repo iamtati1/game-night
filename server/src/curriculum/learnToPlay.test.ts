@@ -40,6 +40,13 @@ const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5
 const CONCEPT = "primitive-types";
 
 /** 234 raw, minus equality's practise question and now minus this one. */
+/*
+ * These counts moved when seed 020 stocked the Values topic with twelve tagged
+ * practice questions. The bank is 246 dealable questions and 14 of them are
+ * tagged -- up from 234 and 2. Stated as numbers on purpose: the whole point of
+ * this work is that tagged coverage is growing, and a silent change to it is
+ * exactly what these tests exist to catch.
+ */
 const NEW_LEARNER_CANDIDATES = 232;
 
 let fx: CurriculumFixture;
@@ -73,6 +80,31 @@ async function nextIntroduction(userId: string): Promise<Introduction | null> {
     const found = await fx.rows<Introduction>(NEXT_INTRODUCTION_SQL, [userId]);
 
     return found[0] ?? null;
+}
+
+/**
+ * Walks the journey, using the real mechanism, until `concept` is the one on
+ * offer.
+ *
+ * Needed because the curriculum now has a root ahead of primitive-types. Seed
+ * 019 connected every authored lesson to the curriculum, so a brand-new learner
+ * is offered console-output -- the actual first thing anyone should meet -- and
+ * primitive-types sits two steps in, behind expressions-produce-values.
+ *
+ * The tests below use primitive-types as their specimen for the Learn -> Play
+ * mechanism, not as a claim about what comes first. So they arrive at it the
+ * way a learner does rather than assuming it is the front of the queue.
+ */
+async function arriveAt(userId: string, concept: string): Promise<void> {
+    for (let step = 0; step < 10; step += 1) {
+        const next = await nextIntroduction(userId);
+
+        if (next === null || next.conceptSlug === concept) return;
+
+        await completeIntroduction(userId, next.challengeId);
+    }
+
+    throw new Error(`never reached ${concept}`);
 }
 
 /** What the route does: check it is completable, then record it. */
@@ -153,12 +185,12 @@ describe("seed 016 creates exactly one introduction and one exercise", () => {
         expect(n).toBe(0);
     });
 
-    it("tags exactly one more question than the equality slice did", async () => {
+    it("tags the Values practice alongside the two earlier slices", async () => {
         const [{ n }] = await fx.rows<{ n: number }>(
             `SELECT COUNT(*)::INT n FROM questions WHERE challenge_id IS NOT NULL`
         );
 
-        expect(n, "one equality question plus one primitive-types question").toBe(2);
+        expect(n, "equality, primitive-types, and the twelve Values questions").toBe(14);
     });
 
     it("derives the introduction's difficulty rather than authoring it", async () => {
@@ -175,19 +207,25 @@ describe("seed 016 creates exactly one introduction and one exercise", () => {
 // ── 1 · a brand-new learner ──────────────────────────────────────────────
 
 describe("1 · a brand-new learner is offered the introduction, not the exercise", () => {
-    it("offers primitive-types", async () => {
+    it("offers the curriculum's root, which is console-output", async () => {
+        // This used to say primitive-types, because it was the only concept
+        // with an introduction. console-output is the curriculum's actual
+        // single root -- the first thing a learner should ever meet -- and it
+        // became reachable when seed 019 connected the authored lessons.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp1@example.com");
             const introduction = await nextIntroduction(learner);
 
             expect(introduction).not.toBeNull();
-            expect(introduction!.conceptSlug).toBe(CONCEPT);
+            expect(introduction!.conceptSlug).toBe("console-output");
         });
     });
 
     it("carries the curriculum's own words, so the client writes no lesson copy", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp1b@example.com");
+            await arriveAt(learner, CONCEPT);
+
             const introduction = await nextIntroduction(learner);
 
             expect(introduction!.conceptName).toBe("Identifying Primitive Types");
@@ -212,13 +250,20 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
     it("moves the concept from unencountered to encountered", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp2@example.com");
+            await arriveAt(learner, CONCEPT);
 
-            const before = await fx.rows<{ concept_id: string }>(
-                `WITH ${metConceptsCte("$1")} SELECT * FROM met`,
+            const before = await fx.rows<{ slug: string }>(
+                `WITH ${metConceptsCte("$1")}
+                 SELECT c.slug FROM met JOIN concepts c ON c.id = met.concept_id`,
                 [learner]
             );
 
-            expect(before, "nothing met yet").toHaveLength(0);
+            // Arriving here meant meeting the concepts in front of it, so the
+            // precondition is about the specimen rather than about an empty
+            // history.
+            expect(before.map((r) => r.slug), "the specimen is not met yet").not.toContain(
+                CONCEPT
+            );
 
             const introduction = await nextIntroduction(learner);
             await completeIntroduction(learner, introduction!.challengeId);
@@ -229,13 +274,16 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
                 [learner]
             );
 
-            expect(after.map((r) => r.slug)).toEqual([CONCEPT]);
+            // Contains, not equals: the concepts met on the way here are still
+            // met, and the transition this test is about is the specimen's.
+            expect(after.map((r) => r.slug)).toContain(CONCEPT);
         });
     });
 
     it("stops offering the introduction", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp2b@example.com");
+            await arriveAt(learner, CONCEPT);
             const introduction = await nextIntroduction(learner);
 
             await completeIntroduction(learner, introduction!.challengeId);
@@ -247,6 +295,7 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
     it("releases the practice", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp2c@example.com");
+            await arriveAt(learner, CONCEPT);
             const introduction = await nextIntroduction(learner);
 
             expect(await selectable(learner)).not.toContain(practiceQuestionId);
@@ -260,6 +309,7 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
     it("is idempotent -- a double-click records one fact, not two", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp2d@example.com");
+            await arriveAt(learner, CONCEPT);
             const introduction = await nextIntroduction(learner);
 
             await completeIntroduction(learner, introduction!.challengeId);
@@ -268,8 +318,9 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
             expect(second, "the second report is accepted, not refused").not.toBeNull();
 
             const [{ n }] = await fx.rows<{ n: number }>(
-                `SELECT COUNT(*)::INT n FROM introduction_completions WHERE user_id = $1`,
-                [learner]
+                `SELECT COUNT(*)::INT n FROM introduction_completions
+                 WHERE user_id = $1 AND challenge_id = $2`,
+                [learner, introduction!.challengeId]
             );
 
             expect(n).toBe(1);
@@ -281,6 +332,7 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
         // this, a learner could mark any concept encountered without seeing it.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp2e@example.com");
+            await arriveAt(learner, CONCEPT);
             const [practise] = await fx.rows<{ id: string }>(
                 `SELECT id FROM challenges WHERE role = 'practise' LIMIT 1`
             );
@@ -292,6 +344,7 @@ describe("2 · acknowledging the Learn Beat is the transition", () => {
     it("refuses an introduction whose prerequisites are unmet", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp2f@example.com");
+            await arriveAt(learner, CONCEPT);
             const intro = await fx.challengeFor("equality", "introduce");
 
             await fx.makeTeachable("type-coercion");
@@ -311,6 +364,7 @@ describe("3 · playing the practice leaves the concept encountered", () => {
         it(`stays encountered after a ${status} practice question`, async () => {
             await fx.scenario(async () => {
                 const learner = await fx.insertUser(`lp3-${status}@example.com`);
+                await arriveAt(learner, CONCEPT);
                 const introduction = await nextIntroduction(learner);
 
                 await completeIntroduction(learner, introduction!.challengeId);
@@ -331,6 +385,7 @@ describe("3 · playing the practice leaves the concept encountered", () => {
         // be a mastery judgement this slice deliberately does not make.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp3-wrong@example.com");
+            await arriveAt(learner, CONCEPT);
             const introduction = await nextIntroduction(learner);
 
             await completeIntroduction(learner, introduction!.challengeId);
@@ -366,6 +421,7 @@ describe("3 · playing the practice leaves the concept encountered", () => {
         // Completing a Learn Beat must not look like having played anything.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp3-xp@example.com");
+            await arriveAt(learner, CONCEPT);
             const introduction = await nextIntroduction(learner);
 
             await completeIntroduction(learner, introduction!.challengeId);
@@ -387,6 +443,9 @@ describe("4 · one learner's introduction is not another's", () => {
         await fx.scenario(async () => {
             const studious = await fx.insertUser("lp4a@example.com");
             const bystander = await fx.insertUser("lp4b@example.com");
+
+            await arriveAt(studious, CONCEPT);
+            await arriveAt(bystander, CONCEPT);
             const introduction = await nextIntroduction(studious);
 
             await completeIntroduction(studious, introduction!.challengeId);
@@ -415,26 +474,26 @@ describe("5 · an introduction is only offered for a reachable concept", () => {
 
             expect(
                 offered!.conceptSlug,
-                "equality is behind an unmet prerequisite, so the root comes first"
-            ).toBe(CONCEPT);
+                "equality is behind an unmet, teachable prerequisite"
+            ).not.toBe("equality");
         });
     });
 
-    it("is why primitive-types was chosen -- nothing can gate it", async () => {
-        // It sits one step in now, behind `console-output`, which has no content
-        // and therefore cannot block anyone. An unteachable prerequisite is not
-        // a barrier -- the rule eligibility.ts has applied since the first slice.
+    it("always has a root that nothing can gate", async () => {
+        // This used to assert it of primitive-types, which was then the only
+        // concept with an introduction. primitive-types now sits two steps in
+        // and IS gated -- correctly. What must remain true is that the
+        // curriculum has an entry point: a concept with an introduction and no
+        // prerequisites at all, or the journey could never start.
         const [{ n }] = await fx.rows<{ n: number }>(
             `SELECT COUNT(*)::INT n
-             FROM prerequisites p
-             JOIN concepts c ON c.id = p.concept_id
-             WHERE c.slug = $1
-               AND EXISTS (SELECT 1 FROM challenges ch
-                           WHERE ch.concept_id = p.requires_id AND ch.is_active)`,
-            [CONCEPT]
+             FROM concepts c
+             JOIN challenges ch ON ch.concept_id = c.id
+                               AND ch.role = 'introduce' AND ch.is_active
+             WHERE NOT EXISTS (SELECT 1 FROM prerequisites p WHERE p.concept_id = c.id)`
         );
 
-        expect(n).toBe(0);
+        expect(n, "the journey needs somewhere to begin").toBeGreaterThan(0);
     });
 });
 
@@ -452,6 +511,7 @@ describe("6 · the introduction joins the existing cross-game state", () => {
     it("lets a Bug Hunt round still mark a concept encountered", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp6@example.com");
+            await arriveAt(learner, CONCEPT);
             const introduction = await nextIntroduction(learner);
             const slug = await fx.attachIncident(introduction!.challengeId);
 
@@ -498,14 +558,18 @@ describe("7 · equality is untouched and still needs an introduction", () => {
         });
     });
 
-    it("still has no introduction of its own", async () => {
+    it("now has exactly one introduction, because it has a lesson", async () => {
+        // The inverse of what this asserted before. equality has authored
+        // lesson copy, so seed 019 gave it the introduction that makes that
+        // copy reachable. "Exactly one" is migration 024's partial unique
+        // index, restated here where a reader of this file will see it.
         const [{ n }] = await fx.rows<{ n: number }>(
             `SELECT COUNT(*)::INT n FROM challenges ch
              JOIN concepts c ON c.id = ch.concept_id
-             WHERE c.slug = 'equality' AND ch.role = 'introduce'`
+             WHERE c.slug = 'equality' AND ch.role = 'introduce' AND ch.is_active`
         );
 
-        expect(n).toBe(0);
+        expect(n).toBe(1);
     });
 });
 
@@ -544,14 +608,24 @@ describe("8 · the transitional escape hatch is unchanged", () => {
         });
     });
 
-    it("gives the learner 233 once primitive-types is introduced", async () => {
+    it("releases exactly one more question once primitive-types is introduced", async () => {
+        // Arrives at the specimen first. Completing the curriculum's ROOT
+        // introduction releases nothing, because console-output has no practice
+        // attached to it yet -- which is a real gap, and a separate one from the
+        // escape hatch this section is about.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp8c@example.com");
+            await arriveAt(learner, CONCEPT);
+
+            // Measured from here, not from a new account: walking to
+            // primitive-types released the console-output and
+            // expressions-produce-values practice on the way.
+            const before = (await selectable(learner)).length;
             const introduction = await nextIntroduction(learner);
 
             await completeIntroduction(learner, introduction!.challengeId);
 
-            expect(await selectable(learner)).toHaveLength(NEW_LEARNER_CANDIDATES + 1);
+            expect(await selectable(learner)).toHaveLength(before + 1);
         });
     });
 });

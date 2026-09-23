@@ -38,9 +38,32 @@
  * A formula would have silently picked one. See rankByFrontier.
  */
 
+/**
+ * The last-resort tiebreak, when two candidates are equally fresh.
+ *
+ * COERCES RATHER THAN ASSUMING A TYPE. `challengeId` is a BIGINT column, and a
+ * BIGINT reaches JavaScript as a number from some drivers and a string from
+ * others -- the interface below says `string` and is simply wrong about it.
+ * Calling `.localeCompare` on it therefore threw `localeCompare is not a
+ * function` and took the whole session down.
+ *
+ * It never fired while the bank held two tagged questions, because two
+ * candidates had to reach the same tier AND tie on freshness before anything
+ * reached this line. Stocking the Values topic made that ordinary.
+ *
+ * `numeric` so ids order the way a person reading them expects: 9 before 10,
+ * not after it. This only has to be DETERMINISTIC -- nothing pedagogical rests
+ * on which of two equally-fresh candidates goes first -- but determinism is the
+ * whole reason the line exists, so it should not depend on the driver.
+ */
+function compareIds(a: string | number, b: string | number): number {
+    return String(a).localeCompare(String(b), undefined, { numeric: true });
+}
+
 /** A challenge that has already passed every curriculum gate. */
 export interface Candidate {
-    challengeId: string;
+    /** BIGINT in the database, so a number or a string depending on the driver. */
+    challengeId: string | number;
     conceptId: string;
     /** demands.display_order -- deeper thinking is a higher number. */
     demandOrder: number;
@@ -240,7 +263,7 @@ export function selectInOrder(
             pool.sort(
                 (a, b) =>
                     byFreshness(freshness(a, chosen), freshness(b, chosen)) ||
-                    a.challengeId.localeCompare(b.challengeId)
+                    compareIds(a.challengeId, b.challengeId)
             );
 
             chosen.push(pool.shift()!);

@@ -56,6 +56,20 @@ export interface CurriculumFixture {
      */
     makeTeachable(concept: string): Promise<{ challengeId: string; questionId: string }>;
 
+    /**
+     * The inverse: deactivates every challenge on a concept, so the
+     * prerequisite layer stops considering it teachable.
+     *
+     * Needed because coverage now MOVES. The prerequisite rule's third case --
+     * "unmet, but Jolt cannot teach it, so it does not block" -- used to be
+     * demonstrable with whichever real concepts happened to have no content,
+     * and seed 019 gave a lesson to every concept that had one written. A test
+     * for a rule should not depend on the bank's current coverage, so a test
+     * that needs an uncovered prerequisite now makes one. Only safe inside
+     * scenario(), which rolls the change back.
+     */
+    makeUnteachable(concept: string): Promise<void>;
+
     /** Points an untagged Bug Hunt incident at a challenge, so it can be played. */
     attachIncident(challengeId: string): Promise<string>;
 
@@ -287,6 +301,13 @@ export async function buildCurriculumFixture(): Promise<CurriculumFixture> {
         scenario,
         challengeFor,
         makeTeachable: (concept) => challengeFor(concept, "practise"),
+        makeUnteachable: async (concept) => {
+            await rows(
+                `UPDATE challenges SET is_active = FALSE
+                 WHERE concept_id = (SELECT id FROM concepts WHERE slug = $1)`,
+                [concept]
+            );
+        },
         attachIncident,
         encounter,
         encounterIncident
