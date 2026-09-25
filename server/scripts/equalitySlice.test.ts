@@ -100,7 +100,12 @@ describe("difficulty is derived, never authored", () => {
 
     it("uses the same rule as difficultyFor in curriculum.ts", () => {
         // produce (display_order 4) is where the ladder's deep half starts.
-        expect(STATEMENTS).toContain("WHEN d.display_order >= 4 THEN");
+        expect(STATEMENTS).toContain(// The threshold is RELATIVE to produce rather than the literal 4, so that
+        // inserting a rung into the middle of the ladder -- `apply`, between
+        // predict and produce -- cannot silently reclassify every produce
+        // challenge as shallow. The client's difficultyFor has always been
+        // relative; this is the SQL copy catching up.
+        "WHEN d.display_order >= (SELECT display_order FROM demands WHERE slug = 'produce') THEN");
 
         const equality = conceptById("equality")!;
         const tier = tierOf(equality);

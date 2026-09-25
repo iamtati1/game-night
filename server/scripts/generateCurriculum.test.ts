@@ -89,8 +89,8 @@ describe("the projection carries every row the curriculum declares", () => {
         }
     });
 
-    it("projects all seven demands", () => {
-        expect(DEMANDS).toHaveLength(7);
+    it("projects all eight demands", () => {
+        expect(DEMANDS).toHaveLength(8);
 
         for (const d of DEMANDS) {
             expect(LITERALS, `demand ${d} missing`).toContain(d);

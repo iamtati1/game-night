@@ -20,7 +20,7 @@
 --                              holds a composite FK to it ON DELETE
 --                              RESTRICT -- see that section
 --
--- 16 topics · 100 concepts · 7 demands
+-- 16 topics · 100 concepts · 8 demands
 
 BEGIN;
 
@@ -29,6 +29,11 @@ BEGIN;
 DELETE FROM prerequisites;
 
 -- ─────────────────────────────────────────────────────────── demands ──
+
+-- Park every rung out of the way first: display_order is uniquely indexed,
+-- and inserting a rung into the middle of the ladder would otherwise
+-- collide with whichever row currently holds that position.
+UPDATE demands SET display_order = display_order + 1000;
 
 INSERT INTO demands (slug, display_order, asks)
 VALUES ('recall', 1, 'Retrieve what something does from memory, with no instance in front of you.')
@@ -52,34 +57,41 @@ ON CONFLICT (slug) DO UPDATE
         updated_at    = CURRENT_TIMESTAMP;
 
 INSERT INTO demands (slug, display_order, asks)
-VALUES ('produce', 4, 'Construct or complete code so that it works.')
+VALUES ('apply', 4, 'Change a specific part of a working example and produce the intended result.')
 ON CONFLICT (slug) DO UPDATE
     SET display_order = EXCLUDED.display_order,
         asks          = EXCLUDED.asks,
         updated_at    = CURRENT_TIMESTAMP;
 
 INSERT INTO demands (slug, display_order, asks)
-VALUES ('diagnose', 5, 'Locate the fault in code that runs wrongly.')
+VALUES ('produce', 5, 'Construct or complete code so that it works.')
 ON CONFLICT (slug) DO UPDATE
     SET display_order = EXCLUDED.display_order,
         asks          = EXCLUDED.asks,
         updated_at    = CURRENT_TIMESTAMP;
 
 INSERT INTO demands (slug, display_order, asks)
-VALUES ('repair', 6, 'Produce the correction, not merely its location.')
+VALUES ('diagnose', 6, 'Locate the fault in code that runs wrongly.')
 ON CONFLICT (slug) DO UPDATE
     SET display_order = EXCLUDED.display_order,
         asks          = EXCLUDED.asks,
         updated_at    = CURRENT_TIMESTAMP;
 
 INSERT INTO demands (slug, display_order, asks)
-VALUES ('explain', 7, 'Give the mechanism, not the outcome.')
+VALUES ('repair', 7, 'Produce the correction, not merely its location.')
 ON CONFLICT (slug) DO UPDATE
     SET display_order = EXCLUDED.display_order,
         asks          = EXCLUDED.asks,
         updated_at    = CURRENT_TIMESTAMP;
 
-DELETE FROM demands WHERE slug <> ALL (ARRAY['recall', 'recognise', 'predict', 'produce', 'diagnose', 'repair', 'explain']);
+INSERT INTO demands (slug, display_order, asks)
+VALUES ('explain', 8, 'Give the mechanism, not the outcome.')
+ON CONFLICT (slug) DO UPDATE
+    SET display_order = EXCLUDED.display_order,
+        asks          = EXCLUDED.asks,
+        updated_at    = CURRENT_TIMESTAMP;
+
+DELETE FROM demands WHERE slug <> ALL (ARRAY['recall', 'recognise', 'predict', 'apply', 'produce', 'diagnose', 'repair', 'explain']);
 
 -- ──────────────────────────────────────────────────────────── topics ──
 
@@ -3061,8 +3073,16 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
         (SELECT id FROM demands WHERE slug = 'predict'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
+        (SELECT id FROM demands WHERE slug = 'apply'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
         (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
+        (SELECT id FROM demands WHERE slug = 'apply'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
@@ -4076,7 +4096,9 @@ WHERE cd.concept_id = c.id
       ('assignment', 'diagnose'),
       ('reading-variables', 'recognise'),
       ('reading-variables', 'predict'),
+      ('reading-variables', 'apply'),
       ('reassignment', 'predict'),
+      ('reassignment', 'apply'),
       ('reassignment', 'diagnose'),
       ('let-vs-const', 'recognise'),
       ('let-vs-const', 'predict'),

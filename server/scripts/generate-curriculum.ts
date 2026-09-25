@@ -100,6 +100,19 @@ export function generate(): string {
     // ── demands ──────────────────────────────────────────────────────────
     p("-- ─────────────────────────────────────────────────────────── demands ──");
     p();
+    // Same collision, same fix as concepts below. display_order is uniquely
+    // indexed and these upsert one row at a time, so inserting a rung in the
+    // MIDDLE of the ladder -- `apply` between predict and produce -- would meet
+    // the row still holding that position. Parking first makes the order of the
+    // statements irrelevant.
+    //
+    // 1000 is a bound: there are eight demands and the ladder is a fixed
+    // pedagogical sequence, not a growing list.
+    p("-- Park every rung out of the way first: display_order is uniquely indexed,");
+    p("-- and inserting a rung into the middle of the ladder would otherwise");
+    p("-- collide with whichever row currently holds that position.");
+    p("UPDATE demands SET display_order = display_order + 1000;");
+    p();
     for (const [i, demand] of DEMANDS.entries()) {
         p("INSERT INTO demands (slug, display_order, asks)");
         p(`VALUES (${lit(demand)}, ${i + 1}, ${lit(DEMAND_SPECS[demand].asks)})`);

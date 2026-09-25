@@ -57,6 +57,11 @@ export const DEMANDS = [
     "recall",
     "recognise",
     "predict",
+    // Between predict and produce: applying an idea to a case in front of you is
+    // more than saying what it will do and less than writing one yourself. It is
+    // the rung under "change this and run it again", which is the most common
+    // interaction in Jolt and had no way to be described before.
+    "apply",
     "produce",
     "diagnose",
     "repair",
@@ -79,6 +84,10 @@ export const DEMAND_SPECS: Readonly<Record<Demand, DemandSpec>> = {
     recognise: {
         demand: "recognise",
         asks: "Judge a presented instance as correct or not."
+    },
+    apply: {
+        demand: "apply",
+        asks: "Change a specific part of a working example and produce the intended result."
     },
     predict: {
         demand: "predict",
@@ -555,7 +564,7 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "using a name anywhere in an expression fetches whatever value it holds at that moment",
         why: "The other half of the name-value split. Tracing any program is repeated substitution, and a learner who cannot do it by hand cannot predict output, which is most of what Jolt asks.",
         prerequisites: ["initialization"], weight: "load-bearing",
-        demands: ["recognise", "predict"]
+        demands: ["recognise", "predict", "apply"]
     },
     {
         id: "reassignment", topic: "variables", label: "Reassigning Variables",
@@ -563,7 +572,7 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "assigning again replaces what the name refers to, from that line onward",
         why: "Where names stop being labels and start being state. The word `onward` is the whole lesson: earlier lines keep the old value, and beginners routinely read a program as if the final value applied throughout.",
         prerequisites: ["assignment", "reading-variables"], weight: "core",
-        demands: ["predict", "diagnose"]
+        demands: ["predict", "apply", "diagnose"]
     },
     {
         id: "let-vs-const", topic: "variables", label: "Choosing between `let` and `const`",
