@@ -1528,6 +1528,125 @@ pre.code {
 .complete-aside a { color: var(--muted); }
 .complete-aside a:hover { color: var(--cyan); }
 
+/* --------------------------------------------------- 4e. the mission ---- */
+
+/*
+   THE DEMONSTRATION THAT CLOSES A TOPIC.
+
+   The only screen in Jolt where the learner types JavaScript and watches it
+   run. It borrows the lesson's spatial idea -- code above, console below -- so
+   the relationship they learned there still holds, but the code slab is now
+   editable and it is the only thing on screen with a cursor in it.
+
+   No score, no timer, no attempt counter. A learner who is stuck should be
+   looking at their code and at one sentence telling them what to try next.
+*/
+.mission {
+    position: relative;
+    max-width: 42rem;
+    margin: 0 auto 4rem;
+    padding: 0 1.25rem;
+}
+
+.mission-stage { display: grid; gap: 0; margin-bottom: 1.5rem; }
+
+.mission-editor-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+    padding: 0.9rem 1.6rem 0;
+    border: 1px solid #ffffff21;
+    border-bottom: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: linear-gradient(180deg, #ffffff12, transparent 60%), #0a0e33;
+}
+
+/* The editor IS the code slab -- same face, same size, same ground as the
+   read-only one in a lesson. A beginner should not feel they have moved from
+   "code" to "a form field". */
+.mission-editor {
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    line-height: 1.7;
+    margin: 0;
+    padding: 0.85rem 1.6rem 1.4rem;
+    color: #eef3ff;
+    border: 1px solid #ffffff21;
+    border-top: 0;
+    border-radius: 0;
+    background: #0a0e33;
+    resize: vertical;
+    width: 100%;
+    display: block;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.mission-editor:focus {
+    outline: none;
+    border-color: #5ee7f066;
+    box-shadow: 0 0 0 1px #5ee7f04d inset;
+}
+
+.mission-editor.is-running {
+    border-color: #5ee7f0a6;
+    box-shadow: 0 0 0 1px #5ee7f066, 0 0 40px -6px #5ee7f08c;
+}
+
+.mission-editor:disabled {
+    opacity: 1;
+    -webkit-text-fill-color: #eef3ff;
+}
+
+.mission .scene-console { border-radius: 0 0 var(--radius) var(--radius); border-top: 0; }
+
+.mission-run { width: 100%; }
+
+/*
+   THE NOTE.
+
+   Not a verdict. It carries one sentence naming the next thing to try, and it
+   is deliberately the same shape whether the attempt worked or not -- only the
+   colour differs. A red panel and a green panel of different sizes would make
+   a miss feel like a penalty, and a miss here costs nothing.
+*/
+.mission-note {
+    padding: 1rem 1.25rem;
+    margin: 0 0 1.5rem;
+    border-radius: var(--radius);
+    border: 1px solid #ffb08a59;
+    background: #ffb08a1a;
+    animation: land 0.32s var(--ease);
+}
+
+.mission-note-body {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--text);
+    max-width: 58ch;
+}
+
+/* Peach, not coral: this is guidance, and coral means error everywhere else in
+   the palette. A learner who has not finished yet has not done anything wrong. */
+.mission-note.is-solved {
+    border-color: #6ee7b766;
+    background: #6ee7b71a;
+}
+
+.mission-note code,
+.mission-note-body code { font-family: var(--mono); color: var(--yellow); }
+
+.mission-craft {
+    position: absolute;
+    top: -0.5rem;
+    right: 0.5rem;
+    opacity: 0.55;
+    animation: cruise 9s ease-in-out infinite;
+    pointer-events: none;
+}
+
 /* ------------------------------------------------------------- 5. motion  */
 
 @keyframes drift-a {
@@ -1673,6 +1792,29 @@ pre.code {
     55% { opacity: 1; transform: scaleY(1.14); }
     78% { opacity: 0.72; transform: scaleY(0.94); }
 }
+
+/*
+   THE CRAFT'S STATES.
+
+   Each one is a different amount of readiness, expressed as light rather than
+   as a label -- the learner should see that something has changed without
+   reading anything.
+
+   `challenge` is the important one: the demonstration is unlocked and waiting,
+   so the craft lights its engine and holds position. That halo is the only
+   thing on the map that says "you are ready for this", and it appears at
+   exactly the moment the curriculum says so.
+*/
+.ship.is-challenge {
+    filter: drop-shadow(0 0 14px #ffd16699) drop-shadow(0 4px 10px #05072acc);
+}
+
+.ship.is-departing {
+    filter: drop-shadow(0 0 16px #5ee7f0a6) drop-shadow(0 4px 10px #05072acc);
+}
+
+/* Parked is genuinely still: a topic behind you is not doing anything. */
+.journey-station .ship.is-parked { animation: approach 1.5s var(--ease) both; }
 
 .ship.is-thrusting .ship-flame {
     transform-origin: 32px 58px;

@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import { challengeFor, lessonFor, type LessonStep } from "../games/lessons.js";
+import { missionFor } from "../games/missions.js";
+import { MissionScene } from "../components/MissionScene.js";
 import { sceneLessonFor } from "../games/scenes.js";
 import { SceneLesson } from "../components/SceneLesson.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
@@ -96,6 +98,18 @@ export function LessonPage() {
         [lesson, concept]
     );
 
+    /**
+     * The mission that closes this topic, if one is authored.
+     *
+     * A topic with a mission is completed by TWO pieces of evidence, not one:
+     * the quiz shows the learner can say what code does, the mission shows they
+     * can make code do something. They are different capabilities and Jolt asks
+     * for both -- so finishing the quiz hands over to the mission rather than
+     * recording the topic.
+     */
+    const mission = useMemo(() => (topic ? missionFor(topic) : null), [topic]);
+    const [quizDone, setQuizDone] = useState(false);
+
     const finish = useCallback(async () => {
         if (!lesson) return;
 
@@ -116,6 +130,20 @@ export function LessonPage() {
         setDone(true);
         setBusy(false);
     }, [lesson, neededRetry]);
+
+    /**
+     * Finishing the quiz half. Records nothing on its own -- the topic is only
+     * recorded once the mission is passed too, because passing half of the
+     * evidence is not the capability.
+     */
+    const finishQuiz = useCallback(() => {
+        if (mission) {
+            setQuizDone(true);
+            return;
+        }
+
+        void finish();
+    }, [mission, finish]);
 
     const advance = useCallback(() => {
         if (!lesson || !step) return;
@@ -139,14 +167,37 @@ export function LessonPage() {
             return;
         }
 
-        void finish();
-    }, [lesson, step, index, chosen, retrying, finish]);
+        finishQuiz();
+    }, [lesson, step, index, chosen, retrying, finishQuiz]);
 
     // The interactive form, where one exists. A concept with a scene lesson gets
     // the scene player; the other twenty keep the prose form, and completion is
     // reported identically either way — the progression layer never learns which
     // shape the learner walked.
     const scenes = useMemo(() => (topic ? null : sceneLessonFor(concept ?? null)), [concept, topic]);
+
+    // Quiz passed, mission still to go. `neededRetry` carries across both
+    // halves: struggling anywhere in the topic is one fact about the learner,
+    // not two.
+    if (mission && quizDone && !done) {
+        return (
+            <MissionScene
+                mission={mission}
+                busy={busy}
+                onFinish={(retried) => {
+                    // finishWith takes the value rather than reading state:
+                    // setNeededRetry would not have flushed by the time the
+                    // request is built, and this is the one fact the request
+                    // carries. Combined with the quiz half, because struggling
+                    // anywhere in the topic is one fact about the learner.
+                    const struggled = neededRetry || retried;
+
+                    setNeededRetry(struggled);
+                    void finishWith(struggled);
+                }}
+            />
+        );
+    }
 
     if (scenes) {
         if (done) {

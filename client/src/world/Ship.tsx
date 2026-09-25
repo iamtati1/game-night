@@ -17,16 +17,40 @@ import { useId } from "react";
  * has a cockpit, two fins and a hull seam -- enough to read as a vehicle with a
  * person in it at 28px, which is the size it is used at most often.
  */
+/**
+ * What the craft is doing, which is the learner's own progress through a topic.
+ *
+ * Each one is DERIVED from curriculum state the journey API already returns --
+ * there is no fifth state added because it sounded good, and none of these is
+ * stored anywhere. If a state cannot be read off the existing data it does not
+ * exist.
+ *
+ *   parked      the topic behind you: arrived, engines cold
+ *   learning    the topic you are working through
+ *   challenge   its demonstration is unlocked and waiting -- engines lit,
+ *               holding position. This is the state that says "you are ready".
+ *   departing   the demonstration is passed and the road onward is open
+ */
+export type ShipState = "parked" | "learning" | "challenge" | "departing";
+
 interface ShipProps {
     size?: number;
     /** Degrees clockwise from nose-up. */
     rotate?: number;
-    /** Draws the engine plume. Off when the craft is parked at a world. */
+    /**
+     * Draws the engine plume directly. Prefer `state`, which decides this from
+     * what the learner has actually done; this stays for the decorative uses on
+     * Home and the completion screen, where there is no learner state to read.
+     */
     thrusting?: boolean;
+    state?: ShipState;
     label?: string;
 }
 
-export function Ship({ size = 44, rotate = 0, thrusting = false, label }: ShipProps) {
+export function Ship({ size = 44, rotate = 0, thrusting = false, state, label }: ShipProps) {
+    // The engine is lit when the craft has somewhere to go: the demonstration
+    // is waiting, or it has been passed and the road is open.
+    const lit = thrusting || state === "challenge" || state === "departing";
     const uid = useId().replace(/:/g, "");
     const hull = `hull-${uid}`;
     const glass = `glass-${uid}`;
@@ -34,7 +58,7 @@ export function Ship({ size = 44, rotate = 0, thrusting = false, label }: ShipPr
 
     return (
         <svg
-            className={`ship${thrusting ? " is-thrusting" : ""}`}
+            className={`ship${lit ? " is-thrusting" : ""}${state ? ` is-${state}` : ""}`}
             viewBox="0 0 64 80"
             width={size}
             height={(size / 64) * 80}
@@ -66,7 +90,7 @@ export function Ship({ size = 44, rotate = 0, thrusting = false, label }: ShipPr
 
             {/* Plume first, so the hull sits over its root and the flame looks
                 like it is coming out of the engine rather than out from behind. */}
-            {thrusting && (
+            {lit && (
                 <path className="ship-flame" d="M24 58 L32 80 L40 58 Z" fill={`url(#${flame})`} />
             )}
 

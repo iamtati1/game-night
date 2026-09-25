@@ -71,12 +71,41 @@ describe("the journey map", () => {
     it("parks the craft at the current world and nowhere else", async () => {
         const { container } = renderMap();
 
-        expect(await screen.findByLabelText("Your craft, here")).toBeTruthy();
+        // The craft's accessible name carries its STATE, because the state is
+        // the learner's progress through the topic rather than decoration.
+        expect(await screen.findByLabelText(/Your craft — exploring here/)).toBeTruthy();
         expect(container.querySelectorAll(".ship")).toHaveLength(1);
 
         const here = container.querySelector(".journey-station.is-here");
 
         expect(within(here as HTMLElement).getByText("operators")).toBeTruthy();
+    });
+
+    /**
+     * The one state that tells the learner something they could not otherwise
+     * see: the demonstration is unlocked and waiting. It is derived entirely
+     * from challenge state the API already returns -- nothing is stored.
+     */
+    it("lights the craft's engine when the demonstration is waiting", async () => {
+        const ready = {
+            ...PATH,
+            topics: PATH.topics.map((t) =>
+                t.slug === "operators" ? { ...t, challenge: { state: "current" as const } } : t
+            )
+        };
+
+        vi.mocked(api.get).mockResolvedValue(ready);
+
+        const { container } = render(
+            <MemoryRouter>
+                <JourneyPage />
+            </MemoryRouter>
+        );
+
+        await screen.findByText("operators");
+
+        expect(container.querySelector(".ship.is-challenge")).toBeTruthy();
+        expect(screen.getByLabelText(/ready for the launch check/)).toBeTruthy();
     });
 
     it("draws every world once, in curriculum order", async () => {

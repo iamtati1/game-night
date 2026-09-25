@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { Planet } from "../world/Planet.js";
-import { Ship } from "../world/Ship.js";
+import { Ship, type ShipState } from "../world/Ship.js";
 import { Icon } from "../world/Icon.js";
 import { WorldLandmark } from "../world/Objects.js";
 import { worldFor } from "../world/atlas.js";
@@ -34,6 +34,14 @@ import type { JourneyPathResponse } from "../api/types.js";
  * Geometry comes from world/atlas.ts, shared with the route drawing, so a world
  * and the road it sits on cannot disagree about where it is.
  */
+/** What each craft state means, for the accessible name. */
+const SHIP_LABEL: Record<ShipState, string> = {
+    parked: "docked here",
+    learning: "exploring here",
+    challenge: "ready for the launch check",
+    departing: "clear to move on"
+};
+
 export function JourneyPage() {
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -107,6 +115,25 @@ export function JourneyPage() {
     })();
 
     const height = stationAt(Math.max(0, topics.length - 1)).y + LEG * 0.55;
+
+    /**
+     * What the craft is doing, read off the curriculum rather than stored.
+     *
+     * The challenge state IS the progression state: locked means still
+     * learning, current means the demonstration is unlocked and waiting,
+     * demonstrated means the topic is closed and the road onward is open. A
+     * topic with no authored challenge has nothing to be ready for, so the
+     * craft simply sits there.
+     */
+    const hereTopic = topics[hereIndex];
+    const shipState: ShipState = (() => {
+        if (!hereTopic) return "parked";
+        if (hereTopic.state === "complete") return "departing";
+        if (hereTopic.challenge?.state === "current") return "challenge";
+        if (hereTopic.challenge?.state === "demonstrated") return "departing";
+
+        return "learning";
+    })();
 
     // The single next step, whether concept or checkpoint. Computed from the
     // same path the map renders, so the button and the lit world can never
@@ -226,7 +253,14 @@ export function JourneyPage() {
                             {/* The craft, parked. Not thrusting: it is in orbit,
                                 not in transit, and a burning engine at a world
                                 you are standing on reads as about to leave. */}
-                            {here && <Ship size={40} rotate={24} label="Your craft, here" />}
+                            {here && (
+                                <Ship
+                                    size={40}
+                                    rotate={24}
+                                    state={shipState}
+                                    label={`Your craft — ${SHIP_LABEL[shipState]}`}
+                                />
+                            )}
 
                             <Planet
                                 slug={topic.slug}

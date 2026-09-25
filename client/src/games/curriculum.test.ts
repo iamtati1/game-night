@@ -173,11 +173,15 @@ describe("prerequisites form a usable graph", () => {
 });
 
 describe("cognitive demands are the only progression axis", () => {
-    it("has exactly seven, in order of what they ask", () => {
+    it("has exactly eight, in order of what they ask", () => {
         expect(DEMANDS).toEqual([
             "recall",
             "recognise",
             "predict",
+            // apply sits between predicting what code does and writing your own:
+            // changing a specific part of a working example. It is the rung the
+            // Variables mission's middle two movements stand on.
+            "apply",
             "produce",
             "diagnose",
             "repair",
