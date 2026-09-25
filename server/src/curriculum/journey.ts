@@ -219,3 +219,46 @@ export function withinJourney(alias: string): string {
         ) <= (SELECT ceiling FROM journey)
     )`;
 }
+
+
+/**
+ * Whether a Bug Hunt incident belongs to a topic the learner has reached.
+ *
+ * SEPARATE FROM withinJourney BECAUSE THE DEFAULT HAS TO BE THE OPPOSITE.
+ *
+ * A question carries a legacy `topic` column, so an untagged question still
+ * maps to a real place in the curriculum and passing it through is honest. An
+ * incident carries nothing: `bug_hunt_incidents` has no topic, and the bank was
+ * written for people who already know JavaScript. Measured, the eight easiest
+ * incidents included functions, arrays, string methods, null and comparison --
+ * seven of the eight needed something a Variables learner has never met, and
+ * every one of them was difficulty 1.
+ *
+ * So treating an untagged incident as "topic 0, always allowed" -- which is
+ * what withinJourney does for questions -- is exactly how a beginner ends up
+ * debugging `cart.length` on a null. Here an untagged incident is treated as
+ * belonging to the first NON-BEGINNER topic: it stays out of reach while the
+ * learner is in the beginner tier, and becomes available the moment they leave
+ * it, with no list of slugs to maintain.
+ *
+ * Tagged incidents are placed properly, by their concept's topic, and are
+ * therefore available exactly when that topic is.
+ *
+ * @param alias the SQL alias of the bug_hunt_incidents table.
+ */
+export function incidentWithinJourney(alias: string): string {
+    if (!/^[a-z][a-z0-9_]*$/.test(alias)) {
+        throw new Error(`incidentWithinJourney expects a table alias, got ${alias}`);
+    }
+
+    return `(
+        COALESCE(
+            (SELECT t.display_order
+             FROM challenges ch
+             JOIN concepts c ON c.id = ch.concept_id
+             JOIN topics   t ON t.id = c.topic_id
+             WHERE ch.id = ${alias}.challenge_id),
+            (SELECT MIN(display_order) FROM topics WHERE tier <> 'beginner')
+        ) <= (SELECT ceiling FROM journey)
+    )`;
+}

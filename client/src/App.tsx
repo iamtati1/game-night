@@ -194,8 +194,17 @@ export default function App() {
                     />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    {/*
+                        Code Blitz. It used to sit on the generic /play, which
+                        worked only while the games grid lived at /. When the
+                        grid moved to /play there were suddenly TWO routes
+                        registered for that path, React Router matched the first
+                        one, and Code Blitz became unreachable -- clicking it
+                        rendered the grid again. It now has a route of its own,
+                        like every other game.
+                    */}
                     <Route
-                        path="/play"
+                        path="/code-blitz"
                         element={
                             <ProtectedRoute>
                                 <GamePage />

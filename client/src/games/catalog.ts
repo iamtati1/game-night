@@ -79,7 +79,7 @@ export const GAMES: GameEntry[] = [
         category: "Code",
         accent: "#8b5cf6",
         status: "live",
-        path: "/play",
+        path: "/code-blitz",
         shape: "10 questions · 35s each",
         intensity: 3,
         instinct: "Technical recall, fast",

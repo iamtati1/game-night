@@ -1,5 +1,7 @@
 import type { PoolClient } from "pg";
 import { curriculumCtes, curriculumSelects } from "../curriculum/selection.js";
+import { incidentWithinJourney, journeyCte } from "../curriculum/journey.js";
+import { QUESTIONS_PER_SESSION } from "../game/scoring.js";
 import { pool } from "../db.js";
 import { BUG_HUNT } from "../games/constants.js";
 import {
@@ -107,11 +109,13 @@ export const ELIGIBLE_INCIDENT_PREDICATE = `
  */
 export async function countDealableIncidents(userId: string): Promise<number> {
     const result = await pool.query<{ count: string }>(
-        `WITH ${curriculumCtes("$1")}
+        `WITH ${curriculumCtes("$1")},
+              ${journeyCte("$1", QUESTIONS_PER_SESSION)}
          SELECT COUNT(*) AS count
          FROM bug_hunt_incidents i
          WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
-           AND ${curriculumSelects("i")}`,
+           AND ${curriculumSelects("i")}
+           AND ${incidentWithinJourney("i")}`,
         [userId]
     );
 
@@ -232,11 +236,13 @@ export async function createSessionWithRounds(userId: string): Promise<BugHuntSe
                      LIMIT ${RECENT_SESSIONS_AVOIDED}
                  )
              ),
-             ${curriculumCtes("$1")}
+             ${curriculumCtes("$1")},
+             ${journeyCte("$1", QUESTIONS_PER_SESSION)}
              SELECT i.id, i.difficulty, i.code
              FROM bug_hunt_incidents i
              WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
                AND ${curriculumSelects("i")}
+               AND ${incidentWithinJourney("i")}
              ORDER BY (i.id IN (SELECT incident_id FROM recent)) ASC, RANDOM()`,
             [userId, BUG_HUNT]
         );

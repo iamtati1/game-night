@@ -531,10 +531,10 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
              FROM questions q WHERE ${ELIGIBLE_QUESTION_PREDICATE}`
         );
 
-        // d1 rose from 78 to 90 when seed 020 added twelve Values practice
-        // questions, all of which are pacing difficulty 1. Nothing EXISTING
-        // moved, which is what this test is actually guarding.
-        expect(spread).toEqual({ d1: 90, d2: 81, d3: 52, d4: 23 });
+        // d1 has risen from 78 to 99 as seeds 020 and 021 added beginner
+        // practice, all of it pacing difficulty 1. Nothing EXISTING moved,
+        // which is what this test actually guards.
+        expect(spread).toEqual({ d1: 99, d2: 81, d3: 52, d4: 23 });
     });
 });
 

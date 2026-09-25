@@ -224,7 +224,7 @@ export function ResultsPage() {
             {/* Two ways to keep going: the same game again, or a different one.
                 A single "home" link ends the session; this continues it. */}
             <div className="cta-row">
-                <Link className="button primary" to="/play">
+                <Link className="button primary" to="/code-blitz">
                     Play again
                 </Link>
                 <Link className="button ghost" to="/play">

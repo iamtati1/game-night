@@ -308,14 +308,29 @@ bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response)
     const eligible = await db.countDealableIncidents(userId);
 
     if (eligible < BUG_HUNT_INCIDENTS_PER_SESSION) {
+        // WRITTEN FOR THE LEARNER, not for whoever seeded the database.
+        //
+        // This used to say "Only 3 playable incidents are seeded; 10 are
+        // needed", which is true, useless to a player, and reads like the game
+        // is broken. It usually is not: the incidents a learner can reach are
+        // gated on what they have practised, so a beginner who has not yet done
+        // any Code Blitz genuinely has nothing here to debug yet.
+        //
+        // Saying so, and saying what to do about it, turns a dead button into
+        // a signpost. The count stays in the body for whoever is debugging the
+        // seed, just not in the sentence the player reads.
         res.status(503).json({
-            error: "Bug Hunt is not ready",
+            error: "Not enough to hunt yet",
             details: [
                 {
                     field: "incidents",
-                    message: `Only ${eligible} playable incidents are seeded; ${BUG_HUNT_INCIDENTS_PER_SESSION} are needed.`
+                    message:
+                        "Bug Hunt uses the ideas you have already practised, and you have not " +
+                        "practised enough of them yet. Play some Code Blitz first — the bugs " +
+                        "here are mistakes in the code you have been reading."
                 }
-            ]
+            ],
+            eligible
         });
         return;
     }

@@ -2957,12 +2957,20 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'console-output'),
         (SELECT id FROM demands WHERE slug = 'predict'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'console-output'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'expressions-produce-values'),
         (SELECT id FROM demands WHERE slug = 'recognise'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'expressions-produce-values'),
         (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'expressions-produce-values'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'expressions-produce-values'),
@@ -3077,6 +3085,10 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
         (SELECT id FROM demands WHERE slug = 'apply'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
         (SELECT id FROM demands WHERE slug = 'predict'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
@@ -3095,6 +3107,10 @@ ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
         (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
@@ -4067,8 +4083,10 @@ WHERE cd.concept_id = c.id
   AND (c.slug, d.slug) NOT IN (
       ('console-output', 'recognise'),
       ('console-output', 'predict'),
+      ('console-output', 'diagnose'),
       ('expressions-produce-values', 'recognise'),
       ('expressions-produce-values', 'predict'),
+      ('expressions-produce-values', 'diagnose'),
       ('expressions-produce-values', 'explain'),
       ('primitive-types', 'recognise'),
       ('primitive-types', 'predict'),
@@ -4097,11 +4115,13 @@ WHERE cd.concept_id = c.id
       ('reading-variables', 'recognise'),
       ('reading-variables', 'predict'),
       ('reading-variables', 'apply'),
+      ('reading-variables', 'diagnose'),
       ('reassignment', 'predict'),
       ('reassignment', 'apply'),
       ('reassignment', 'diagnose'),
       ('let-vs-const', 'recognise'),
       ('let-vs-const', 'predict'),
+      ('let-vs-const', 'diagnose'),
       ('let-vs-const', 'explain'),
       ('variable-state', 'predict'),
       ('variable-state', 'produce'),

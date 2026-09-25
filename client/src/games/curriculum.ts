@@ -474,7 +474,7 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "console.log writes its arguments to the output, one line per call, in the order the lines run",
         why: "The first thing a learner has to be able to do, and the thing every prediction question in Jolt silently assumes. Someone unsure whether a line prints at all cannot reason about what it prints, and until now the curriculum never claimed to teach it.",
         prerequisites: [], weight: "load-bearing",
-        demands: ["recognise", "predict"]
+        demands: ["recognise", "predict", "diagnose"]
     },
     {
         id: "expressions-produce-values", topic: "values", label: "Expressions Produce Values",
@@ -482,7 +482,7 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "an expression is any code that produces a value, and it is replaced by that value before anything else happens",
         why: "The idea the whole language rests on, and the one the curriculum never stated. Arguments, conditions, right-hand sides of assignments and array indexes are all expressions; a learner who cannot see that `total + 1` becomes one number before it is used has to relearn evaluation order separately in every one of those places.",
         prerequisites: ["console-output"], weight: "load-bearing",
-        demands: ["recognise", "predict", "explain"]
+        demands: ["recognise", "predict", "diagnose", "explain"]
     },
     {
         id: "primitive-types", topic: "values", label: "Identifying Primitive Types",
@@ -564,7 +564,7 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "using a name anywhere in an expression fetches whatever value it holds at that moment",
         why: "The other half of the name-value split. Tracing any program is repeated substitution, and a learner who cannot do it by hand cannot predict output, which is most of what Jolt asks.",
         prerequisites: ["initialization"], weight: "load-bearing",
-        demands: ["recognise", "predict", "apply"]
+        demands: ["recognise", "predict", "apply", "diagnose"]
     },
     {
         id: "reassignment", topic: "variables", label: "Reassigning Variables",
@@ -580,7 +580,7 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "const stops the name being pointed somewhere else; it does not freeze the value",
         why: "Follows reassignment rather than declaration, because const is defined by what it refuses to allow -- the rule is meaningless to someone who has not yet watched a name be pointed somewhere new.",
         prerequisites: ["reassignment"], weight: "core",
-        demands: ["recognise", "predict", "explain"]
+        demands: ["recognise", "predict", "diagnose", "explain"]
     },
     {
         id: "variable-state", topic: "variables", label: "Tracking Variables Through a Program",

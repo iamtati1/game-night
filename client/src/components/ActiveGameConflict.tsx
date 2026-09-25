@@ -13,7 +13,7 @@ interface ActiveGameConflictProps {
 }
 
 const PLAY_PATH: Record<string, string> = {
-    "code-blitz": "/play",
+    "code-blitz": "/code-blitz",
     flush: "/flush"
 };
 

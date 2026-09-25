@@ -24,7 +24,7 @@ function formatWhen(session: HistorySession): string {
  *  renders as a game with no rounds. Keyed by slug rather than a boolean, which
  *  stopped scaling the moment there was a third game. */
 const RESUME_PATH: Record<string, string> = {
-    "code-blitz": "/play",
+    "code-blitz": "/code-blitz",
     flush: "/flush",
     reaction: "/reaction",
     memory: "/memory",

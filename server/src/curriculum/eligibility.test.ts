@@ -44,13 +44,13 @@ import { QUESTIONS_PER_SESSION } from "../game/scoring.js";
  * the answer is to diagnose them, never to edit this constant.
  */
 /*
- * These counts moved when seed 020 stocked the Values topic with twelve tagged
- * practice questions. The bank is 246 dealable questions and 14 of them are
- * tagged -- up from 234 and 2. Stated as numbers on purpose: the whole point of
- * this work is that tagged coverage is growing, and a silent change to it is
+ * Moved again when seed 021 added nine tagged Variables practice questions --
+ * the beginner content for Code Blitz. The bank is 255 dealable questions and
+ * 23 are tagged, up from 246 and 14. Stated as numbers on purpose: tagged
+ * coverage growing is the point of this work, and a silent change to it is
  * exactly what these tests exist to catch.
  */
-const BASELINE_CANDIDATES = 246;
+const BASELINE_CANDIDATES = 255;
 
 /**
  * How many of those the curriculum now withholds from a learner with no
@@ -64,7 +64,7 @@ const BASELINE_CANDIDATES = 246;
  * now doing the job it was built for, on the small amount of content that has
  * been connected to it.
  */
-const CURRICULUM_GATED_FOR_A_NEW_LEARNER = 8;
+const CURRICULUM_GATED_FOR_A_NEW_LEARNER = 17;
 
 /**
  * How many of those carry a challenge_id.
@@ -74,7 +74,7 @@ const CURRICULUM_GATED_FOR_A_NEW_LEARNER = 8;
  * transitional escape hatch, which is why this number being small is the point
  * rather than an embarrassment.
  */
-const TAGGED_QUESTIONS = 14;
+const TAGGED_QUESTIONS = 23;
 
 /** The two Bug Hunt incidents the equality slice tagged. */
 const TAGGED_INCIDENTS = ["order-lookup-string-id", "profile-clear-field-null"];

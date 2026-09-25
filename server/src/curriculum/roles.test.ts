@@ -25,20 +25,20 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
 
 /** Unchanged from the previous slice: the raw playable bank. */
 /*
- * These counts moved when seed 020 stocked the Values topic with twelve tagged
- * practice questions. The bank is 246 dealable questions and 14 of them are
- * tagged -- up from 234 and 2. Stated as numbers on purpose: the whole point of
- * this work is that tagged coverage is growing, and a silent change to it is
+ * Moved again when seed 021 added nine tagged Variables practice questions --
+ * the beginner content for Code Blitz. The bank is 255 dealable questions and
+ * 23 are tagged, up from 246 and 14. Stated as numbers on purpose: tagged
+ * coverage growing is the point of this work, and a silent change to it is
  * exactly what these tests exist to catch.
  */
-const BASELINE_CANDIDATES = 246;
+const BASELINE_CANDIDATES = 255;
 
 /**
  * Questions carrying a challenge_id: equality's (seed 015) and
  * primitive-types' (seed 016). Both are `practise`, so both are withheld from a
  * learner who has met neither concept.
  */
-const TAGGED_QUESTIONS = 14;
+const TAGGED_QUESTIONS = 23;
 
 /** The two Bug Hunt incidents the equality slice tagged, both `practise`. */
 const TAGGED_INCIDENTS = ["order-lookup-string-id", "profile-clear-field-null"];
@@ -517,8 +517,19 @@ describe("10 · the layers below are unchanged", () => {
         // not earned; everything untagged still flows through the escape hatch.
         const eligible = await prerequisiteEligible(newLearner);
 
+        // What it withholds is tagged content behind a teachable prerequisite,
+        // and nothing else -- so the untagged remainder, which is still the
+        // overwhelming majority of the bank, is untouched.
+        const tagged = await fx.rows<{ count: number }>(
+            `SELECT COUNT(*)::INT AS count FROM questions
+             WHERE challenge_id IS NOT NULL AND is_active`
+        );
+
         expect(eligible.length).toBeLessThan(BASELINE_CANDIDATES);
-        expect(eligible.length).toBeGreaterThan(BASELINE_CANDIDATES - 10);
+        expect(
+            eligible.length,
+            "it may never withhold more than the tagged content"
+        ).toBeGreaterThanOrEqual(BASELINE_CANDIDATES - tagged[0]!.count);
     });
 
     it("removes every tagged practise question from the full stack", async () => {

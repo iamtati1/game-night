@@ -40,13 +40,6 @@ const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5
 const CONCEPT = "primitive-types";
 
 /** 234 raw, minus equality's practise question and now minus this one. */
-/*
- * These counts moved when seed 020 stocked the Values topic with twelve tagged
- * practice questions. The bank is 246 dealable questions and 14 of them are
- * tagged -- up from 234 and 2. Stated as numbers on purpose: the whole point of
- * this work is that tagged coverage is growing, and a silent change to it is
- * exactly what these tests exist to catch.
- */
 const NEW_LEARNER_CANDIDATES = 232;
 
 let fx: CurriculumFixture;
@@ -190,7 +183,7 @@ describe("seed 016 creates exactly one introduction and one exercise", () => {
             `SELECT COUNT(*)::INT n FROM questions WHERE challenge_id IS NOT NULL`
         );
 
-        expect(n, "equality, primitive-types, and the twelve Values questions").toBe(14);
+        expect(n, "the earlier slices plus the Values and Variables practice").toBe(23);
     });
 
     it("derives the introduction's difficulty rather than authoring it", async () => {
