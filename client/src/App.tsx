@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { HomePage } from "./pages/HomePage.js";
 import { JourneyPage } from "./pages/JourneyPage.js";
 import { WorldPage } from "./pages/WorldPage.js";
+import { PracticePage } from "./pages/PracticePage.js";
 import { LessonPage } from "./pages/LessonPage.js";
 import { BugHuntPage } from "./pages/BugHuntPage.js";
 import { BugHuntResultsPage } from "./pages/BugHuntResultsPage.js";
@@ -182,6 +183,16 @@ export default function App() {
                         JavaScript"; this answers "I am here". Same curriculum,
                         same endpoint, neither replacing the other.
                     */}
+                    {/* Write the thing you were just shown. The stage between
+                        meeting a concept and being asked to predict it. */}
+                    <Route
+                        path="/practise/:concept"
+                        element={
+                            <ProtectedRoute>
+                                <PracticePage />
+                            </ProtectedRoute>
+                        }
+                    />
                     <Route
                         path="/world/:topic"
                         element={

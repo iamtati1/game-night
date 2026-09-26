@@ -146,12 +146,18 @@ curriculumRouter.post(
             return;
         }
 
-        const neededRetry =
-            typeof req.body === "object" &&
-            req.body !== null &&
-            (req.body as { neededRetry?: unknown }).neededRetry === true;
+        const body = typeof req.body === "object" && req.body !== null ? req.body : {};
+        const neededRetry = (body as { neededRetry?: unknown }).neededRetry === true;
 
-        const recorded = await recordDemonstration(req.user!.id, concept, neededRetry);
+        // The rung this demonstration is evidence of, where the activity knows
+        // it. Validated as a slug shape only -- an unknown one resolves to NULL
+        // in the insert rather than rejecting the request, because losing the
+        // rung is a smaller loss than losing the demonstration.
+        const rawDemand = (body as { demand?: unknown }).demand;
+        const demand =
+            typeof rawDemand === "string" && /^[a-z][a-z-]*$/.test(rawDemand) ? rawDemand : null;
+
+        const recorded = await recordDemonstration(req.user!.id, concept, neededRetry, demand);
 
         if (!recorded) {
             res.status(404).json({ error: "No such concept" });

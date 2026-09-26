@@ -6,6 +6,7 @@ import { Ship } from "../world/Ship.js";
 import { Icon } from "../world/Icon.js";
 import { ConceptObject } from "../world/ConceptObject.js";
 import { orbitFor, topicWarmth } from "../world/orbits.js";
+import { practiceFor } from "../games/practice.js";
 import type { JourneyPathResponse, JourneyTopic } from "../api/types.js";
 
 /**
@@ -110,9 +111,34 @@ export function WorldPage() {
                         const at = orbitFor(i, concept.state);
                         const reachable = concept.state === "current";
 
+                        /*
+                         * WHERE THE CURRICULUM SENDS THEM.
+                         *
+                         * A concept they have not met goes to its lesson. One
+                         * they have met, and which has practice authored, goes
+                         * to the practice -- because being shown a variable and
+                         * being able to write one are different things, and the
+                         * second is what was missing.
+                         *
+                         * Deterministic and readable: what has the learner
+                         * reached, what have they demonstrated, what is
+                         * authored. No scoring, no recommendation engine.
+                         */
+                        const practice = practiceFor(concept.slug);
+                        const goesTo =
+                            concept.state === "demonstrated" && practice
+                                ? `/practise/${concept.slug}`
+                                : `/learn/${concept.slug}`;
+
+                        // A finished concept with practice still to do is worth
+                        // returning to; one with nothing left is not.
+                        const revisitable = concept.state === "demonstrated" && practice !== null;
+
                         const label =
                             concept.state === "demonstrated"
-                                ? `${concept.name} — you can ${concept.objective}`
+                                ? practice
+                                    ? `${concept.name} — practise writing it`
+                                    : `${concept.name} — you can ${concept.objective}`
                                 : reachable
                                   ? `${concept.name} — go here next`
                                   : `${concept.name} — not reached yet`;
@@ -127,7 +153,9 @@ export function WorldPage() {
                         return (
                             <li
                                 key={concept.slug}
-                                className={`world-object is-${concept.state}`}
+                                className={`world-object is-${concept.state}${
+                                    revisitable ? " is-revisitable" : ""
+                                }`}
                                 style={{
                                     left: `${at.x}%`,
                                     top: `${at.y}%`,
@@ -135,8 +163,8 @@ export function WorldPage() {
                                     animationDelay: `${i * 80}ms`
                                 }}
                             >
-                                {reachable ? (
-                                    <Link to={`/learn/${concept.slug}`} aria-label={label}>
+                                {reachable || revisitable ? (
+                                    <Link to={goesTo} aria-label={label}>
                                         {body}
                                     </Link>
                                 ) : (

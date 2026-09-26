@@ -189,13 +189,32 @@ export async function findJourneyPath(userId: string): Promise<JourneyTopic[]> {
 export async function recordDemonstration(
     userId: string,
     conceptSlug: string,
-    neededRetry: boolean
+    neededRetry: boolean,
+    /**
+     * The rung this is evidence of, where the caller knows it.
+     *
+     * A lesson leaves it unset -- finishing a lesson says the learner MET the
+     * concept and nothing about what they can do with it. Practice passes the
+     * rung it asked for, which is the difference between "was shown a variable"
+     * and "wrote one".
+     *
+     * Unknown slugs resolve to NULL rather than failing: losing the rung is a
+     * smaller loss than losing the demonstration.
+     */
+    demandSlug?: string | null
 ): Promise<boolean> {
     const result = await pool.query(
-        `INSERT INTO concept_demonstrations (user_id, concept_id, needed_retry)
-         SELECT $1, c.id, $3 FROM concepts c WHERE c.slug = $2
-         ON CONFLICT (user_id, concept_id) DO NOTHING`,
-        [userId, conceptSlug, neededRetry]
+        `INSERT INTO concept_demonstrations (user_id, concept_id, needed_retry, demand_id)
+         SELECT $1, c.id, $3, (SELECT id FROM demands WHERE slug = $4)
+         FROM concepts c WHERE c.slug = $2
+         ON CONFLICT (user_id, concept_id) DO UPDATE
+             -- A concept demonstrated by a lesson and later practised keeps the
+             -- deeper evidence. COALESCE on the existing value means a lesson
+             -- finished afterwards never erases what practice established.
+             SET demand_id = COALESCE(EXCLUDED.demand_id, concept_demonstrations.demand_id)
+             WHERE concept_demonstrations.demand_id IS DISTINCT FROM EXCLUDED.demand_id
+               AND EXCLUDED.demand_id IS NOT NULL`,
+        [userId, conceptSlug, neededRetry, demandSlug ?? null]
     );
 
     if ((result.rowCount ?? 0) > 0) {
