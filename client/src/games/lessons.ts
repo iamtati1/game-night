@@ -661,74 +661,6 @@ export const VALUES_TAIL_LESSONS: readonly Lesson[] = [
                 }
             }
         ]
-    },
-    {
-        concept: "type-coercion",
-        title: "When types get mixed",
-        why: "JavaScript will quietly convert a value to make an operation work, and the result surprises everyone once.",
-        teach: [
-            {
-                code: 'console.log("5" + 3);',
-                output: "53",
-                note: "One side is text, and + joins text rather than adding.",
-                parts: [
-                    { piece: '"5"', means: "a string — the quotes make it text" },
-                    { piece: "+", means: "joins, when either side is text" }
-                ]
-            },
-            {
-                code: 'console.log("5" - 3);',
-                output: "2",
-                note: "Same string, different operator, completely different answer.",
-                parts: [{ piece: "-", means: "has no meaning for text, so JavaScript turns \"5\" into the number 5" }]
-            }
-        ],
-        notice: "+ joins when either side is text. Every other arithmetic operator converts to numbers instead.",
-        steps: [
-            {
-                demand: "predict",
-                ask: "What does this print?",
-                code: 'console.log("5" + 3);',
-                choices: [
-                    { text: "53", correct: true },
-                    {
-                        text: "8",
-                        feedback:
-                            'One side is a string, and + joins text when it sees one. So "5" and 3 are stuck together into "53".'
-                    }
-                ],
-                confirm: "+ with a string joins rather than adds."
-            },
-            {
-                demand: "predict",
-                ask: "And this one?",
-                code: 'console.log("5" - 3);',
-                choices: [
-                    { text: "2", correct: true },
-                    {
-                        text: "53",
-                        feedback:
-                            'Only + joins text. Subtraction has no meaning for strings, so "5" is converted to the number 5 first.'
-                    },
-                    {
-                        text: "an error",
-                        feedback:
-                            "JavaScript converts rather than complaining. That is exactly what makes this worth knowing."
-                    }
-                ],
-                confirm: "Same string, different operator, completely different answer.",
-                retry: {
-                    demand: "predict",
-                    ask: "One more — what does this print?",
-                    code: 'console.log("10" * 2);',
-                    choices: [
-                        { text: "20", correct: true },
-                        { text: "102", feedback: "Only + joins. * converts the string to a number." }
-                    ],
-                    confirm: "Right."
-                }
-            }
-        ]
     }
 ];
 
@@ -1317,6 +1249,74 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
                     choices: [
                         { text: "false", correct: true },
                         { text: "true", feedback: "10 is bigger than 3, so it is not less than or equal." }
+                    ],
+                    confirm: "Right."
+                }
+            }
+        ]
+    },
+    {
+        concept: "type-coercion",
+        title: "When types get mixed",
+        why: "JavaScript will quietly convert a value to make an operation work, and the result surprises everyone once.",
+        teach: [
+            {
+                code: 'console.log("5" + 3);',
+                output: "53",
+                note: "One side is text, and + joins text rather than adding.",
+                parts: [
+                    { piece: '"5"', means: "a string — the quotes make it text" },
+                    { piece: "+", means: "joins, when either side is text" }
+                ]
+            },
+            {
+                code: 'console.log("5" - 3);',
+                output: "2",
+                note: "Same string, different operator, completely different answer.",
+                parts: [{ piece: "-", means: "has no meaning for text, so JavaScript turns \"5\" into the number 5" }]
+            }
+        ],
+        notice: "+ joins when either side is text. Every other arithmetic operator converts to numbers instead.",
+        steps: [
+            {
+                demand: "predict",
+                ask: "What does this print?",
+                code: 'console.log("5" + 3);',
+                choices: [
+                    { text: "53", correct: true },
+                    {
+                        text: "8",
+                        feedback:
+                            'One side is a string, and + joins text when it sees one. So "5" and 3 are stuck together into "53".'
+                    }
+                ],
+                confirm: "+ with a string joins rather than adds."
+            },
+            {
+                demand: "predict",
+                ask: "And this one?",
+                code: 'console.log("5" - 3);',
+                choices: [
+                    { text: "2", correct: true },
+                    {
+                        text: "53",
+                        feedback:
+                            'Only + joins text. Subtraction has no meaning for strings, so "5" is converted to the number 5 first.'
+                    },
+                    {
+                        text: "an error",
+                        feedback:
+                            "JavaScript converts rather than complaining. That is exactly what makes this worth knowing."
+                    }
+                ],
+                confirm: "Same string, different operator, completely different answer.",
+                retry: {
+                    demand: "predict",
+                    ask: "One more — what does this print?",
+                    code: 'console.log("10" * 2);',
+                    choices: [
+                        { text: "20", correct: true },
+                        { text: "102", feedback: "Only + joins. * converts the string to a number." }
                     ],
                     confirm: "Right."
                 }

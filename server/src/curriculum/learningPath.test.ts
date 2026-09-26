@@ -119,11 +119,23 @@ describe("finishing a lesson moves the learner on, and nothing else does", () =>
     });
 
     it("walks values in the authored order, one concept at a time", async () => {
+        // Read from the curriculum rather than typed out. This list was a
+        // literal until type-coercion moved to Operators, and the only thing
+        // the test lost by hardcoding it was the ability to survive the
+        // curriculum being corrected.
+        const values = (
+            await fx.rows<{ slug: string }>(
+                `SELECT c.slug FROM concepts c
+                 JOIN topics t ON t.id = c.topic_id
+                 WHERE t.slug = 'values' ORDER BY c.display_order`
+            )
+        ).map((r) => r.slug);
+
         await fx.scenario(async () => {
             const learner = await fx.insertUser("p5@example.com");
             const seen: string[] = [];
 
-            for (let i = 0; i < 7; i += 1) {
+            for (let i = 0; i < values.length + 1; i += 1) {
                 const { current } = await path(learner);
 
                 if (!current) break;
@@ -132,15 +144,9 @@ describe("finishing a lesson moves the learner on, and nothing else does", () =>
                 await demonstrate(learner, current.concept_slug);
             }
 
-            expect(seen).toEqual([
-                "console-output",
-                "expressions-produce-values",
-                "primitive-types",
-                "booleans",
-                "typeof",
-                "null-vs-undefined",
-                "type-coercion"
-            ]);
+            // Exactly the topic, in exactly its order -- one at a time, and it
+            // stops at the topic boundary rather than running on.
+            expect(seen.slice(0, values.length)).toEqual(values);
         });
     });
 

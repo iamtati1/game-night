@@ -451,28 +451,6 @@ ON CONFLICT (slug) DO UPDATE
         display_order = EXCLUDED.display_order,
         updated_at    = CURRENT_TIMESTAMP;
 
-INSERT INTO concepts
-    (topic_id, slug, name, objective, meaning, why, weight, display_order)
-VALUES (
-    (SELECT id FROM topics WHERE slug = 'values'),
-    'type-coercion',
-    'Predicting Type Coercion',
-    'predict what happens when types are mixed in an expression',
-    'JavaScript silently converts types to make an operation work',
-    'Load-bearing despite sitting in a beginner topic: coercion surprises reappear in equality, truthiness, array joining and JSON for the rest of the curriculum.',
-    'load-bearing',
-    7
-)
-ON CONFLICT (slug) DO UPDATE
-    SET topic_id      = EXCLUDED.topic_id,
-        name          = EXCLUDED.name,
-        objective     = EXCLUDED.objective,
-        meaning       = EXCLUDED.meaning,
-        why           = EXCLUDED.why,
-        weight        = EXCLUDED.weight,
-        display_order = EXCLUDED.display_order,
-        updated_at    = CURRENT_TIMESTAMP;
-
 -- Variables
 
 INSERT INTO concepts
@@ -723,13 +701,35 @@ INSERT INTO concepts
     (topic_id, slug, name, objective, meaning, why, weight, display_order)
 VALUES (
     (SELECT id FROM topics WHERE slug = 'operators'),
+    'type-coercion',
+    'Predicting Type Coercion',
+    'predict what happens when types are mixed in an expression',
+    'JavaScript silently converts types to make an operation work',
+    'Sits in Operators because that is where it is used and where it can be shown: coercion happens when an OPERATOR mixes types, and both equality and truthiness are built directly on it. It reappears in array joining and JSON for the rest of the curriculum.',
+    'load-bearing',
+    4
+)
+ON CONFLICT (slug) DO UPDATE
+    SET topic_id      = EXCLUDED.topic_id,
+        name          = EXCLUDED.name,
+        objective     = EXCLUDED.objective,
+        meaning       = EXCLUDED.meaning,
+        why           = EXCLUDED.why,
+        weight        = EXCLUDED.weight,
+        display_order = EXCLUDED.display_order,
+        updated_at    = CURRENT_TIMESTAMP;
+
+INSERT INTO concepts
+    (topic_id, slug, name, objective, meaning, why, weight, display_order)
+VALUES (
+    (SELECT id FROM topics WHERE slug = 'operators'),
     'equality',
     'Comparing with `==` vs. `===`',
     'choose between == and === and predict what each one says',
     '=== compares value and type; == converts first and then compares',
     'The most consequential two-character decision a beginner makes, and the source of bugs that survive review because both forms look correct.',
     'load-bearing',
-    4
+    5
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -751,7 +751,7 @@ VALUES (
     '&& and || return one of their operands, not necessarily a boolean',
     'That they return an operand rather than true or false is what makes default-value idioms work, and what makes them surprising until it is understood.',
     'core',
-    5
+    6
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -773,7 +773,7 @@ VALUES (
     'every value is either truthy or falsy, and the falsy list is short and worth memorising',
     'The falsy set is finite and learnable, and knowing it converts a whole class of mysterious branches into obvious ones.',
     'load-bearing',
-    6
+    7
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -2549,7 +2549,7 @@ ON CONFLICT (slug) DO UPDATE
         display_order = EXCLUDED.display_order,
         updated_at    = CURRENT_TIMESTAMP;
 
-DELETE FROM concepts WHERE slug <> ALL (ARRAY['console-output', 'expressions-produce-values', 'primitive-types', 'booleans', 'typeof', 'null-vs-undefined', 'type-coercion', 'variables-name-values', 'declaration', 'initialization', 'assignment', 'reading-variables', 'reassignment', 'let-vs-const', 'variable-state', 'arithmetic-operators', 'assignment-operators', 'comparison-operators', 'equality', 'logical-operators', 'truthy-falsy', 'if-else', 'else-if-chains', 'compound-conditions', 'nested-conditions', 'ternary', 'guard-clauses', 'string-literals', 'string-concatenation', 'string-length', 'string-indexing', 'string-methods', 'template-literals', 'string-immutability', 'for-loop-anatomy', 'while-loops', 'loop-conditions', 'accumulators', 'break-continue', 'nested-loops', 'for-of-for-in', 'function-declaration', 'parameters-arguments', 'return-values', 'arrow-functions', 'functions-as-values', 'default-rest-params', 'block-vs-function-scope', 'hoisting-tdz', 'shadowing', 'closures', 'loop-variable-capture', 'array-indexing', 'array-length', 'array-mutation', 'array-copy-spread', 'nested-arrays', 'array-reference-identity', 'map', 'for-each', 'filter', 'find-some-every', 'reduce', 'sort', 'flat', 'method-chaining', 'object-access', 'object-mutation', 'nested-objects', 'optional-chaining', 'destructuring', 'object-references', 'json-shape', 'built-in-collections', 'error-types', 'throwing', 'try-catch', 'stack-traces', 'debugging-strategy', 'selecting-elements', 'element-properties', 'event-listeners', 'event-order', 'dom-as-tree', 'callbacks', 'promise-states', 'event-loop', 'async-await', 'error-propagation', 'promise-all', 'this-binding', 'methods', 'classes', 'prototypes', 'inheritance', 'recursion', 'base-cases', 'search-strategies', 'sorting-basics', 'complexity']);
+DELETE FROM concepts WHERE slug <> ALL (ARRAY['console-output', 'expressions-produce-values', 'primitive-types', 'booleans', 'typeof', 'null-vs-undefined', 'variables-name-values', 'declaration', 'initialization', 'assignment', 'reading-variables', 'reassignment', 'let-vs-const', 'variable-state', 'arithmetic-operators', 'assignment-operators', 'comparison-operators', 'type-coercion', 'equality', 'logical-operators', 'truthy-falsy', 'if-else', 'else-if-chains', 'compound-conditions', 'nested-conditions', 'ternary', 'guard-clauses', 'string-literals', 'string-concatenation', 'string-length', 'string-indexing', 'string-methods', 'template-literals', 'string-immutability', 'for-loop-anatomy', 'while-loops', 'loop-conditions', 'accumulators', 'break-continue', 'nested-loops', 'for-of-for-in', 'function-declaration', 'parameters-arguments', 'return-values', 'arrow-functions', 'functions-as-values', 'default-rest-params', 'block-vs-function-scope', 'hoisting-tdz', 'shadowing', 'closures', 'loop-variable-capture', 'array-indexing', 'array-length', 'array-mutation', 'array-copy-spread', 'nested-arrays', 'array-reference-identity', 'map', 'for-each', 'filter', 'find-some-every', 'reduce', 'sort', 'flat', 'method-chaining', 'object-access', 'object-mutation', 'nested-objects', 'optional-chaining', 'destructuring', 'object-references', 'json-shape', 'built-in-collections', 'error-types', 'throwing', 'try-catch', 'stack-traces', 'debugging-strategy', 'selecting-elements', 'element-properties', 'event-listeners', 'event-order', 'dom-as-tree', 'callbacks', 'promise-states', 'event-loop', 'async-await', 'error-propagation', 'promise-all', 'this-binding', 'methods', 'classes', 'prototypes', 'inheritance', 'recursion', 'base-cases', 'search-strategies', 'sorting-basics', 'complexity']);
 
 -- ───────────────────────────────────────────────────── prerequisites ──
 
@@ -2567,9 +2567,6 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'typeof'),
         (SELECT id FROM concepts WHERE slug = 'primitive-types'));
 INSERT INTO prerequisites (concept_id, requires_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'null-vs-undefined'),
-        (SELECT id FROM concepts WHERE slug = 'primitive-types'));
-INSERT INTO prerequisites (concept_id, requires_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'type-coercion'),
         (SELECT id FROM concepts WHERE slug = 'primitive-types'));
 INSERT INTO prerequisites (concept_id, requires_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'variables-name-values'),
@@ -2616,6 +2613,9 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'comparison-operators'),
 INSERT INTO prerequisites (concept_id, requires_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'comparison-operators'),
         (SELECT id FROM concepts WHERE slug = 'booleans'));
+INSERT INTO prerequisites (concept_id, requires_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'type-coercion'),
+        (SELECT id FROM concepts WHERE slug = 'primitive-types'));
 INSERT INTO prerequisites (concept_id, requires_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'equality'),
         (SELECT id FROM concepts WHERE slug = 'comparison-operators'));
@@ -3013,6 +3013,126 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'null-vs-undefined'),
         (SELECT id FROM demands WHERE slug = 'explain'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'variables-name-values'),
+        (SELECT id FROM demands WHERE slug = 'recognise'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'variables-name-values'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'declaration'),
+        (SELECT id FROM demands WHERE slug = 'recognise'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'declaration'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'declaration'),
+        (SELECT id FROM demands WHERE slug = 'produce'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'initialization'),
+        (SELECT id FROM demands WHERE slug = 'recognise'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'initialization'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'initialization'),
+        (SELECT id FROM demands WHERE slug = 'produce'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'assignment'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'assignment'),
+        (SELECT id FROM demands WHERE slug = 'produce'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'assignment'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
+        (SELECT id FROM demands WHERE slug = 'recognise'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
+        (SELECT id FROM demands WHERE slug = 'apply'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
+        (SELECT id FROM demands WHERE slug = 'apply'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
+        (SELECT id FROM demands WHERE slug = 'recognise'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
+        (SELECT id FROM demands WHERE slug = 'diagnose'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
+        (SELECT id FROM demands WHERE slug = 'explain'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'variable-state'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'variable-state'),
+        (SELECT id FROM demands WHERE slug = 'produce'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'arithmetic-operators'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'arithmetic-operators'),
+        (SELECT id FROM demands WHERE slug = 'explain'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
+        (SELECT id FROM demands WHERE slug = 'produce'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'comparison-operators'),
+        (SELECT id FROM demands WHERE slug = 'recognise'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'comparison-operators'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'type-coercion'),
         (SELECT id FROM demands WHERE slug = 'predict'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
@@ -3027,126 +3147,6 @@ ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'type-coercion'),
         (SELECT id FROM demands WHERE slug = 'explain'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'variables-name-values'),
-        (SELECT id FROM demands WHERE slug = 'recognise'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'variables-name-values'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'declaration'),
-        (SELECT id FROM demands WHERE slug = 'recognise'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'declaration'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'declaration'),
-        (SELECT id FROM demands WHERE slug = 'produce'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'initialization'),
-        (SELECT id FROM demands WHERE slug = 'recognise'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'initialization'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'initialization'),
-        (SELECT id FROM demands WHERE slug = 'produce'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'assignment'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'assignment'),
-        (SELECT id FROM demands WHERE slug = 'produce'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'assignment'),
-        (SELECT id FROM demands WHERE slug = 'diagnose'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
-        (SELECT id FROM demands WHERE slug = 'recognise'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
-        (SELECT id FROM demands WHERE slug = 'apply'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reading-variables'),
-        (SELECT id FROM demands WHERE slug = 'diagnose'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
-        (SELECT id FROM demands WHERE slug = 'apply'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'reassignment'),
-        (SELECT id FROM demands WHERE slug = 'diagnose'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
-        (SELECT id FROM demands WHERE slug = 'recognise'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
-        (SELECT id FROM demands WHERE slug = 'diagnose'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'let-vs-const'),
-        (SELECT id FROM demands WHERE slug = 'explain'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'variable-state'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'variable-state'),
-        (SELECT id FROM demands WHERE slug = 'produce'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'arithmetic-operators'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'arithmetic-operators'),
-        (SELECT id FROM demands WHERE slug = 'explain'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
-        (SELECT id FROM demands WHERE slug = 'produce'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'comparison-operators'),
-        (SELECT id FROM demands WHERE slug = 'recognise'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'comparison-operators'),
-        (SELECT id FROM demands WHERE slug = 'predict'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'equality'),
@@ -4097,10 +4097,6 @@ WHERE cd.concept_id = c.id
       ('null-vs-undefined', 'recognise'),
       ('null-vs-undefined', 'predict'),
       ('null-vs-undefined', 'explain'),
-      ('type-coercion', 'predict'),
-      ('type-coercion', 'diagnose'),
-      ('type-coercion', 'repair'),
-      ('type-coercion', 'explain'),
       ('variables-name-values', 'recognise'),
       ('variables-name-values', 'predict'),
       ('declaration', 'recognise'),
@@ -4131,6 +4127,10 @@ WHERE cd.concept_id = c.id
       ('assignment-operators', 'produce'),
       ('comparison-operators', 'recognise'),
       ('comparison-operators', 'predict'),
+      ('type-coercion', 'predict'),
+      ('type-coercion', 'diagnose'),
+      ('type-coercion', 'repair'),
+      ('type-coercion', 'explain'),
       ('equality', 'predict'),
       ('equality', 'diagnose'),
       ('equality', 'repair'),

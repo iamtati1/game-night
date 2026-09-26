@@ -166,6 +166,74 @@ describe("prerequisites form a usable graph", () => {
         }
     });
 
+    it("never requires a concept from later in its own topic", () => {
+        /*
+         * The gap the test above leaves. It compares TOPIC positions with
+         * `toBeLessThanOrEqual`, so two concepts in the same topic always pass
+         * it however they are ordered -- and within-topic order is real
+         * teaching order, because that is what the journey and the world walk.
+         *
+         * It became load-bearing when type-coercion moved into Operators
+         * alongside equality and truthy-falsy, which both require it. Nothing
+         * would have caught it being placed after them.
+         */
+        const order = topicOrder().map((t) => t.id);
+        const positionOf = (id: TopicId) => order.indexOf(id);
+        const indexIn = (c: (typeof CONCEPTS)[number]) =>
+            CONCEPTS.filter((x) => x.topic === c.topic).indexOf(c);
+
+        for (const c of CONCEPTS) {
+            for (const p of c.prerequisites) {
+                const required = conceptById(p)!;
+
+                if (positionOf(required.topic) !== positionOf(c.topic)) continue;
+
+                expect(
+                    indexIn(required),
+                    `${c.id} requires ${p}, which is taught after it in ${c.topic}`
+                ).toBeLessThan(indexIn(c));
+            }
+        }
+    });
+
+    it("teaches type coercion where it is used, before the concepts built on it", () => {
+        /*
+         * Coercion happens when an OPERATOR mixes types -- "5" - 3, 1 + "1" --
+         * so it lived in Values only by accident of being about values.
+         *
+         * Its real place is Operators, ahead of the two concepts that require
+         * it. Having it in Values also put the beginner spine's only `repair`
+         * declaration on a concept a beginner has no business reaching, which
+         * is why there was no beginner repair content to write.
+         */
+        const coercion = conceptById("type-coercion")!;
+
+        expect(coercion.topic).toBe("operators");
+
+        const operators = CONCEPTS.filter((c) => c.topic === "operators").map((c) => c.id);
+
+        for (const dependent of ["equality", "truthy-falsy"] as const) {
+            expect(
+                conceptById(dependent)!.prerequisites,
+                `${dependent} should still require type-coercion`
+            ).toContain("type-coercion");
+
+            expect(
+                operators.indexOf("type-coercion"),
+                `type-coercion must be taught before ${dependent}`
+            ).toBeLessThan(operators.indexOf(dependent));
+        }
+    });
+
+    it("lets Values finish without coercion", () => {
+        // Values is the first thing anyone meets. It should end on something a
+        // beginner can actually complete.
+        const values = CONCEPTS.filter((c) => c.topic === "values").map((c) => c.id);
+
+        expect(values).not.toContain("type-coercion");
+        expect(values[values.length - 1]).toBe("null-vs-undefined");
+    });
+
     it("computes a topic order without a cycle", () => {
         expect(topicOrder().length).toBe(TOPICS.length);
         expect(topicOrder()[0]!.prerequisites).toHaveLength(0);

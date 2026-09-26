@@ -516,14 +516,6 @@ export const CONCEPTS: readonly Concept[] = [
         prerequisites: ["primitive-types"], weight: "core",
         demands: ["recognise", "predict", "explain"]
     },
-    {
-        id: "type-coercion", topic: "values", label: "Predicting Type Coercion",
-        objective: "predict what happens when types are mixed in an expression",
-        meaning: "JavaScript silently converts types to make an operation work",
-        why: "Load-bearing despite sitting in a beginner topic: coercion surprises reappear in equality, truthiness, array joining and JSON for the rest of the curriculum.",
-        prerequisites: ["primitive-types"], weight: "load-bearing",
-        demands: ["predict", "diagnose", "repair", "explain"]
-    },
 
     /* ------------------------------------------------------- variables */
     {
@@ -615,6 +607,14 @@ export const CONCEPTS: readonly Concept[] = [
         why: "Every branch and every loop condition is a comparison. Getting these wrong makes control flow unpredictable rather than merely unfamiliar.",
         prerequisites: ["primitive-types", "booleans"], weight: "core",
         demands: ["recognise", "predict"]
+    },
+    {
+        id: "type-coercion", topic: "operators", label: "Predicting Type Coercion",
+        objective: "predict what happens when types are mixed in an expression",
+        meaning: "JavaScript silently converts types to make an operation work",
+        why: "Sits in Operators because that is where it is used and where it can be shown: coercion happens when an OPERATOR mixes types, and both equality and truthiness are built directly on it. It reappears in array joining and JSON for the rest of the curriculum.",
+        prerequisites: ["primitive-types"], weight: "load-bearing",
+        demands: ["predict", "diagnose", "repair", "explain"]
     },
     {
         id: "equality", topic: "operators", label: "Comparing with `==` vs. `===`",
