@@ -157,3 +157,92 @@ describe("failure always gives one next thing to try", () => {
         expect(note).not.toMatch(/SyntaxError|TypeError/);
     });
 });
+
+/**
+ * The approved design, checked movement by movement against the exact code and
+ * the exact wording it specifies.
+ */
+describe("the approved design, verbatim", () => {
+    const specs: ReadonlyArray<{
+        movement: (typeof VARIABLES_MISSION.movements)[number];
+        concept: string;
+        demand: string;
+        accepts: readonly string[];
+        rejects: readonly string[];
+    }> = [
+        {
+            movement: name!,
+            concept: "initialization",
+            demand: "produce",
+            accepts: ["let fuel = 100;"],
+            rejects: ["fuel = 100;"]
+        },
+        {
+            movement: use!,
+            concept: "reading-variables",
+            demand: "apply",
+            // Both natural forms of "use the name". The design names the
+            // template-literal one specifically.
+            accepts: [
+                'let fuel = 100;\nconsole.log("Fuel: " + fuel);',
+                "let fuel = 100;\nconsole.log(`Fuel: ${fuel}`);"
+            ],
+            rejects: ['console.log("Fuel: 100");', "console.log(`Fuel: 100`);"]
+        },
+        {
+            movement: change!,
+            concept: "reassignment",
+            demand: "apply",
+            accepts: [
+                'let fuel = 50;\nconsole.log("Fuel: " + fuel);',
+                'let fuel = 100;\nfuel = 50;\nconsole.log("Fuel: " + fuel);',
+                "let fuel = 100;\nfuel = 50;\nconsole.log(`Fuel: ${fuel}`);"
+            ],
+            rejects: ['let fuel = 100;\nconsole.log("Fuel: 50");']
+        },
+        {
+            movement: independent!,
+            concept: "variable-state",
+            demand: "produce",
+            accepts: [
+                'let fuel = 50;\nlet crew = 3;\nconsole.log("Fuel: " + fuel);\nconsole.log("Crew: " + crew);',
+                "let fuel = 50;\nlet crew = 3;\nconsole.log(`Fuel: ${fuel}`);\nconsole.log(`Crew: ${crew}`);"
+            ],
+            rejects: ['console.log("Fuel: 50");\nconsole.log("Crew: 3");']
+        }
+    ];
+
+    for (const spec of specs) {
+        describe(`${spec.concept} / ${spec.demand}`, () => {
+            it("is the concept and rung the design names", () => {
+                expect(spec.movement.concept).toBe(spec.concept);
+                expect(spec.movement.demand).toBe(spec.demand);
+            });
+
+            for (const source of spec.accepts) {
+                it(`accepts ${source.split("\n").pop()}`, () => {
+                    const { ok, note } = attempt(spec.movement, source);
+
+                    expect(ok, note ?? "").toBe(true);
+                });
+            }
+
+            for (const source of spec.rejects) {
+                it(`rejects ${source.split("\n").pop()}`, () => {
+                    expect(attempt(spec.movement, source).ok).toBe(false);
+                });
+            }
+        });
+    }
+
+    it("rejects hard-coded output in BOTH string forms", () => {
+        // The central decision, and it must not have a syntactic loophole.
+        for (const source of ['console.log("Fuel: 100");', "console.log(`Fuel: 100`);"]) {
+            const { ok, run, note } = attempt(use!, source);
+
+            expect(run.output, source).toEqual(["Fuel: 100"]);
+            expect(ok, `${source} printed the right thing and must still be rejected`).toBe(false);
+            expect(note, source).toContain("fuel");
+        }
+    });
+});

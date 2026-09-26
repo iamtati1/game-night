@@ -121,7 +121,7 @@ describe("syntax the learner has not been taught is refused by name", () => {
         ["let a = null;", "`null`"],
         ["var a = 1;", "`let` or `const`"],
         ['let a = "x"; console.log(a.length);', "not something we have covered yet"],
-        ["let a = `x`;", "Backticks"]
+        ["let a = x.y;", "not something we have covered yet"]
     ];
 
     for (const [source, expected] of untaught) {
@@ -158,5 +158,52 @@ describe("it cannot be used to run arbitrary code", () => {
         const long = `let a = 1;\nconsole.log(${"1 + ".repeat(6000)}1);`;
 
         expect(runLittleJs(long).error).toContain("too much");
+    });
+});
+
+
+/**
+ * Template literals, accepted as a deliberate exception.
+ *
+ * The approved mission design names `Fuel: ${fuel}` as a correct answer for
+ * "use the name", and it is: the interpolation reads the variable exactly as a
+ * join does. Refusing a learner's working answer because the curriculum has not
+ * formally reached backticks yet would teach nothing and read as a broken tool.
+ */
+describe("template literals", () => {
+    it("reads a variable through an interpolation", () => {
+        const r = runLittleJs("let fuel = 100;\nconsole.log(`Fuel: ${fuel}`);");
+
+        expect(r.error).toBeNull();
+        expect(r.output).toEqual(["Fuel: 100"]);
+    });
+
+    it("records the interpolated name as used, exactly as a join does", () => {
+        const template = runLittleJs("let fuel = 100;\nconsole.log(`Fuel: ${fuel}`);");
+        const joined = runLittleJs('let fuel = 100;\nconsole.log("Fuel: " + fuel);');
+
+        expect(template.namesUsedInOutput).toEqual([["fuel"]]);
+        expect(template.namesUsedInOutput).toEqual(joined.namesUsedInOutput);
+        expect(template.output).toEqual(joined.output);
+    });
+
+    it("still reports a hard-coded value as using no name", () => {
+        // The distinction the mission turns on survives the new syntax.
+        const r = runLittleJs("console.log(`Fuel: 100`);");
+
+        expect(r.output).toEqual(["Fuel: 100"]);
+        expect(r.namesUsedInOutput).toEqual([[]]);
+    });
+
+    it("handles an expression inside the braces", () => {
+        expect(runLittleJs("let a = 2;\nconsole.log(`${a + 3}`);").output).toEqual(["5"]);
+    });
+
+    it("catches an unclosed backtick", () => {
+        expect(runLittleJs("console.log(`Fuel);").error).toContain("closing backtick");
+    });
+
+    it("catches an unclosed interpolation", () => {
+        expect(runLittleJs("let a = 1;\nconsole.log(`${a`);").error).toBeTruthy();
     });
 });

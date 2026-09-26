@@ -129,7 +129,74 @@ function tokenise(src: string): Tok[] {
         }
 
         if (c === "`") {
-            throw new LittleError("Backticks are not something we have covered yet. Use \" \".");
+            // A template literal is accepted even though the curriculum has not
+            // reached it yet, and that is a deliberate exception to the
+            // refuse-what-was-not-taught rule.
+            //
+            // The rule exists so a learner is never silently credited for
+            // something nobody taught them. A learner who TYPES `Fuel: ${fuel}`
+            // already knows the form -- refusing their working answer teaches
+            // nothing and reads as the tool being broken. And the evidence the
+            // mission actually wants is unaffected: ${fuel} reads the name,
+            // exactly as "Fuel: " + fuel does.
+            //
+            // Desugared into the same tokens a join produces, so everything
+            // downstream -- including which names were read -- is identical.
+            i += 1;
+            const pieces: Tok[] = [];
+            let text = "";
+
+            const flush = () => {
+                if (pieces.length > 0) pieces.push({ k: "punc", v: "+" });
+                pieces.push({ k: "str", v: text });
+                text = "";
+            };
+
+            while (i < src.length && src[i] !== "`") {
+                if (src[i] === "\\" && i + 1 < src.length) {
+                    text += src[i + 1];
+                    i += 2;
+                    continue;
+                }
+
+                if (src[i] === "$" && src[i + 1] === "{") {
+                    flush();
+                    i += 2;
+
+                    let depth = 1;
+                    let inner = "";
+
+                    while (i < src.length && depth > 0) {
+                        if (src[i] === "{") depth += 1;
+                        if (src[i] === "}") {
+                            depth -= 1;
+                            if (depth === 0) break;
+                        }
+                        inner += src[i];
+                        i += 1;
+                    }
+
+                    if (depth !== 0) throw new LittleError("That ${ ... } is missing its closing brace.");
+
+                    i += 1;
+                    pieces.push({ k: "punc", v: "+" }, { k: "punc", v: "(" });
+                    pieces.push(...tokenise(inner));
+                    pieces.push({ k: "punc", v: ")" });
+                    continue;
+                }
+
+                text += src[i];
+                i += 1;
+            }
+
+            if (i >= src.length) throw new LittleError("That text is missing its closing backtick.");
+
+            i += 1;
+            flush();
+
+            // Wrapped, so it composes with whatever surrounds it.
+            toks.push({ k: "punc", v: "(" }, ...pieces, { k: "punc", v: ")" });
+            continue;
         }
 
         if (/[0-9]/.test(c)) {
