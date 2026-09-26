@@ -426,6 +426,69 @@ export const LESSONS: readonly Lesson[] = [
         ],
         notice: "A comparison is an expression, and the value it produces is always true or false.",
         steps: [
+            /*
+             * RECOGNITION FIRST, and it is a different question from the ones
+             * below.
+             *
+             * Prediction asks what a piece of code will produce. Recognition
+             * asks the learner to look at something already in front of them
+             * and judge which part is the thing being named. For booleans that
+             * is: of these four values, which two are the booleans -- because
+             * the concept's objective is to say where a true or a false came
+             * from, and the first step of that is telling one when you see it.
+             *
+             * booleans was one of only two concepts declaring `recognise` with
+             * no recognition anywhere. The other eight already had steps like
+             * this; it simply never got one.
+             */
+            {
+                demand: "recognise",
+                ask: "Which of these is a boolean?",
+                code: 'console.log(5);\nconsole.log("true");\nconsole.log(true);',
+                choices: [
+                    { text: "true", correct: true },
+                    {
+                        text: '"true"',
+                        feedback:
+                            'The quotes make it text. "true" is a string that happens to spell the word — the boolean is the one without quotes.'
+                    },
+                    {
+                        text: "5",
+                        feedback: "5 is a number. Booleans are only ever true or false."
+                    }
+                ],
+                confirm: "true without quotes is the boolean. With quotes it is just a word.",
+                aside: "There are exactly two booleans in the whole language. Every other value is something else."
+            },
+            {
+                demand: "recognise",
+                ask: "Which part of this line produced a boolean?",
+                code: "console.log(5 > 3);",
+                choices: [
+                    { text: "5 > 3", correct: true },
+                    {
+                        text: "console.log",
+                        feedback:
+                            "console.log only shows a value. The boolean was already made before it got there."
+                    },
+                    {
+                        text: "5",
+                        feedback:
+                            "5 is one of the numbers being compared, not the answer. The answer is what the whole comparison hands back."
+                    }
+                ],
+                confirm: "The comparison is what produced it. console.log only showed it.",
+                retry: {
+                    demand: "recognise",
+                    ask: "And in this one?",
+                    code: "console.log(2 < 1);",
+                    choices: [
+                        { text: "2 < 1", correct: true },
+                        { text: "2", feedback: "2 is being compared, not handed back." }
+                    ],
+                    confirm: "The comparison, again."
+                }
+            },
             {
                 demand: "predict",
                 ask: "What does this produce?",
