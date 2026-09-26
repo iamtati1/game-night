@@ -1921,3 +1921,271 @@ pre.code {
     .site-header { flex-wrap: wrap; justify-content: center; }
     .site-header .brand { margin-right: 0; }
 }
+
+/* ---------------------------------------------------- 4f. one world ------ */
+
+/*
+   A TOPIC, CLOSE UP.
+
+   The map is the overview; this is the place. They read the same curriculum
+   from the same endpoint and neither replaces the other -- the map answers
+   "where am I in JavaScript", this answers "I am here".
+
+   `--warmth` is the fraction of the topic's concepts that are behind the
+   learner, set on the section by the page. It is never printed as a number:
+   it lights the atmosphere. Finishing a concept makes the place measurably
+   brighter, which is the entire idea being tested.
+*/
+.world {
+    position: relative;
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: 0.5rem 1.5rem 5rem;
+    text-align: center;
+}
+
+.world-head { margin-bottom: 1rem; }
+
+.world-eyebrow {
+    font-family: var(--ui);
+    font-size: var(--t-label);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin: 0 0 0.5rem;
+}
+
+.world-name {
+    font-family: var(--display);
+    font-variation-settings: var(--display-soft);
+    font-size: var(--t-title);
+    margin: 0 0 0.6rem;
+}
+
+.world-principle {
+    max-width: 44ch;
+    margin: 0 auto;
+    color: var(--text-2);
+    font-size: 1.08rem;
+}
+
+/* The field the world sits in. Aspect-ratio rather than a fixed height, so the
+   ellipse the objects orbit on keeps its shape at every width. */
+.world-field {
+    position: relative;
+    width: 100%;
+    max-width: 46rem;
+    margin: 1.5rem auto 0;
+    aspect-ratio: 3 / 2;
+}
+
+/* The glow the place gives off, which grows as the topic fills in. */
+.world-field::before {
+    content: "";
+    position: absolute;
+    inset: -12%;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgb(255 209 102 / calc(var(--warmth, 0) * 0.16)) 0%,
+        rgb(94 231 240 / calc(0.05 + var(--warmth, 0) * 0.06)) 38%,
+        transparent 68%
+    );
+    pointer-events: none;
+    transition: background 1.2s ease;
+}
+
+.world-body {
+    position: absolute;
+    /* Spans the field so the planet can be sized against it. */
+    inset: 0;
+    display: grid;
+    place-items: center;
+    z-index: 6;
+    pointer-events: none;
+}
+
+/* Sized as a FRACTION OF THE FIELD, not in pixels.
+   A fixed 168px planet filled most of a narrow field, so the innermost orbit
+   landed on top of it and the objects there were unreadable. Scaling it with
+   the field keeps the space between the world and its outposts constant at
+   every width. */
+.world-body .planet {
+    width: 30%;
+    height: auto;
+    filter: drop-shadow(0 0 32px rgb(94 231 240 / calc(0.25 + var(--warmth, 0) * 0.35)));
+    animation: bob 12s ease-in-out infinite;
+    transition: filter 1.2s ease;
+}
+
+.world-body .ship {
+    position: absolute;
+    bottom: 26%;
+    right: 30%;
+    filter: drop-shadow(0 4px 12px #05072acc);
+    animation: cruise 9s ease-in-out infinite;
+}
+
+.world-orbit { list-style: none; margin: 0; padding: 0; }
+
+/* Each object fades in on its own beat, so the place assembles rather than
+   appearing. Position is set inline from the orbit function. */
+.world-object {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    animation: arrive 0.5s var(--ease) both;
+}
+
+.world-object a,
+.world-object span[role="img"] {
+    display: grid;
+    justify-items: center;
+    gap: 0.3rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Moving toward a reachable object. The unreached ones do not respond, because
+   there is nothing there to respond -- but they are not disabled controls
+   either, and they never grey out. */
+.world-object a {
+    transition: transform 0.2s var(--ease);
+}
+
+.world-object a:hover { transform: translateY(-3px); }
+
+.world-object a:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 6px;
+    border-radius: var(--radius);
+}
+
+.world-object-name {
+    font-family: var(--ui);
+    font-size: 0.8rem;
+    line-height: 1.25;
+    max-width: 9rem;
+    text-wrap: balance;
+}
+
+/* Distance, said three ways at once: how far out the object sits (geometry),
+   how big it is (geometry), and how clearly you can read its name (here). */
+.world-object.is-locked .world-object-name { color: var(--dim); }
+.world-object.is-current .world-object-name { color: var(--text); font-weight: 600; }
+.world-object.is-demonstrated .world-object-name { color: var(--text-2); }
+
+/* Haze on the far objects. They stay coloured and stay interesting -- this is
+   atmosphere between you and them, not a disabled state. */
+.world-object.is-locked .concept-object { opacity: 0.66; }
+
+.concept-object { display: block; }
+
+.concept-beacon {
+    transform-origin: 32px 4px;
+    animation: lamp 2.6s ease-in-out infinite;
+}
+
+/* The checkpoint, which exists only once nothing is left out there. */
+.world-checkpoint {
+    margin-top: 1rem;
+    display: grid;
+    justify-items: center;
+    gap: 0.9rem;
+    animation: arrive 0.6s var(--ease) both;
+}
+
+.world-checkpoint-line {
+    margin: 0;
+    font-family: var(--display);
+    font-variation-settings: var(--display-soft);
+    font-size: 1.25rem;
+    color: var(--text);
+}
+
+.world-exit { margin-top: 2.5rem; font-size: var(--t-small); }
+
+.world-exit a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-2);
+    text-decoration: none;
+}
+
+.world-exit a:hover { color: var(--cyan); }
+
+/* The way in, on the map's current station. */
+.journey-enter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, 3.4rem);
+    z-index: 5;
+    padding: 0.3rem 0.85rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid #5ee7f066;
+    background: rgb(16 20 58 / 0.86);
+    font-family: var(--ui);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--cyan);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.journey-enter:hover { background: #5ee7f01f; }
+
+@media (max-width: 46rem) {
+    /* The ellipse has no width to spread into, so the field grows taller. */
+    .world-field { aspect-ratio: 1 / 1.25; max-width: 24rem; }
+    .world-object-name { max-width: 5.5rem; font-size: 0.72rem; }
+}
+
+/*
+   PHONE: THE NAMES COME OFF.
+
+   Measured at 280px: seven labels at 9rem each, around a field 200px wide,
+   produced five overlapping pairs and three objects sitting on the planet. No
+   amount of nudging fixes that -- the text is simply wider than the space.
+
+   So below 30rem only the object the learner can actually go to keeps its name
+   on screen. The rest stay as objects in a field, which is what they are, and
+   every one keeps its aria-label, so nothing is lost to a screen reader and
+   focusing one still says what it is.
+*/
+@media (max-width: 30rem) {
+    .world-field { aspect-ratio: 1 / 1.35; max-width: 20rem; }
+
+    .world-object.is-locked .world-object-name,
+    .world-object.is-demonstrated .world-object-name {
+        /* Visually hidden, not removed: still read aloud, still found by
+           find-in-page, and it comes back on focus below. */
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .world-object a:focus-visible .world-object-name,
+    .world-object a:hover .world-object-name {
+        position: static;
+        width: auto;
+        height: auto;
+        clip-path: none;
+    }
+
+    .world-object-name { max-width: 6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .world-object,
+    .world-body .planet,
+    .world-body .ship,
+    .concept-beacon,
+    .world-checkpoint { animation: none !important; }
+
+    .world-field::before,
+    .world-body .planet { transition: none; }
+}

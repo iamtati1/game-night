@@ -7,6 +7,7 @@ import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { HomePage } from "./pages/HomePage.js";
 import { JourneyPage } from "./pages/JourneyPage.js";
+import { WorldPage } from "./pages/WorldPage.js";
 import { LessonPage } from "./pages/LessonPage.js";
 import { BugHuntPage } from "./pages/BugHuntPage.js";
 import { BugHuntResultsPage } from "./pages/BugHuntResultsPage.js";
@@ -173,6 +174,19 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <JourneyPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    {/*
+                        One world, close up. The map answers "where am I in
+                        JavaScript"; this answers "I am here". Same curriculum,
+                        same endpoint, neither replacing the other.
+                    */}
+                    <Route
+                        path="/world/:topic"
+                        element={
+                            <ProtectedRoute>
+                                <WorldPage />
                             </ProtectedRoute>
                         }
                     />

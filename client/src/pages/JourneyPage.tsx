@@ -283,6 +283,15 @@ export function JourneyPage() {
                                 <WorldLandmark kind={worldFor(topic.slug).landmark} size={26} />
                             )}
 
+                            {/* Only the world you are at can be entered: the
+                                close view of somewhere you have not reached
+                                would be an empty room. */}
+                            {here && (
+                                <Link className="journey-enter" to={`/world/${topic.slug}`}>
+                                    Go down
+                                </Link>
+                            )}
+
                             <div className="journey-caption">
                                 <p className="journey-name">{topic.name}</p>
 
