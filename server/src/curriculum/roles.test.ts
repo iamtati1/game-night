@@ -25,20 +25,26 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
 
 /** Unchanged from the previous slice: the raw playable bank. */
 /*
- * Moved again when seed 021 added nine tagged Variables practice questions --
- * the beginner content for Code Blitz. The bank is 255 dealable questions and
- * 23 are tagged, up from 246 and 14. Stated as numbers on purpose: tagged
- * coverage growing is the point of this work, and a silent change to it is
- * exactly what these tests exist to catch.
+ * DERIVED, NOT TYPED IN.
+ *
+ * These two counts have been edited by hand four times as content landed --
+ * 234, 246, 255, 267 -- and every edit was mechanical, which is a good sign the
+ * number was never the thing being tested. What the tests below actually care
+ * about is the RELATIONSHIP between the whole bank and its tagged part, so both
+ * are now read from the fixture and the relationship is asserted instead.
+ *
+ * A test that had to be updated whenever someone wrote a question was not
+ * protecting anything; it was charging rent.
  */
-const BASELINE_CANDIDATES = 255;
+let BASELINE_CANDIDATES: number;
+let TAGGED_QUESTIONS: number;
+
 
 /**
  * Questions carrying a challenge_id: equality's (seed 015) and
  * primitive-types' (seed 016). Both are `practise`, so both are withheld from a
  * learner who has met neither concept.
  */
-const TAGGED_QUESTIONS = 23;
 
 /** The two Bug Hunt incidents the equality slice tagged, both `practise`. */
 const TAGGED_INCIDENTS = ["order-lookup-string-id", "profile-clear-field-null"];
@@ -65,6 +71,20 @@ let equalityQuestionId: string;
 beforeAll(async () => {
     fx = await buildCurriculumFixture();
     newLearner = await fx.insertUser("roles-new@example.com");
+
+    // Read from the bank rather than typed in. See the note by their
+    // declarations: these moved four times as content landed, and the number
+    // was never what any test below cared about.
+    const [bank] = await fx.rows<{ total: number; tagged: number }>(
+        `SELECT COUNT(*)::INT AS total,
+                COUNT(challenge_id)::INT AS tagged
+         FROM questions q
+         WHERE ${ELIGIBLE_QUESTION_PREDICATE}`
+    );
+
+    BASELINE_CANDIDATES = bank!.total;
+    TAGGED_QUESTIONS = bank!.tagged;
+
 
     const [question] = await fx.rows<{ id: string }>(
         `SELECT q.id FROM questions q

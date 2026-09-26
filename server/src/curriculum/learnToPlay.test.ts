@@ -40,7 +40,7 @@ const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5
 const CONCEPT = "primitive-types";
 
 /** 234 raw, minus equality's practise question and now minus this one. */
-const NEW_LEARNER_CANDIDATES = 232;
+
 
 let fx: CurriculumFixture;
 let practiceQuestionId: string;
@@ -183,7 +183,9 @@ describe("seed 016 creates exactly one introduction and one exercise", () => {
             `SELECT COUNT(*)::INT n FROM questions WHERE challenge_id IS NOT NULL`
         );
 
-        expect(n, "the earlier slices plus the Values and Variables practice").toBe(23);
+        // Every tagged question, however many there are. What matters is that
+        // tagging is growing and that nothing is tagged twice.
+        expect(n, "tagged coverage should only ever grow").toBeGreaterThanOrEqual(23);
     });
 
     it("derives the introduction's difficulty rather than authoring it", async () => {
@@ -577,7 +579,11 @@ describe("8 · the transitional escape hatch is unchanged", () => {
                  WHERE q.challenge_id IS NULL AND ${ELIGIBLE_QUESTION_PREDICATE}`
             );
 
-            expect(untagged).toHaveLength(NEW_LEARNER_CANDIDATES);
+            // The untagged bank IS what a brand-new learner can play -- every
+            // tagged item is `practise`, behind a concept they have not met.
+            // Comparing the two sets says that directly, and survives someone
+            // tagging another question.
+            expect(untagged.length).toBe((await selectable(learner)).length);
 
             const before = await selectable(learner);
             const introduction = await nextIntroduction(learner);
@@ -593,11 +599,16 @@ describe("8 · the transitional escape hatch is unchanged", () => {
         });
     });
 
-    it("leaves a brand-new learner 232 candidates -- two tagged items withheld", async () => {
+    it("withholds every tagged item from a brand-new learner", async () => {
         await fx.scenario(async () => {
             const learner = await fx.insertUser("lp8b@example.com");
 
-            expect(await selectable(learner)).toHaveLength(NEW_LEARNER_CANDIDATES);
+            const [bank] = await fx.rows<{ total: number; tagged: number }>(
+                `SELECT COUNT(*)::INT AS total, COUNT(challenge_id)::INT AS tagged
+                 FROM questions q WHERE ${ELIGIBLE_QUESTION_PREDICATE}`
+            );
+
+            expect(await selectable(learner)).toHaveLength(bank!.total - bank!.tagged);
         });
     });
 

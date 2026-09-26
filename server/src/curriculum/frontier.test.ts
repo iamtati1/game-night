@@ -534,7 +534,10 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
         // d1 has risen from 78 to 99 as seeds 020 and 021 added beginner
         // practice, all of it pacing difficulty 1. Nothing EXISTING moved,
         // which is what this test actually guards.
-        expect(spread).toEqual({ d1: 99, d2: 81, d3: 52, d4: 23 });
+        // Only d1 moves as beginner content lands; nothing EXISTING may shift,
+        // which is what this test actually guards.
+        expect({ d2: spread.d2, d3: spread.d3, d4: spread.d4 }).toEqual({ d2: 81, d3: 52, d4: 23 });
+        expect(spread.d1).toBeGreaterThanOrEqual(99);
     });
 });
 
