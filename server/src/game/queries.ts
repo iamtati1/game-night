@@ -60,6 +60,79 @@ export async function countActiveQuestions(): Promise<number> {
     return Number(result.rows[0]!.count);
 }
 
+/**
+ * Which concept and rung a question is practice for, when it is tagged to one.
+ *
+ * Reads the existing challenge link -- no new table, no new state. Null for the
+ * 234 active questions that carry no challenge_id, which is the honest answer:
+ * an untagged question is not practice for anything the curriculum tracks.
+ */
+export async function conceptForQuestion(
+    questionId: string
+): Promise<{ conceptSlug: string; conceptName: string; demandSlug: string } | null> {
+    const result = await pool.query<{
+        concept_slug: string;
+        concept_name: string;
+        demand_slug: string;
+    }>(
+        `SELECT c.slug AS concept_slug, c.name AS concept_name, d.slug AS demand_slug
+         FROM questions q
+         JOIN challenges ch ON ch.id = q.challenge_id
+         JOIN concepts c    ON c.id  = ch.concept_id
+         JOIN demands d     ON d.id  = ch.demand_id
+         WHERE q.id = $1 AND ch.role = 'practise' AND ch.is_active`,
+        [questionId]
+    );
+
+    const row = result.rows[0];
+
+    return row
+        ? {
+              conceptSlug: row.concept_slug,
+              conceptName: row.concept_name,
+              demandSlug: row.demand_slug
+          }
+        : null;
+}
+
+/**
+ * The rungs this run produced evidence for.
+ *
+ * DERIVED FROM THE ROUND THAT WAS PLAYED, not from a counter kept alongside it:
+ * the correct answers in this session, on questions tagged to a practise
+ * challenge, are exactly the rungs it can claim. The same join
+ * CLEARED_RUNGS_CTE's first arm makes, narrowed to one session so the results
+ * screen can say what THIS round did rather than what the learner has ever done.
+ */
+export async function rungsEarnedInSession(
+    sessionId: string
+): Promise<{ conceptSlug: string; conceptName: string; demandSlug: string }[]> {
+    const result = await pool.query<{
+        concept_slug: string;
+        concept_name: string;
+        demand_slug: string;
+    }>(
+        `SELECT DISTINCT c.slug AS concept_slug, c.name AS concept_name, d.slug AS demand_slug
+         FROM session_questions sq
+         JOIN questions q   ON q.id  = sq.question_id
+         JOIN challenges ch ON ch.id = q.challenge_id
+         JOIN concepts c    ON c.id  = ch.concept_id
+         JOIN demands d     ON d.id  = ch.demand_id
+         WHERE sq.game_session_id = $1
+           AND sq.is_correct
+           AND ch.role = 'practise'
+           AND ch.is_active
+         ORDER BY c.slug, d.slug`,
+        [sessionId]
+    );
+
+    return result.rows.map((r) => ({
+        conceptSlug: r.concept_slug,
+        conceptName: r.concept_name,
+        demandSlug: r.demand_slug
+    }));
+}
+
 export async function findSessionForUser(
     sessionId: string,
     userId: string
@@ -250,7 +323,15 @@ export function byCurriculumPreference(rows: readonly CandidateRow[]): Candidate
 export async function createSessionWithQuestions(
     userId: string,
     /** Guarantees this topic an introduction slot and a reinforcement slot. */
-    focusTopic: string | null = null
+    focusTopic: string | null = null,
+    /**
+     * The learner's current concept_id, resolved server-side by the caller.
+     *
+     * Takes precedence over focusTopic for the two reserved beats. Passed in
+     * rather than resolved here so this function keeps doing one thing, and so
+     * the curriculum stays the curriculum module's business.
+     */
+    focusConcept: string | null = null
 ): Promise<GameSessionRow> {
     const client: PoolClient = await pool.connect();
 
@@ -354,7 +435,8 @@ export async function createSessionWithQuestions(
             byCurriculumPreference(candidates.rows),
             QUESTIONS_PER_SESSION,
             Math.random,
-            focusTopic
+            focusTopic,
+            focusConcept
         );
 
         for (const [index, question] of dealt.entries()) {

@@ -83,6 +83,22 @@ export function WorldPage() {
     }
 
     const warmth = topicWarmth(topic.concepts.map((c) => c.state));
+
+    /*
+     * A WORLD NOBODY CAN ENTER HAS TO SAY SO.
+     *
+     * Playtesting found this as a dead end: a new learner opening
+     * /world/variables got eight locked objects, no link, and nothing saying
+     * why or where to go instead. The curriculum already knows where they
+     * actually are, so the world says it rather than leaving them to guess.
+     */
+    const openHere = topic.concepts.some((c) => c.state === "current");
+    /*
+     * `path.current` is null while a topic checkpoint is due -- the learner's
+     * next step is the checkpoint, not a concept. Playtesting hit exactly that
+     * state, so the fallback names the checkpoint rather than rendering nothing.
+     */
+    const pendingCheckpoint = path.topics.find((t) => t.challenge?.state === "current") ?? null;
     const everyConceptDone = topic.concepts.every((c) => c.state === "demonstrated");
     const challengeReady = topic.challenge?.state === "current" && everyConceptDone;
 
@@ -95,6 +111,24 @@ export function WorldPage() {
                     already carries. No progress count: "3 of 7" is a progress
                     bar wearing a costume, and the objects say it better. */}
                 {topic.principle && <p className="world-principle">{topic.principle}</p>}
+
+                {!openHere && (
+                    <p className="world-closed">
+                        This world is not open yet — you are still working on{" "}
+                        {path.current ? (
+                            <Link to={`/concept/${path.current.slug}`}>
+                                {path.current.name}
+                            </Link>
+                        ) : pendingCheckpoint ? (
+                            <Link to={`/challenge/${pendingCheckpoint.slug}`}>
+                                the {pendingCheckpoint.name} checkpoint
+                            </Link>
+                        ) : (
+                            <Link to="/journey">your journey</Link>
+                        )}
+                        .
+                    </p>
+                )}
             </header>
 
             <div className="world-field">
@@ -125,10 +159,16 @@ export function WorldPage() {
                          * authored. No scoring, no recommendation engine.
                          */
                         const practice = practiceFor(concept.slug);
-                        const goesTo =
-                            concept.state === "demonstrated" && practice
-                                ? `/practise/${concept.slug}`
-                                : `/learn/${concept.slug}`;
+
+                        /*
+                         * ONE DOOR. Every concept opens its encounter, whatever
+                         * state it is in -- the encounter is what knows which
+                         * rung is next, what is already cleared, and whether
+                         * anything is left. Routing a demonstrated concept
+                         * somewhere else made the learner responsible for a
+                         * distinction that is the curriculum's to make.
+                         */
+                        const goesTo = `/concept/${concept.slug}`;
 
                         // A finished concept with practice still to do is worth
                         // returning to; one with nothing left is not.

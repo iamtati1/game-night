@@ -18,6 +18,18 @@ export interface Dealable {
     difficulty: number | null;
     /** Its curriculum unit -- 'loops', 'functions', and so on. */
     topic: string | null;
+    /**
+     * challenges.concept_id, when this question is tagged to a challenge.
+     *
+     * Named for the column because the rest of this interface already is, and
+     * because it must never be confused with a slug: it is the identity the
+     * curriculum joins on. Null for every untagged question, which is 234 of
+     * the 495 active ones today.
+     *
+     * Optional so that a caller with no curriculum data -- every existing test
+     * of the pacing curve -- still satisfies the shape.
+     */
+    concept_id?: string | null;
 }
 
 /**
@@ -151,13 +163,79 @@ export function difficultyCurve(
  *
  * Zero-indexed against the dealt order, so beat 1 and beat 6 of ten.
  */
-const FOCUS_SLOTS = [0, 5] as const;
+/**
+ * The most beats a single concept may claim in one round.
+ *
+ * Four of ten. The vision asks for a "Variables Code Blitz" rather than a
+ * generic one, and two beats out of ten did not deliver that -- a learner
+ * spent eight beats wondering why they were being asked this. But a round
+ * where every beat is the same concept is a worksheet with a clock on it, and
+ * the difficulty curve stops meaning anything when there is nothing to vary.
+ *
+ * Four is the point where the concept is unmistakably the subject of the round
+ * and the round is still a round.
+ */
+export const MAX_FOCUS_BEATS = 4;
+
+/**
+ * What a TOPIC focus reserves, unchanged since it was introduced.
+ *
+ * Two, deliberately far apart: the first is where the unit is introduced, the
+ * second is where it comes back. A unit met once and never revisited is the
+ * thing the learning loop exists to stop.
+ */
+export const TOPIC_FOCUS_BEATS = 2;
+
+/**
+ * Which beats are reserved, given how many there are to reserve.
+ *
+ * Spread rather than bunched, because the reason for more than one was never
+ * volume: the first beat is where the concept is introduced and the later ones
+ * are where it comes back. A concept met once and never revisited is the thing
+ * the learning loop exists to stop, and four in a row is the same failure
+ * wearing a different shape.
+ *
+ * THE LAST BEAT IS NEVER RESERVED. The curve climbs to its top tier at the
+ * finish, and concept questions are spent easiest-first -- so claiming the
+ * final slot would put the gentlest question of the run in the slot built to
+ * be its hardest.
+ *
+ * `round(i * (questionCount - 1) / count)` keeps [0, 5] for two beats of ten,
+ * which is what this did before and what its tests pin.
+ */
+export function focusSlots(count: number, questionCount: number): number[] {
+    if (count <= 0 || questionCount <= 0) return [];
+    if (count === 1) return [0];
+
+    const slots: number[] = [];
+
+    for (let i = 0; i < count; i += 1) {
+        const slot = Math.round((i * (questionCount - 1)) / count);
+
+        if (slot < questionCount - 1 && !slots.includes(slot)) slots.push(slot);
+    }
+
+    return slots;
+}
 
 export function dealSession<T extends Dealable>(
     candidates: readonly T[],
     questionCount: number,
     random: () => number = Math.random,
-    focusTopic: string | null = null
+    focusTopic: string | null = null,
+    /**
+     * The concept the curriculum says this learner is on, as a concept_id.
+     *
+     * RESOLVED ON THE SERVER, ALWAYS. The caller gets it from findCurrentConcept,
+     * which reads findJourneyPath -- the same authority the map and the Home
+     * page use. No client may supply it, because what a learner is learning is
+     * not a client's opinion.
+     *
+     * Preferred over `focusTopic` for the reserved slots, because a concept is
+     * what rungs and evidence are keyed on: clearing a rung needs a question
+     * tagged to THIS concept, not merely to its unit.
+     */
+    focusConcept: string | null = null
 ): T[] {
     const remaining = [...candidates];
     const curve = difficultyCurve(questionCount, random);
@@ -168,18 +246,70 @@ export function dealSession<T extends Dealable>(
     // first contact; the reinforcement slot then takes whatever is next.
     const reserved = new Map<number, T>();
 
-    if (focusTopic) {
-        const onTopic = remaining
-            .filter((q) => q.topic === focusTopic)
-            .sort((a, b) => (a.difficulty ?? UNTIERED_AS) - (b.difficulty ?? UNTIERED_AS));
+    //
+    // TWO PREFERENCES, IN ORDER, AND AN HONEST FALLBACK.
+    //
+    // The concept pool first: a question tagged to the learner's current concept
+    // is the only kind whose correct answer can clear that concept's rung, so it
+    // is what the reserved beats are worth spending on. The topic pool second,
+    // which is the older behaviour and still useful -- it keeps the run pointed
+    // at the right unit when the concept itself has no tagged question.
+    //
+    // When NEITHER pool has anything, nothing is reserved and the deal is
+    // exactly what it has always been. 52 of 281 declared rungs have no question
+    // content, so this is a real path, not a theoretical one. Reserving a beat
+    // for an unrelated question in order to look targeted would be worse than
+    // not targeting: the learner would be told this run was about their concept
+    // and it would not be.
+    const byEasiest = (a: T, b: T) =>
+        (a.difficulty ?? UNTIERED_AS) - (b.difficulty ?? UNTIERED_AS);
 
-        for (const [i, slot] of FOCUS_SLOTS.entries()) {
-            const pick = onTopic[i];
+    if (focusConcept || focusTopic) {
+        const onConcept = focusConcept
+            ? remaining.filter((q) => q.concept_id === focusConcept).sort(byEasiest)
+            : [];
+        const onTopic = focusTopic
+            ? remaining.filter((q) => q.topic === focusTopic).sort(byEasiest)
+            : [];
 
-            if (slot < questionCount && pick) {
-                reserved.set(slot, pick);
-                remaining.splice(remaining.indexOf(pick), 1);
-            }
+        /*
+         * HOW MANY BEATS THIS CONCEPT HAS EARNED.
+         *
+         * Derived from the content that actually exists rather than fixed at
+         * two: a concept with one tagged question gets one beat, a well-covered
+         * one gets up to MAX_FOCUS_BEATS. Reserving a beat the concept cannot
+         * fill would fall through to the topic pool and quietly make the round
+         * look more targeted than it is.
+         *
+         * TOPIC FOCUS KEEPS THE TWO BEATS IT ALWAYS HAD. Widening was about
+         * concept targeting, and must not quietly take something away from the
+         * older path: `?focus=<topic>` has always reserved an introduction and
+         * a reinforcement, and still does. Only a concept earns more.
+         */
+        const earned =
+            onConcept.length > 0
+                ? Math.min(onConcept.length, MAX_FOCUS_BEATS)
+                : Math.min(onTopic.length, TOPIC_FOCUS_BEATS);
+
+        const slots = focusSlots(earned, questionCount);
+
+        /* Each slot takes the next unused concept question, else the next unused
+           topic question. Tracked by identity rather than by index because the
+           two pools overlap -- a concept question is also a topic question, and
+           reserving it twice would deal the same question in both beats. */
+        const taken = new Set<T>();
+
+        for (const slot of slots) {
+            if (slot >= questionCount) continue;
+
+            const pick =
+                onConcept.find((q) => !taken.has(q)) ?? onTopic.find((q) => !taken.has(q));
+
+            if (!pick) continue;
+
+            taken.add(pick);
+            reserved.set(slot, pick);
+            remaining.splice(remaining.indexOf(pick), 1);
         }
     }
 

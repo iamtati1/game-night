@@ -160,9 +160,58 @@ export async function findBugHuntSessionForUser(
  * where hunt five is a shade easier than intended. The ramp is a target, not a
  * guarantee the bank can always meet.
  */
-export function dealRun<T extends { id: string; difficulty: number }>(candidates: T[]): T[] {
+/** Hunts reserved for the learner's current concept: the first and the sixth. */
+const FOCUS_HUNTS = [0, 5] as const;
+
+export function dealRun<T extends { id: string; difficulty: number; concept_id?: string | null }>(
+    candidates: T[],
+    /**
+     * The concept the curriculum says this learner is on, as a concept_id.
+     *
+     * RESOLVED ON THE SERVER, exactly as Code Blitz does it -- findCurrentConcept
+     * reads findJourneyPath, and no client may name it. A forged concept here
+     * would aim a run at whichever rung the client wanted to clear, and a
+     * resolved hunt clears a rung.
+     */
+    focusConcept: string | null = null
+): T[] {
     const remaining = [...candidates];
     const dealt: T[] = [];
+    /** Hunt index -> the incident held for it. */
+    const reserved = new Map<number, T>();
+
+    /*
+     * TWO HUNTS, AND AN HONEST FALLBACK -- the same bargain dealSession makes.
+     *
+     * Only an incident tagged to the current concept can have its resolution
+     * clear that concept's rung, so those two hunts are what the reservation is
+     * worth spending on. The remaining eight keep the existing difficulty ramp
+     * and the ordinary eligible pool, because a run that was entirely one
+     * concept would be a quiz wearing a game's clothes.
+     *
+     * There is no topic fallback here, and that is deliberate rather than an
+     * omission: an incident carries no topic of its own the way a question does
+     * -- `bug_hunt_incidents` has `bug_category`, which is a taxonomy of bug
+     * SHAPES ("off-by-one", "mutation") and not of curriculum units. Matching on
+     * it would look like targeting and mean something else. Concept, or nothing.
+     *
+     * Most incidents are still untagged, so "nothing" is the common case and
+     * the run is simply what it has always been.
+     */
+    if (focusConcept) {
+        const onConcept = remaining
+            .filter((c) => c.concept_id === focusConcept)
+            .sort((a, b) => a.difficulty - b.difficulty);
+
+        for (const [i, hunt] of FOCUS_HUNTS.entries()) {
+            const pick = onConcept[i];
+
+            if (hunt < DIFFICULTY_RAMP.length && pick) {
+                reserved.set(hunt, pick);
+                remaining.splice(remaining.indexOf(pick), 1);
+            }
+        }
+    }
 
     /** Nearest-first search outwards from the wanted tier: 3, then 2, 4, 1, 5. */
     const byDistance = (want: number) =>
@@ -170,7 +219,14 @@ export function dealRun<T extends { id: string; difficulty: number }>(candidates
             (a, b) => Math.abs(a.difficulty - want) - Math.abs(b.difficulty - want)
         );
 
-    for (const want of DIFFICULTY_RAMP) {
+    for (const [hunt, want] of DIFFICULTY_RAMP.entries()) {
+        const held = reserved.get(hunt);
+
+        if (held) {
+            dealt.push(held);
+            continue;
+        }
+
         const exact = remaining.find((c) => c.difficulty === want) ?? byDistance(want)[0];
 
         if (!exact) break;
@@ -182,7 +238,11 @@ export function dealRun<T extends { id: string; difficulty: number }>(candidates
     return dealt;
 }
 
-export async function createSessionWithRounds(userId: string): Promise<BugHuntSessionRow> {
+export async function createSessionWithRounds(
+    userId: string,
+    /** The learner's current concept_id, resolved server-side by the caller. */
+    focusConcept: string | null = null
+): Promise<BugHuntSessionRow> {
     const client: PoolClient = await pool.connect();
 
     try {
@@ -223,6 +283,8 @@ export async function createSessionWithRounds(userId: string): Promise<BugHuntSe
             id: string;
             difficulty: number;
             code: string;
+            /** challenges.concept_id, or null for an untagged incident. */
+            concept_id: string | null;
         }>(
             `WITH recent AS (
                  SELECT bhr.incident_id
@@ -238,8 +300,10 @@ export async function createSessionWithRounds(userId: string): Promise<BugHuntSe
              ),
              ${curriculumCtes("$1")},
              ${journeyCte("$1", QUESTIONS_PER_SESSION)}
-             SELECT i.id, i.difficulty, i.code
+             SELECT i.id, i.difficulty, i.code,
+                    ch.concept_id AS concept_id
              FROM bug_hunt_incidents i
+             LEFT JOIN challenges ch ON ch.id = i.challenge_id
              WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
                AND ${curriculumSelects("i")}
                AND ${incidentWithinJourney("i")}
@@ -247,7 +311,7 @@ export async function createSessionWithRounds(userId: string): Promise<BugHuntSe
             [userId, BUG_HUNT]
         );
 
-        const dealt = dealRun(candidates.rows);
+        const dealt = dealRun(candidates.rows, focusConcept);
 
         for (const [index, incident] of dealt.entries()) {
             await client.query(

@@ -29,7 +29,16 @@ import { QUESTIONS_PER_SESSION } from "../game/scoring.js";
  */
 
 /** Seeded by 016: primitive-types, introduce at recognise + practise at predict. */
-const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5);';
+/*
+ * THE SEEDED PRACTICE FOR primitive-types.
+ *
+ * Was `console.log(typeof "5", typeof 5)`. That is a typeof question and typeof
+ * comes after primitive-types, so the concept's only exercise required the
+ * concept that follows it; seed 029 moved it and seed 030 gave primitive-types
+ * practice of its own. The concept under test is unchanged -- only which
+ * question is its one tagged exercise.
+ */
+const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(7 / 2);';
 
 let fx: CurriculumFixture;
 let practiceId: string;
@@ -421,14 +430,21 @@ describe("untagged content is transitional fallback, not curriculum content", ()
             await arriveAt(learner, "primitive-types");
             const pool = await candidates(learner);
 
-            // Was "25 untagged, 0 tagged, values+variables". The journey gate
-            // now holds a learner at Values alone -- because Values finally has
-            // enough DEALABLE content to fill a session -- and most of what
-            // they are offered is the practice they unlocked rather than legacy
-            // questions that happen to be filed under the right topic.
-            expect(pool.filter((r) => r.concept_id !== null).length).toBeGreaterThan(
-                pool.filter((r) => r.concept_id === null).length
-            );
+            // THE TOPIC GATE IS THE CLAIM, not the ratio. A learner here is
+            // offered Values and nothing else -- that is the fix this test was
+            // written for, and it still holds.
+            //
+            // The ratio no longer does, and correctly so. `primitive-types` is
+            // now Values #2 and `expressions-produce-values` sits behind
+            // `arithmetic-operators`, so the six expression questions are
+            // properly withheld from a learner who has not met arithmetic yet.
+            // Asserting that tagged content outnumbers untagged was really
+            // asserting how much content happened to be unlocked at one point in
+            // the path, which is a content fact, not a gating one.
+            expect(
+                pool.some((r) => r.concept_id !== null),
+                "curriculum content reaches the run"
+            ).toBe(true);
             expect(new Set(pool.map((r) => r.topic))).toEqual(new Set(["values"]));
         });
     });
@@ -478,7 +494,15 @@ describe("untagged content is transitional fallback, not curriculum content", ()
 
             const ordered = byCurriculumPreference(await candidates(learner));
 
-            expect(ordered[0]!.id, "the curriculum's pick leads").toBe(practiceId);
+            // CURRICULUM CONTENT LEADS, which is the claim. Not a specific id:
+            // primitive-types now has two tagged exercises (seed 030) and the
+            // shallower rung sorts first, so pinning one of them was pinning
+            // the content, not the ordering.
+            expect(ordered[0]!.concept_id, "the curriculum's pick leads").not.toBeNull();
+            expect(
+                ordered.map((r) => r.id),
+                "and the practice is in the pool"
+            ).toContain(practiceId);
             // Ordering never removes anything. Compared against the unordered
             // pool rather than a fixed number, which stops being true the
             // moment the bank grows.

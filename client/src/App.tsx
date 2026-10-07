@@ -7,8 +7,10 @@ import { useAuth } from "./auth/AuthContext.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { HomePage } from "./pages/HomePage.js";
 import { JourneyPage } from "./pages/JourneyPage.js";
+import { PlaygroundPage } from "./pages/PlaygroundPage.js";
 import { WorldPage } from "./pages/WorldPage.js";
 import { PracticePage } from "./pages/PracticePage.js";
+import { EncounterPage } from "./pages/EncounterPage.js";
 import { LessonPage } from "./pages/LessonPage.js";
 import { BugHuntPage } from "./pages/BugHuntPage.js";
 import { BugHuntResultsPage } from "./pages/BugHuntResultsPage.js";
@@ -76,32 +78,57 @@ function Header() {
                         <>
                             {/* First in the nav on purpose: the journey is the
                                 product, and the games are how it is practiced. */}
-                            {/* Three destinations, in the order a learner needs
-                                them: what now, where am I going, where do I
-                                practice. History is real but not a beginner's
-                                concern, so it sits last. */}
-                            <Link to="/" aria-label="Home">
-                                <Icon name="home" />
-                                <span className="nav-label">Home</span>
-                            </Link>
-                            <Link to="/journey" aria-label="Map">
+                            {/*
+                                THREE AREAS, NOT FIVE DESTINATIONS.
+                                
+                                It was Home, Map, Play, Experiment and Log, all
+                                at equal weight -- and three of those answered
+                                the same question. Home is "where am I and what
+                                is next", the Map is the same path drawn out,
+                                and Home linked to both of the others, so the
+                                navigation competed with the page it landed on.
+                                A learner reading five equal words has to work
+                                out what five things are before choosing one.
+
+                                What is left is the three things a learner
+                                actually does:
+
+                                  Learn        the curriculum and where you are in it
+                                  Play         the world and the games
+                                  Experiment   free JavaScript, nothing marked
+
+                                Learn points at Home rather than at the Map,
+                                because Home answers "what now" with one lit
+                                control and the Map is the whole route -- the
+                                overview is a click deeper, where it belongs
+                                for a beginner.
+
+                                The Log did not disappear; it moved beside the
+                                pilot below, with the account. It is a real
+                                thing to want and it is not a fourth area.
+                            */}
+                            <Link to="/" aria-label="Learn">
                                 <Icon name="map" />
-                                <span className="nav-label">Map</span>
+                                <span className="nav-label">Learn</span>
                             </Link>
                             <Link to="/play" aria-label="Play">
                                 <Icon name="play" />
                                 <span className="nav-label">Play</span>
                             </Link>
-                            <Link to="/history" aria-label="Log">
-                                <Icon name="log" />
-                                <span className="nav-label">Log</span>
+                            <Link to="/experiment" aria-label="Experiment">
+                                <Icon name="spark" />
+                                <span className="nav-label">Experiment</span>
                             </Link>
 
-                            {/* The pilot, set apart from the destinations by a
+                            {/* The pilot, set apart from the three areas by a
                                 hairline: an identity is not somewhere you can
-                                navigate to, and reading as a fifth link is what
-                                made the old nav feel like five equal choices. */}
+                                navigate to. The Log sits here too -- secondary
+                                by placement rather than by being hidden. */}
                             <span className="nav-pilot">
+                                <Link className="nav-aside" to="/history" aria-label="Log">
+                                    <Icon name="log" size={16} />
+                                    <span className="nav-label">Log</span>
+                                </Link>
                                 <span className="nav-avatar" aria-hidden="true">
                                     {user.username.slice(0, 1).toUpperCase()}
                                 </span>
@@ -179,10 +206,34 @@ export default function App() {
                         }
                     />
                     {/*
+                        EXPERIMENT. Free exploration, and the only place in
+                        Jolt where running code means nothing: no evidence, no
+                        progression, no grade. Behind auth only because the
+                        whole shell is -- it reads and writes no learner state.
+                    */}
+                    <Route
+                        path="/experiment"
+                        element={
+                            <ProtectedRoute>
+                                <PlaygroundPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    {/*
                         One world, close up. The map answers "where am I in
                         JavaScript"; this answers "I am here". Same curriculum,
                         same endpoint, neither replacing the other.
                     */}
+                    {/* One concept, end to end: learn it, try it, write it,
+                        finish it. The curriculum decides what happens on it. */}
+                    <Route
+                        path="/concept/:concept"
+                        element={
+                            <ProtectedRoute>
+                                <EncounterPage />
+                            </ProtectedRoute>
+                        }
+                    />
                     {/* Write the thing you were just shown. The stage between
                         meeting a concept and being asked to predict it. */}
                     <Route

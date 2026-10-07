@@ -200,14 +200,23 @@ describe("playing moves the learner along the journey", () => {
     });
 
     it("steps over topics that have no content at all", async () => {
-        // strings (5), errors (12), dom (13), this-and-classes (15) and
-        // algorithms (16) have no questions. A ceiling that parked on one would
-        // be a wall nobody could climb, because you cannot play what does not
-        // exist.
+        // The rule: a ceiling must never park on a topic with nothing in it,
+        // because you cannot play what does not exist.
+        //
+        // THE EXAMPLE HAS MOVED FOUR TIMES and has now run out. It was
+        // `strings`, then `errors`, then `dom`, then this-and-classes (15) --
+        // each retired as the curriculum filled in. With the last topic
+        // authored there is NO empty topic left anywhere, so the skip cannot
+        // be demonstrated by example.
+        //
+        // The rule is still real and still worth testing, so it is asserted by
+        // construction instead: wherever the ceiling lands, that topic has
+        // something to play. A future topic declared with no content would
+        // fail this immediately, which is the protection the old example gave.
         await fx.scenario(async () => {
             const learner = await fx.insertUser("t9@example.com");
 
-            // Reach control-flow, whose successor `strings` is empty.
+            // Reach async (14), whose successor this-and-classes (15) is empty.
             await fx.db.query(
                 `INSERT INTO game_sessions (user_id, game_id, status, completed_at)
                  VALUES ($1, (SELECT id FROM games WHERE slug = 'code-blitz'),
@@ -215,8 +224,8 @@ describe("playing moves the learner along the journey", () => {
                 [learner]
             );
 
-            const [conditional] = await fx.rows<{ id: string }>(
-                `SELECT id FROM questions WHERE topic = 'conditionals' AND is_active LIMIT 1`
+            const [reached] = await fx.rows<{ id: string }>(
+                `SELECT id FROM questions WHERE topic = 'async' AND is_active LIMIT 1`
             );
 
             await fx.db.query(
@@ -226,15 +235,40 @@ describe("playing moves the learner along the journey", () => {
                  VALUES ((SELECT MAX(id) FROM game_sessions WHERE user_id = $1),
                          $2, 1, 'p', 'timed_out',
                          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'x')`,
-                [learner, conditional!.id]
+                [learner, reached!.id]
             );
 
             const after = await journey(learner);
 
-            expect(after.reached, "legacy `conditionals` maps to control-flow").toBe(
-                order["control-flow"]
+            expect(after.reached).toBe(order.async);
+
+            // The ceiling advanced, and the topic it advanced TO is one the
+            // learner can actually play.
+            expect(after.ceiling).toBeGreaterThan(after.reached - 1);
+
+            const [playable] = await fx.rows<{ n: number }>(
+                `SELECT COUNT(*)::INT AS n
+                 FROM questions q
+                 JOIN challenges ch ON ch.id = q.challenge_id
+                 JOIN concepts c    ON c.id  = ch.concept_id
+                 JOIN topics t      ON t.id  = c.topic_id
+                 WHERE t.display_order = $1 AND q.is_active AND ch.is_active`,
+                [after.ceiling]
             );
-            expect(after.ceiling, "strings is empty, so loops is next").toBe(order.loops);
+
+            expect(playable!.n, "the ceiling never parks on an empty topic")
+                .toBeGreaterThan(0);
+
+            // And there is no empty topic for it to have skipped.
+            const bare = await fx.rows<{ slug: string }>(
+                `SELECT t.slug FROM topics t
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM concepts c
+                     JOIN challenges ch ON ch.concept_id = c.id AND ch.is_active
+                     WHERE c.topic_id = t.id)`
+            );
+
+            expect(bare.map((r) => r.slug)).toEqual([]);
         });
     });
 });

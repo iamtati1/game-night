@@ -2,23 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { Planet } from "../world/Planet.js";
 import { Ship } from "../world/Ship.js";
 import { attempt, type Mission } from "../games/missions.js";
-
-/**
- * Renders `backticked` fragments as code.
- *
- * Mission prose names the actual identifier -- "use the name `fuel`" -- and
- * that name should look like code, because it is. Specificity is the teaching;
- * making it visually distinct is the cheapest possible way to support it.
- */
-function withCode(text: string) {
-    return text.split(/(`[^`]+`)/g).map((part, i) =>
-        part.startsWith("`") && part.endsWith("`") && part.length > 2 ? (
-            <code key={i}>{part.slice(1, -1)}</code>
-        ) : (
-            part
-        )
-    );
-}
+import { withCode } from "./CodeText.js";
+import { CodeEditor, ConsoleOutput } from "./CodeStage.js";
 
 /**
  * The demonstration that closes a topic.
@@ -124,33 +109,16 @@ export function MissionScene({
             <p className="scene-ask">{withCode(movement.brief)}</p>
 
             <div className="mission-stage">
-                <label className="mission-editor-label" htmlFor="mission-code">
-                    Your code
-                </label>
-                <textarea
+                <CodeEditor
                     id="mission-code"
-                    className={`mission-editor${running ? " is-running" : ""}`}
+                    label="Your code"
                     value={source}
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    rows={Math.max(4, source.split("\n").length + 1)}
+                    onChange={setSource}
+                    busy={running}
                     disabled={running || solved}
-                    onChange={(event) => setSource(event.target.value)}
                 />
 
-                <div className="scene-console">
-                    <span className="scene-console-tag">console</span>
-                    {printed.length > 0 ? (
-                        <pre className="scene-output">
-                            <code>{printed.join("\n")}</code>
-                        </pre>
-                    ) : (
-                        <p className="scene-console-empty">
-                            {running ? "running…" : "nothing yet"}
-                        </p>
-                    )}
-                </div>
+                <ConsoleOutput lines={printed} busy={running} />
             </div>
 
             {/* The note, when there is one. Never labelled "wrong". */}

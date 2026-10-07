@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  * served_at when it hands over a question, and that stamp is the deadline -- so
  * a countdown placed on the far side of the request that starts the round spends
  * the player's own time showing them a countdown. Code Blitz loses 1.65s of a
- * 35s window that way, and nothing about the screen looks wrong.
+ * question window that way, and nothing about the screen looks wrong.
  *
  * These are source assertions rather than rendered tests because what matters is
  * the ORDER of two calls, which is a property of the code rather than of any one

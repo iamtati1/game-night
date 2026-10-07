@@ -94,7 +94,12 @@ describe("the booleans slice", () => {
              WHERE c.slug = 'booleans' AND ch.is_active AND ch.role = 'practise'`
         );
 
-        expect(rungs.map((r) => r.slug)).toEqual(["predict"]);
+        // Both declared rungs are now realised. This asserted ["predict"] while
+        // recognition lived only in the lesson; seed 032 gave booleans a
+        // recognise question of its own, which is what made Values finishable.
+        // Nothing beyond the two declared rungs exists, which is the claim that
+        // has not changed.
+        expect(rungs.map((r) => r.slug).sort()).toEqual(["predict", "recognise"]);
     });
 
     it("reaches a learner once they have practised their way to it", async () => {

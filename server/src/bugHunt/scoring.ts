@@ -4,17 +4,39 @@
 
 import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 
-export const BUG_HUNT_INCIDENTS_PER_SESSION = 10;
+/**
+ * How many hunts a run contains.
+ *
+ * WAS TEN, which made Bug Hunt the longest thing in Jolt by a wide margin: the
+ * first three hunts are untimed by design, so a run had no upper bound at all,
+ * and the seven timed ones could reach 90 seconds each on their own. Measured
+ * against the 2-3 minute target the rest of the product is built to, that was
+ * not a round, it was a sitting.
+ *
+ * Six keeps everything the shape of the run depended on -- two untimed openers,
+ * a climb through every tier, a boss at the end, and a reserved slot for the
+ * learner's current concept at both ends of the ramp.
+ *
+ * XP IS UNAFFECTED. `xpForUnits` rounds the TOTAL rather than the per-unit
+ * rate, so a perfect game is exactly PERFECT_GAME_XP whatever this number is.
+ */
+export const BUG_HUNT_INCIDENTS_PER_SESSION = 6;
 
 /**
  * Which difficulty each hunt of a run is drawn from.
  *
- * Three trivial openers before anything real is asked of the player, then a
+ * Two trivial openers before anything real is asked of the player, then a
  * climb. Held as a literal rather than computed because the shape of the ramp is
  * a design decision someone should be able to read and argue with -- a formula
  * would hide exactly where the game stops being gentle.
+ *
+ * SHORTENED FROM TEN WITHOUT LOSING A TIER. The old ramp paired every tier
+ * (1,1,1,2,2,3,3,4,4,5); this one visits each once. That matters more than it
+ * looks: dropping a tier from the ramp would mean incidents at that difficulty
+ * are never dealt at all, quietly retiring content from the bank rather than
+ * shortening the game.
  */
-export const DIFFICULTY_RAMP = [1, 1, 1, 2, 2, 3, 3, 4, 4, 5] as const;
+export const DIFFICULTY_RAMP = [1, 1, 2, 3, 4, 5] as const;
 
 /** The last incident of a run. Framed as a critical failure and scored higher. */
 export const BOSS_DISPLAY_ORDER = BUG_HUNT_INCIDENTS_PER_SESSION;
@@ -102,7 +124,15 @@ const THINKING_MS: Record<number, number | null> = {
 
 /** However hard the bug, nobody should be asked to read and answer in under this. */
 export const BUG_HUNT_MIN_TIME_MS = 18_000;
-export const BUG_HUNT_MAX_TIME_MS = 90_000;
+/*
+ * WAS 90 SECONDS. With the long ramp that ceiling was rarely the binding
+ * constraint; with six hunts it would be, and a single hunt able to run a
+ * minute and a half is what made the old run unpredictable. Forty-five keeps
+ * the generous feel on a long snippet -- the formula below still grants 2.5s a
+ * line on top of thinking time -- while putting the worst case for the four
+ * timed hunts at three minutes.
+ */
+export const BUG_HUNT_MAX_TIME_MS = 45_000;
 
 /** Lines of code in a snippet, which reading time is scaled to. */
 export function countCodeLines(code: string): number {

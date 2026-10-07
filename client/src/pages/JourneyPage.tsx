@@ -146,7 +146,7 @@ export function JourneyPage() {
               label: "Take the checkpoint"
           }
         : path.current
-          ? { name: path.current.name, href: `/learn/${path.current.slug}`, label: "Continue" }
+          ? { name: path.current.name, href: `/concept/${path.current.slug}`, label: "Continue" }
           : null;
 
     return (
@@ -331,12 +331,35 @@ export function JourneyPage() {
                                                 size={14}
                                             />
                                             {concept.state === "current" ? (
-                                                <Link to={`/learn/${concept.slug}`}>
+                                                <Link to={`/concept/${concept.slug}`}>
                                                     {concept.name}
                                                 </Link>
                                             ) : (
                                                 <span>{concept.name}</span>
                                             )}
+
+                                            {/* WHAT THE GAME ALREADY DID.
+                                                A rung cleared in Code Blitz is
+                                                real progress the map used to
+                                                say nothing about, because
+                                                `state` is concept-level and a
+                                                part-done concept still reads as
+                                                `current`. Shown only while
+                                                there is something to show --
+                                                not on a finished concept, where
+                                                the tick says more, and not at
+                                                zero, where it would be noise on
+                                                every locked stop. */}
+                                            {concept.state !== "demonstrated" &&
+                                                concept.rungs.cleared > 0 && (
+                                                    <span
+                                                        className="journey-stop-rungs"
+                                                        title="Stops cleared on this concept"
+                                                    >
+                                                        {concept.rungs.cleared}/
+                                                        {concept.rungs.playable}
+                                                    </span>
+                                                )}
                                         </li>
                                     ))}
 

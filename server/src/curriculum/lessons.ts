@@ -1,5 +1,5 @@
 import { pool } from "../db.js";
-
+import { CLEARED_RUNGS_CTE } from "./encounter.js";
 /**
  * The learner's standing on the teaching path: what they have demonstrated, what
  * they are on, and what is still locked.
@@ -28,6 +28,23 @@ export interface JourneyConcept {
     state: ConceptState;
     /** True when they came back to it after a wrong answer. */
     neededRetry: boolean;
+    /**
+     * How much of this concept the learner has actually done.
+     *
+     * DERIVED FROM THE EVIDENCE THAT ALREADY EXISTS -- CLEARED_RUNGS_CTE, the
+     * same three arms that decide whether a rung is cleared anywhere else. It
+     * is not a stored counter, not a second progression system, and not
+     * something the client can move.
+     *
+     * Why the map needs it: `state` is concept-level, so a learner who clears
+     * one rung of three in Code Blitz saw an unchanged map node. The work had
+     * happened, the server knew, and the world said nothing.
+     *
+     * `playable` counts only rungs something actually fills -- a declared rung
+     * with no content is not work the learner can do, and counting it would
+     * show progress that can never complete.
+     */
+    rungs: { cleared: number; playable: number };
 }
 
 export interface JourneyTopic {
@@ -64,10 +81,25 @@ interface Row {
     demonstrated: boolean;
     needed_retry: boolean;
     challenge_done: boolean;
+    playable_rungs: number;
+    cleared_rungs: number;
 }
 
-/** Topics that have an authored cumulative challenge. */
-const CHALLENGED = new Set(["values", "variables", "operators"]);
+/**
+ * Topics that have an authored cumulative challenge.
+ *
+ * Exported because concept reachability depends on it: a topic's checkpoint sits
+ * between its last concept and the next topic's first, so it takes the learner's
+ * position and blocks everything after it. Any rule deciding whether a concept
+ * is open has to know the same set this does -- see CONCEPT_STATE_SQL in
+ * encounter.ts, which is the single authority both the journey and the encounter
+ * now answer to.
+ *
+ * STILL A HARDCODED SET, and that is a real inconsistency: every other
+ * curricular fact lives in the database. Left as-is here because moving it is a
+ * schema change, and recorded so the next person does not mistake it for one.
+ */
+export const CHALLENGED = new Set(["values", "variables", "operators"]);
 
 /**
  * The whole journey, topic by topic and concept by concept.
@@ -78,7 +110,11 @@ const CHALLENGED = new Set(["values", "variables", "operators"]);
  */
 export async function findJourneyPath(userId: string): Promise<JourneyTopic[]> {
     const result = await pool.query<Row>(
-        `SELECT t.slug         AS topic_slug,
+        /* CLEARED_RUNGS_CTE is the one definition of "this rung is done",
+           shared with the encounter rather than restated here. It takes the
+           user id as $1, which this query already passes. */
+        `WITH ${CLEARED_RUNGS_CTE}
+         SELECT t.slug         AS topic_slug,
                 t.name         AS topic_name,
                 t.principle    AS principle,
                 t.display_order AS topic_order,
@@ -87,7 +123,38 @@ export async function findJourneyPath(userId: string): Promise<JourneyTopic[]> {
                 c.objective    AS objective,
                 (d.user_id IS NOT NULL)            AS demonstrated,
                 COALESCE(d.needed_retry, FALSE)    AS needed_retry,
-                (tc.user_id IS NOT NULL)           AS challenge_done
+                (tc.user_id IS NOT NULL)           AS challenge_done,
+                -- Rungs this concept declares that something can actually play.
+                --
+                -- Counted over concept_demands with an EXISTS rather than by
+                -- joining challenges: a rung may be realised by SEVERAL active
+                -- challenges, and a join counts those rows, not rungs. That
+                -- over-count would have shown "2/5" on a concept with three
+                -- stops.
+                (SELECT COUNT(*)::INT
+                   FROM concept_demands cd
+                  WHERE cd.concept_id = c.id
+                    AND EXISTS (
+                        SELECT 1
+                        FROM challenges pch
+                        WHERE pch.concept_id = cd.concept_id
+                          AND pch.demand_id  = cd.demand_id
+                          AND pch.role = 'practise'
+                          AND pch.is_active
+                          AND (
+                              EXISTS (SELECT 1 FROM questions pq
+                                       WHERE pq.challenge_id = pch.id AND pq.is_active)
+                           OR EXISTS (SELECT 1 FROM bug_hunt_incidents pi
+                                       WHERE pi.challenge_id = pch.id AND pi.is_active)
+                           OR pch.activity IS NOT NULL
+                          )
+                    )
+                ) AS playable_rungs,
+                -- ...and how many of them this learner has cleared.
+                (SELECT COUNT(*)::INT
+                   FROM cleared
+                  WHERE cleared.concept_id = c.id
+                ) AS cleared_rungs
          FROM topics t
          JOIN concepts c ON c.topic_id = t.id
          LEFT JOIN concept_demonstrations d
@@ -123,7 +190,15 @@ export async function findJourneyPath(userId: string): Promise<JourneyTopic[]> {
             name: row.concept_name,
             objective: row.objective,
             state: row.demonstrated ? "demonstrated" : "locked",
-            neededRetry: row.needed_retry
+            neededRetry: row.needed_retry,
+            /* Clamped, because `cleared` counts rungs the learner has cleared
+               and `playable_rungs` counts rungs still realised today. Content
+               retired after a learner cleared it would otherwise read as
+               4 of 3. */
+            rungs: {
+                cleared: Math.min(row.cleared_rungs, row.playable_rungs),
+                playable: row.playable_rungs
+            }
         });
     }
 
@@ -173,6 +248,45 @@ export async function findJourneyPath(userId: string): Promise<JourneyTopic[]> {
     }
 
     return topics;
+}
+
+/**
+ * The one concept this learner is on, as the curriculum sees it.
+ *
+ * NOT A SECOND RESOLUTION. It reads findJourneyPath and applies the same rule
+ * GET /api/curriculum/path applies -- the first concept on the ordered path
+ * whose state is `current`. The map, the Home page, the Play page and now the
+ * Code Blitz dealer therefore cannot disagree about where a learner is, because
+ * there is only one answer and this is it.
+ *
+ * Returns the concept_id as well as the slug because the two callers want
+ * different halves: a screen names the concept, and the dealer joins on it.
+ * Resolving the id here rather than at the call site keeps slug->id lookup from
+ * being re-written wherever it is next needed.
+ *
+ * Null for a learner who has demonstrated everything reachable, and null when
+ * the path's current step is a topic checkpoint rather than a concept. Both are
+ * real states, and in both the honest answer is "no concept to aim at".
+ */
+export async function findCurrentConcept(
+    userId: string
+): Promise<{ slug: string; id: string } | null> {
+    const topics = await findJourneyPath(userId);
+
+    const current = topics
+        .flatMap((t) => t.concepts)
+        .find((c) => c.state === "current");
+
+    if (!current) return null;
+
+    const row = await pool.query<{ id: string }>(
+        `SELECT id FROM concepts WHERE slug = $1`,
+        [current.slug]
+    );
+
+    const id = row.rows[0]?.id;
+
+    return id ? { slug: current.slug, id } : null;
 }
 
 /**

@@ -10,6 +10,7 @@ import {
     resumePausedSession
 } from "../sessions/queries.js";
 import { wantsFreshSession } from "../sessions/schemas.js";
+import { mayPlayChallenge, recordActivityCompletion } from "../curriculum/encounter.js";
 import * as db from "./queries.js";
 import { placementSchema } from "./schemas.js";
 import {
@@ -100,6 +101,39 @@ async function finishSession(sessionId: string): Promise<db.FlushSessionRow> {
  * next genuinely playable one. Timeouts resolve lazily on the next request
  * rather than by a background job, matching Code Blitz.
  */
+/**
+ * What a finished round taught, and whether it counts.
+ *
+ * TWO SEPARATE QUESTIONS, deliberately. The EXPLANATION is always returned --
+ * a learner who just got the order wrong deserves to know why regardless of
+ * where they are in the curriculum, and withholding the reason until they
+ * reach Async would be teaching nobody in order to protect a rung.
+ *
+ * The EVIDENCE is gated. `mayPlayChallenge` is the same check Code Blitz and
+ * Bug Hunt apply before dealing: it refuses a challenge whose concept the
+ * learner cannot reach yet. Without it, a beginner could complete an
+ * `event-loop` snippet by luck and arrive at the concept weeks later to find
+ * its practice already marked done.
+ *
+ * So Flush stays playable by everyone from day one, and starts clearing rungs
+ * the moment the learner actually reaches Async.
+ */
+async function roundTeaching(
+    userId: string,
+    snippetId: string,
+    resolved: boolean
+): Promise<{ explanation: string | null; credited: boolean }> {
+    const { explanation, challengeId } = await db.snippetTeaching(snippetId);
+
+    if (!resolved || !challengeId || !(await mayPlayChallenge(userId, challengeId))) {
+        return { explanation, credited: false };
+    }
+
+    await recordActivityCompletion(userId, challengeId, false);
+
+    return { explanation, credited: true };
+}
+
 async function nextPlayableRound(
     sessionId: string,
     now: Date
@@ -361,7 +395,8 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
     }
 
     const sessionId = String(req.params.id);
-    const session = await db.findFlushSessionForUser(sessionId, req.user!.id);
+    const userId = req.user!.id;
+    const session = await db.findFlushSessionForUser(sessionId, userId);
 
     // 404 rather than 403: do not confirm that someone else's session exists.
     if (!session) {
@@ -404,8 +439,11 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
             roundEnded: true,
             pointsBanked: pointsForPlacements(round.correct_placements),
             scoreSoFar: await db.scoreSoFar(sessionId),
-            // Teaching moment: show the order they were reaching for.
+            // Teaching moment: the order they were reaching for, AND why it
+            // is that order. The sequence alone only helps someone who already
+            // knows the answer.
             correctSequence: await db.correctSequence(round.snippet_id),
+            ...(await roundTeaching(userId, round.snippet_id, false)),
             yourSequence: (await db.listPlacements(round.id)).map((p) => p.output_text),
             complete: !remaining,
             round: remaining ? await serveRound(remaining) : null,
@@ -454,6 +492,9 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
         scoreSoFar: await db.scoreSoFar(sessionId),
         // Revealed only once the round is over -- never while it is still in play.
         correctSequence: roundEnded ? await db.correctSequence(round.snippet_id) : null,
+        ...(roundEnded
+            ? await roundTeaching(userId, round.snippet_id, completesRound)
+            : { explanation: null, credited: false }),
         yourSequence: roundEnded
             ? (await db.listPlacements(round.id)).map((p) => p.output_text)
             : null,

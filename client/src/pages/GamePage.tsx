@@ -21,12 +21,12 @@ import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
 
-const QUESTION_TIME_LIMIT_MS = 35_000;
+const QUESTION_TIME_LIMIT_MS = 18_000;
 /**
  * A lapse still auto-advances, and only a lapse.
  *
  * The timeout path has already fetched the next question by the time this
- * runs -- that fetch is what adjudicates the expired one -- so its 35s clock
+ * runs -- that fetch is what adjudicates the expired one -- so its clock
  * is live. Holding the player on a button here would spend time they are
  * about to need. There is also nothing to read: a lapse carries no
  * explanation and names no answer, by design.
@@ -43,7 +43,7 @@ const LAPSE_DWELL_MS = 1400;
  *
  * The player advances instead. Safe to do here specifically because the next
  * question is fetched on advance rather than bundled into the answer response,
- * so its 35s clock starts when they ask for it, not while they are still
+ * so its clock starts when they ask for it, not while they are still
  * reading. That ordering was already in place; this just uses it.
  */
 
@@ -871,7 +871,7 @@ export function GamePage() {
        the intro is only for "you have not started yet". */
     if (!entered) {
         /* The Learn beat. Sits between Start and the count-in deliberately: no
-           session exists yet, so no question has been served and no 35s clock is
+           session exists yet, so no question has been served and no clock is
            running behind it. The player reads for as long as they like and the
            first challenge still arrives with its full time. */
         if (learning && learnBeat) {
@@ -922,7 +922,7 @@ export function GamePage() {
                         Questions start on the fundamentals and get harder as you go.
                     </>
                 }
-                shape="10 questions · 35s each · difficulty climbs"
+                shape="10 questions · 18s each · difficulty climbs"
                 busy={beginning}
                 onStart={() => (learnBeat ? setLearning(true) : setCountingIn(true))}
                 startLabel="Start blitz"
@@ -984,11 +984,24 @@ export function GamePage() {
                 total={question.totalQuestions}
             />
 
-            <Countdown
-                deadlineAt={question.deadlineAt}
-                totalMs={QUESTION_TIME_LIMIT_MS}
-                onExpire={onExpire}
-            />
+            {/*
+             * NO CLOCK ON THE OPENING BEATS.
+             *
+             * Deliberately renders nothing rather than a paused or full timer:
+             * a countdown sitting there still tells a learner they are being
+             * measured, which is the whole reason the opening is untimed. The
+             * server decides which beats these are -- the client only honours
+             * a null deadline.
+             */}
+            {question.deadlineAt === null ? (
+                <p className="untimed-note">No timer on this one — take your time.</p>
+            ) : (
+                <Countdown
+                    deadlineAt={question.deadlineAt}
+                    totalMs={QUESTION_TIME_LIMIT_MS}
+                    onExpire={onExpire}
+                />
+            )}
 
             {/* Keyed on the question, so React remounts it and the entrance
                 animation replays without any state to reset. `leaving` drives the
@@ -1003,6 +1016,23 @@ export function GamePage() {
 
                     return (
                         <>
+                            {/* THE RESERVED BEAT, MADE VISIBLE.
+                                FOCUS_SLOTS has reserved two beats for the
+                                learner's current concept since Phase 4B, and
+                                nothing said so -- the game asked about the
+                                thing they were studying and they had no way to
+                                know. One line, in the game's own voice, above
+                                the question. Deliberately not a card, not a
+                                panel, and not on the other eight beats: a
+                                marker that appears every time marks nothing. */}
+                            {question.practisingNow && (
+                                <p className="ask-practising">
+                                    <span className="ask-practising-dot" aria-hidden="true" />
+                                    What you are learning ·{" "}
+                                    <strong>{question.practisingNow.conceptName}</strong>
+                                </p>
+                            )}
+
                             {/* The question is a question. It reads in the UI face,
                                 at reading size -- monospace was making prose look
                                 like output the player had to parse. */}

@@ -46,7 +46,11 @@ const MIGRATION_SQL = MIGRATION.split("\n")
     .join("\n");
 
 /** Every hunt of a full run, by position. */
-const RUN = Array.from({ length: 10 }, (_, i) => i + 1);
+/* One display order per hunt of a full run. Derived rather than hardcoded: a
+   literal 10 here is what made the perfect-run XP test fail when the run got
+   shorter, even though the platform invariant it checks was never about how
+   many hunts there are. */
+const RUN = Array.from({ length: BUG_HUNT_INCIDENTS_PER_SESSION }, (_, i) => i + 1);
 
 /** A round with everything at its most neutral, so each test varies one thing. */
 const round = (over: Partial<ScoredRound> = {}): ScoredRound => ({
@@ -117,10 +121,22 @@ describe("the incident clock", () => {
 });
 
 describe("the difficulty ramp", () => {
-    it("gives the player three easy hunts before asking anything", () => {
+    it("gives the player two easy hunts before asking anything", () => {
         // The on-ramp. A run that opens on a tier-three bug is the "I barely had
         // time to read that" complaint, whatever the clock says.
-        expect(DIFFICULTY_RAMP.slice(0, 3)).toEqual([1, 1, 1]);
+        //
+        // Was three openers out of ten. The run is six now, so three would have
+        // been half the game spent warming up -- two keeps the same proportion
+        // of gentle start to real play.
+        expect(DIFFICULTY_RAMP.slice(0, 2)).toEqual([1, 1]);
+        expect(DIFFICULTY_RAMP[2], "and then it starts asking").toBeGreaterThan(1);
+    });
+
+    it("still visits every difficulty tier", () => {
+        // The shortening must not retire content. A tier missing from the ramp
+        // is a tier whose incidents are never dealt, which would quietly remove
+        // the hardest bugs from the bank rather than shorten the run.
+        expect([...new Set(DIFFICULTY_RAMP)].sort()).toEqual([1, 2, 3, 4, 5]);
     });
 
     it("climbs without ever stepping back down", () => {
@@ -336,9 +352,31 @@ describe("system integrity is derived, not stored", () => {
 
     it("never leaves the 0-100 range", () => {
         const catastrophe = RUN.map((displayOrder) => failed({ displayOrder, hintsUsed: 3 }));
+        const worst = systemIntegrity(catastrophe);
 
-        expect(systemIntegrity(catastrophe)).toBe(0);
+        expect(worst).toBeGreaterThanOrEqual(0);
+        expect(worst).toBeLessThan(100);
         expect(systemIntegrity([])).toBe(100);
+    });
+
+    it("no longer bottoms out exactly, now that a run is six hunts", () => {
+        /*
+         * A CONSEQUENCE OF SHORTENING, RECORDED RATHER THAN HIDDEN.
+         *
+         * The integrity costs are per incident (failed 10, extra attempt 3,
+         * hint 1), so the worst possible run used to total 130 against a
+         * ceiling of 100 and clamped to exactly 0. Over six hunts the worst
+         * case is 96, and the meter stops just short of empty.
+         *
+         * Left alone deliberately: making a catastrophe reach zero again means
+         * raising INTEGRITY_FAILED_COST, which is a scoring constant the client
+         * legend displays. That is a product decision about how the meter should
+         * feel, not a side effect a test should quietly force. This test exists
+         * so the behaviour is visible when that decision gets made.
+         */
+        const catastrophe = RUN.map((displayOrder) => failed({ displayOrder, hintsUsed: 3 }));
+
+        expect(systemIntegrity(catastrophe)).toBeLessThan(10);
     });
 
     it("returns the same value for the same rows", () => {
@@ -484,8 +522,21 @@ describe("migration 014 encodes the invariants the code relies on", () => {
         }
     });
 
-    it("plans ten hunts per run", () => {
-        expect(BUG_HUNT_INCIDENTS_PER_SESSION).toBe(10);
+    it("plans six hunts per run, and the ramp covers all of them", () => {
+        // Six rather than ten: the first hunts are untimed by design, so the old
+        // run had no upper bound at all, and the timed ones could reach 90s
+        // each. See BUG_HUNT_INCIDENTS_PER_SESSION for the whole argument.
+        expect(BUG_HUNT_INCIDENTS_PER_SESSION).toBe(6);
         expect(BOSS_DISPLAY_ORDER).toBe(BUG_HUNT_INCIDENTS_PER_SESSION);
+        expect(DIFFICULTY_RAMP).toHaveLength(BUG_HUNT_INCIDENTS_PER_SESSION);
+    });
+
+    it("keeps the whole run inside the target length", () => {
+        // The reason for the change, asserted. Every timed hunt is capped, and
+        // the untimed openers are the learner's own pace rather than the
+        // game's -- so what is bounded is the part the game controls.
+        const timed = DIFFICULTY_RAMP.filter((tier) => tier > 1).length;
+
+        expect(timed * BUG_HUNT_MAX_TIME_MS).toBeLessThanOrEqual(180_000);
     });
 });

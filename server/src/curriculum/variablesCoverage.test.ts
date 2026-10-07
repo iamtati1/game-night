@@ -17,11 +17,14 @@ import { buildCurriculumFixture, type CurriculumFixture } from "./database.fixtu
  *              one rungless demonstration, but the teaching is not missing.
  *              Authoring recognition questions would duplicate the lesson.
  *
- *   explain    let-vs-const declares it, and no activity in Jolt does
- *              explanation. That is a missing interaction, not missing content.
+ *   explain    WAS the one gap: let-vs-const declared it and nothing in Jolt
+ *              did explanation. Seed 067 closed it, written for where the
+ *              concept sits -- Variables #7, where there are no objects or
+ *              arrays to show that const does not freeze a value, so the
+ *              mechanism is stated as what const actually fixes: the name.
  *
- * If either becomes playable, this test should fail and be updated -- that is
- * the point of writing it down.
+ * Variables is now fully covered. This test fails if that stops being true,
+ * which is the point of writing it down.
  */
 describe("Variables coverage", () => {
     let fx: CurriculumFixture;
@@ -56,7 +59,10 @@ describe("Variables coverage", () => {
                AND (EXISTS (SELECT 1 FROM questions q
                             WHERE q.challenge_id = ch.id AND q.is_active)
                  OR EXISTS (SELECT 1 FROM bug_hunt_incidents i
-                            WHERE i.challenge_id = ch.id AND i.is_active))`
+                            WHERE i.challenge_id = ch.id AND i.is_active)
+                 -- A movement realises the rung without a content row of its
+                 -- own; migration 030 is what makes it visible from here.
+                 OR ch.activity IS NOT NULL)`
         );
 
         playable = new Set(rows.map((r) => `${r.concept}/${r.demand}`));
@@ -82,15 +88,20 @@ describe("Variables coverage", () => {
         expect(missing).toEqual([]);
     });
 
-    it("leaves exactly the two rungs the audit decided to leave", () => {
+    it("leaves only the one rung nothing is written for", () => {
         const uncovered = declared
             .filter((d) => !playable.has(`${d.concept}/${d.demand}`))
-            .map((d) => d.demand);
+            .map((d) => `${d.concept}/${d.demand}`);
 
-        // produce and apply are covered by guided practice, which is client
-        // content and so does not appear in the query above -- they are
-        // asserted in client/src/games/practice.test.ts instead.
-        expect(new Set(uncovered)).toEqual(new Set(["recognise", "produce", "apply", "explain"]));
+        // WHAT CHANGED. `produce` and `apply` were invisible here because the
+        // exercises are client-authored movements and this query only saw
+        // questions and incidents. Migration 030 and seeds 024/026 let a
+        // challenge say a movement realises it, so they are visible now.
+        // `recognise` was genuinely empty and seed 027 filled it.
+        //
+        // `let-vs-const/explain` was the last one and is now written, so
+        // nothing in Variables is uncovered.
+        expect(uncovered).toEqual([]);
     });
 
     it("keeps every beginner item at a difficulty the curriculum derived", () => {

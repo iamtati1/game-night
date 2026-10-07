@@ -7180,3 +7180,503 @@ a.card-body:focus-visible .preview-shot img {
 .scene-place-lesson {
     color: var(--muted, #8b93a7);
 }
+
+/* ---------------------------------------------------------- the encounter */
+
+/*
+ * One concept, end to end. Everything here reuses the lesson's own type and
+ * spacing -- the encounter is the same room, not a new one -- so only the four
+ * genuinely new pieces are defined.
+ */
+
+/* What the learner is doing, in their words rather than the curriculum's. */
+.encounter-rung-label {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0 0 1.25rem;
+}
+
+/* Why a concept is closed, with the way to the thing that opens it. */
+.encounter-locked {
+    list-style: none;
+    margin: 0 0 1.5rem;
+    padding: 0;
+}
+
+.encounter-locked a { text-transform: capitalize; }
+
+/* The ladder, when there is nothing playable left on it. */
+.encounter-rungs {
+    list-style: none;
+    margin: 0 0 1.5rem;
+    padding: 0;
+}
+
+.encounter-rungs li {
+    color: var(--muted);
+    padding: 0.35rem 0;
+}
+
+.encounter-rungs li[data-state="cleared"] { color: #3fae6d; }
+.encounter-rungs li[data-state="unbuilt"] { opacity: 0.55; }
+
+
+/* The bug report on a diagnose rung: what is wrong, before the code. */
+.encounter-brief {
+    border-left: 2px solid var(--accent, #6ee7d7);
+    color: var(--text, #e8ecf5);
+    margin: 0 0 1.25rem;
+    padding-left: 0.9rem;
+}
+
+/* A world the learner has not reached, saying where they actually are. */
+.world-closed {
+    color: var(--muted);
+    margin: 0.75rem 0 0;
+}
+
+/* The authored repair, shown in place of the question the learner missed. */
+.remediation-label {
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.75rem;
+    text-transform: uppercase;
+}
+
+/* ---------- the concept route ----------
+ *
+ * The rungs of a concept, drawn as stations on a leg of the same route the
+ * Journey map shows. This is the join that was missing: the learning used to
+ * happen on a page that knew nothing about the world it was reached from.
+ *
+ * One line, a mark per stop, the craft parked at the one in front of you.
+ * Nothing here reports a score or a time, because nothing here is a measure --
+ * it answers "where am I in this concept" and stops.
+ */
+.run {
+    margin: 0 0 1.6rem;
+}
+
+.run-caption {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    color: var(--ink-soft, #9aa4c4);
+}
+
+.run-route {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.run-stop {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    padding-top: 1.9rem;
+    text-align: center;
+}
+
+/* The road itself: drawn behind the marks, lit for the part you have flown
+   and dashed for the part you have not. */
+.run-stop::before {
+    content: "";
+    position: absolute;
+    top: 0.62rem;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        transparent 0 calc(50% - 0.55rem),
+        currentColor calc(50% - 0.55rem) calc(50% + 0.55rem),
+        transparent calc(50% + 0.55rem) 100%
+    );
+    color: transparent;
+}
+
+.run-stop:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 0.62rem;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    border-top: 2px dashed rgba(154, 164, 196, 0.32);
+}
+
+.run-stop.is-done:not(:last-child)::after {
+    border-top-style: solid;
+    border-top-color: rgba(126, 231, 196, 0.5);
+}
+
+.run-mark {
+    position: absolute;
+    top: 0.25rem;
+    left: 50%;
+    width: 0.78rem;
+    height: 0.78rem;
+    margin-left: -0.39rem;
+    border-radius: 50%;
+    border: 2px solid rgba(154, 164, 196, 0.4);
+    background: var(--bg-deep, #141a33);
+}
+
+.run-stop.is-done .run-mark {
+    border-color: rgba(126, 231, 196, 0.75);
+    background: rgba(126, 231, 196, 0.75);
+}
+
+.run-stop.is-here .run-mark {
+    border-color: var(--accent, #8ab4ff);
+    background: var(--bg-deep, #141a33);
+}
+
+.run-name {
+    display: block;
+    font-size: 0.74rem;
+    line-height: 1.3;
+    color: var(--ink-soft, #9aa4c4);
+}
+
+.run-stop.is-done .run-name {
+    color: rgba(126, 231, 196, 0.85);
+}
+
+.run-stop.is-here .run-name {
+    color: var(--ink, #e9ecf8);
+    font-weight: 600;
+}
+
+/* The craft rides above its station. It moves because the station it is in
+   changes, so the travel reads as travel rather than as a redraw. */
+.run-ship {
+    position: absolute;
+    top: -1.15rem;
+    left: 50%;
+    margin-left: -13px;
+    animation: run-arrive 420ms ease-out;
+}
+
+@keyframes run-arrive {
+    from {
+        transform: translateX(-26px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .run-ship {
+        animation: none;
+    }
+}
+
+/* Narrow: the names are what make the stops legible, so they stay -- the
+   route just gets tighter. */
+@media (max-width: 30rem) {
+    .run-name {
+        font-size: 0.66rem;
+    }
+}
+
+/* ---------- the experiment playground ----------
+ *
+ * Reuses the mission editor and console wholesale; only the value panel and
+ * the error are new, because a graded movement has no use for either.
+ */
+.playground-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0.7rem 0 0;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(154, 164, 196, 0.18);
+}
+
+.playground-value-tag {
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft, #9aa4c4);
+}
+
+.playground-value code {
+    font-size: 1.02rem;
+    color: var(--accent, #8ab4ff);
+}
+
+.playground-error {
+    border-left: 3px solid rgba(255, 150, 150, 0.6);
+}
+
+/* Named, not shouted. `ReferenceError` is already capitalised the way
+   JavaScript writes it, and a beginner meeting it here should see the word
+   they will meet again in a browser console. */
+.playground-error-kind {
+    display: inline-block;
+    margin-right: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 170, 170, 0.95);
+}
+
+.playground-trace {
+    margin: 0.4rem 0 0;
+    font-family: var(--mono, ui-monospace, monospace);
+    font-size: 0.74rem;
+    color: var(--ink-soft, #9aa4c4);
+}
+
+.playground-back {
+    margin: 1.2rem 0 0;
+    font-size: 0.86rem;
+}
+
+/* An offer beside the main action, never competing with it. */
+.lesson-aside-link {
+    margin: 0.9rem 0 0;
+    font-size: 0.86rem;
+    color: var(--ink-soft, #9aa4c4);
+}
+
+/* The Log, beside the pilot: reachable without being a fourth area. */
+.nav-aside {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    margin-right: 0.9rem;
+    opacity: 0.72;
+    font-size: 0.82rem;
+}
+
+.nav-aside:hover,
+.nav-aside:focus-visible {
+    opacity: 1;
+}
+
+/* ── What to play for what you are learning (PlayFocus, above the grid) ──
+   Deliberately quieter than a game card: it is a sentence about the learner,
+   not a sixth game. */
+.play-focus {
+    max-width: 52rem;
+    margin: 0 auto 2.2rem;
+    padding: 1.25rem 1.4rem 1.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.play-focus-label {
+    margin: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+.play-focus-concept {
+    margin: 0.25rem 0 0;
+    font-size: 1.35rem;
+    line-height: 1.2;
+}
+
+.play-focus-concept a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.play-focus-concept a:hover,
+.play-focus-concept a:focus-visible {
+    text-decoration: underline;
+}
+
+.play-focus-topic {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+    opacity: 0.65;
+}
+
+.play-focus-routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.play-focus-route {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.play-focus-route:hover,
+.play-focus-route:focus-visible {
+    border-color: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.play-focus-route-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.play-focus-route-why {
+    font-size: 0.78rem;
+    opacity: 0.68;
+}
+
+.play-focus-none {
+    margin: 0.9rem 0 0;
+    font-size: 0.88rem;
+    opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .play-focus-route {
+        transition: none;
+    }
+}
+
+/* Rungs cleared on a part-done concept, on the map. Quiet: it is a note about
+   work already done, not a score. */
+.journey-stop-rungs {
+    margin-left: 0.45rem;
+    padding: 0.05rem 0.34rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.72;
+}
+
+/* The reserved beat, named above the question. Quiet on purpose: it is a note
+   about why this question is here, not a second headline. */
+.ask-practising {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.78;
+}
+
+.ask-practising strong {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.86rem;
+}
+
+.ask-practising-dot {
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+/* What a round did to the learning, on the results screen. */
+.round-learning {
+    max-width: 34rem;
+    margin: 1.6rem auto 0;
+    padding: 1.1rem 1.25rem 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+    text-align: left;
+}
+
+.round-learning-label {
+    margin: 0;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+.round-learning-concept {
+    margin: 0.2rem 0 0.7rem;
+    font-size: 1.2rem;
+    line-height: 1.25;
+}
+
+.round-learning-earned {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.round-learning-earned li {
+    font-size: 0.92rem;
+}
+
+.round-learning-elsewhere,
+.round-learning-none,
+.round-learning-standing {
+    opacity: 0.68;
+    font-size: 0.85rem;
+}
+
+.round-learning-standing {
+    margin: 0.75rem 0 0;
+}
+
+.round-learning-none {
+    margin: 0;
+}
+
+/* The stuck offer: re-read the explanation, or push on anyway. */
+.encounter-stuck {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.encounter-stuck-note {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.78;
+}
+
+/* Where the countdown would be on an untimed opening beat. Occupies the same
+   band so the question does not jump when the clock appears at beat three. */
+.untimed-note {
+    margin: 0 0 0.6rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+}
+
+/* The rule behind the order, under the two sequences on the Flush reveal.
+   The diff above is the evidence; this is the lesson. */
+.reveal-why {
+    max-width: 44rem;
+    margin: 0.9rem auto 0;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    opacity: 0.85;
+    text-align: left;
+}

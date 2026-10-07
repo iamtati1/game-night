@@ -113,7 +113,12 @@ describe("finishing a lesson moves the learner on, and nothing else does", () =>
             await demonstrate(learner, "console-output");
 
             expect((await path(learner)).current?.concept_slug).toBe(
-                "expressions-produce-values"
+                // Values #2 since the reorder. Arithmetic moved in from
+                // Operators because `expressions-produce-values` cannot show
+                // that an expression collapses to a value without one, and it
+                // comes BEFORE that abstraction: do the concrete thing, then
+                // name the general idea.
+                "arithmetic-operators"
             );
         });
     });
@@ -180,7 +185,12 @@ describe("finishing a lesson moves the learner on, and nothing else does", () =>
             await demonstrate(studious, "console-output");
 
             expect((await path(studious)).current?.concept_slug).toBe(
-                "expressions-produce-values"
+                // Values #2 since the reorder. Arithmetic moved in from
+                // Operators because `expressions-produce-values` cannot show
+                // that an expression collapses to a value without one, and it
+                // comes BEFORE that abstraction: do the concrete thing, then
+                // name the general idea.
+                "arithmetic-operators"
             );
             expect((await path(bystander)).current?.concept_slug).toBe("console-output");
         });
@@ -506,7 +516,7 @@ describe("values unlocks variables unlocks operators", () => {
 
             expect(await reached(learner, "operators")).toBe(true);
             expect((await path(learner)).current?.concept_slug).toBe(
-                "arithmetic-operators"
+                "assignment-operators"
             );
         });
     });
@@ -589,10 +599,15 @@ describe("variables and operators are authored to the curriculum's order", () =>
         }
     });
 
-    it("covers all three topics and nothing beyond them", () => {
+    it("covers the authored topics and nothing beyond them", () => {
         const taught = new Set(ALL_LESSONS.map((l) => l.concept ?? l.challengeFor));
 
-        expect(taught.size, "21 concepts plus 3 challenges").toBe(24);
+        // Every concept in the curriculum now has a lesson, plus the three
+        // authored topic challenges. The number stopped being a running total
+        // of "how far we have got" when this-and-classes landed -- it is now
+        // the whole curriculum, and the assertion below says so in the form
+        // that cannot drift.
+        expect(taught.size, "100 concepts plus 3 challenges").toBe(103);
     });
 });
 
@@ -1014,23 +1029,47 @@ describe("a learner always has one obvious next action", () => {
         // Home reads /api/curriculum/path rather than deciding anything itself,
         // so Home and Journey can never disagree about what is next.
         expect(home).toContain("/api/curriculum/path");
-        expect(home).toContain("`/learn/${current.slug}`");
+        // The ENCOUNTER, not the bare lesson. Every concept door goes to one
+        // place, so the learner never has to know that teaching and practice
+        // used to live on different screens.
+        expect(home).toContain("`/concept/${current.slug}`");
         expect(home, "and at the challenge when that is what is due").toContain(
             "`/challenge/${challenge.slug}`"
         );
     });
 
-    it("keeps the navigation to four ordered destinations", () => {
+    it("keeps the navigation to the three things a learner does", () => {
         // Read from aria-label rather than from the link text. The visible word
         // is hidden below 40rem -- the icon carries it there -- so the
         // accessible name is the thing that is always present, and it is the
         // stable contract this test actually cares about.
-        const nav = app.slice(app.indexOf("{user ? ("), app.indexOf("Log out"));
+        const nav = app.slice(app.indexOf("{user ? ("), app.indexOf("nav-pilot"));
         const links = [...nav.matchAll(/<Link to="[^"]+" aria-label="([^"]+)">/g)].map(
             (m) => m[1]
         );
 
-        expect(links).toEqual(["Home", "Map", "Play", "Log"]);
+        /*
+         * This was five: Home, Map, Play, Experiment, Log. Three of those
+         * answered the same question -- Home is "where am I and what is next",
+         * the Map is that same path drawn out, and Home linked to both of the
+         * others -- so the navigation competed with the page it landed on, and
+         * a learner had to work out what five words meant before choosing one.
+         *
+         * What is left is the three things there are to do: learn the thing,
+         * play, and try something with nothing at stake. The list is asserted
+         * exactly rather than loosely, because the point is that it stays
+         * SHORT. A fourth should have to argue for itself here.
+         */
+        expect(links).toEqual(["Learn", "Play", "Experiment"]);
+    });
+
+    it("keeps the log reachable, beside the pilot rather than as a fourth area", () => {
+        // Secondary by placement, not by being hidden: history is a real thing
+        // to want, and a learner who wants it should not have to guess that it
+        // is gone. It sits with the account, below the hairline.
+        const pilot = app.slice(app.indexOf("nav-pilot"), app.indexOf("Log out"));
+
+        expect(pilot).toContain('to="/history"');
     });
 });
 
@@ -1052,7 +1091,7 @@ describe("finishing a concept is recognised as a capability", () => {
     });
 
     it("hands the learner straight to the next thing", () => {
-        expect(complete).toContain("`/learn/${next.slug}`");
+        expect(complete).toContain("`/concept/${next.slug}`");
         expect(complete).toContain("Continue");
     });
 

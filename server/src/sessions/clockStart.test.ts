@@ -93,14 +93,19 @@ describe("feedback never consumes the next unit's deadline", () => {
 });
 
 describe("Code Blitz timing", () => {
-    it("gives 35 seconds per question", () => {
-        expect(QUESTION_TIME_LIMIT_MS).toBe(35_000);
+    it("gives 18 seconds per question", () => {
+        // WAS 35, which made the worst case nearly six minutes for a round
+        // meant to be short. The number is asserted here -- and against the
+        // client's copy below -- because the two must not drift: a client
+        // clock longer than the server's lets a player answer after the
+        // server has already timed the question out.
+        expect(QUESTION_TIME_LIMIT_MS).toBe(18_000);
     });
 
     it("keeps the client countdown in step with the server limit", () => {
         // The client duplicates the constant purely to size the bar. If it drifts,
         // the bar animates against a different number than the deadline it draws.
-        expect(BLITZ_PAGE).toMatch(/const QUESTION_TIME_LIMIT_MS = 35_000;/);
+        expect(BLITZ_PAGE).toMatch(/const QUESTION_TIME_LIMIT_MS = 18_000;/);
     });
 });
 

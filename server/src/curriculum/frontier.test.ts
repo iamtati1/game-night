@@ -13,13 +13,15 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
  * never how much time pressure it carries (questions.difficulty). Several tests
  * below exist purely to keep those two apart.
  *
- * The fixture concept is `primitive-types` throughout: the curriculum's only
- * root, so nothing prerequisite-related can interfere, and seed 016 already
- * gives it an introduction so the learner can be moved past the role gate the
- * way a real learner is.
+ * The fixture concept is `typeof`, which owns the seeded practice question
+ * below. It used to be `primitive-types`, because that question was filed there
+ * -- but `console.log(typeof "5", typeof 5)` is a typeof question and seed 029
+ * moved it to the concept it actually tests. The frontier rules under test are
+ * concept-agnostic; what this file needs is a concept with one seeded practise
+ * challenge at difficulty 1, and that is now this one.
  */
 
-const CONCEPT = "primitive-types";
+const CONCEPT = "typeof";
 
 /** Seeded: one practise challenge at difficulty 1, one question behind it. */
 const SEEDED_PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5);';
@@ -487,9 +489,23 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
     it("leaves the pacing curve unable to see curriculum difficulty", () => {
         const curve = readFileSync(new URL("../game/curve.ts", import.meta.url), "utf8");
 
+        // THE SUBJECT HERE IS DIFFICULTY, and that line has not moved: the
+        // dealer reads questions.difficulty for pacing and must never see
+        // challenges.difficulty, because the two numbers mean different things
+        // and conflating them is what this whole section exists to prevent.
         expect(curve, "curve.ts imports nothing at all").not.toMatch(/^import /m);
-        expect(curve).not.toContain("challenge");
-        expect(curve).not.toContain("concept_id");
+        expect(curve, "curriculum difficulty is not the dealer's").not.toContain(
+            "challenge_difficulty"
+        );
+        expect(curve).not.toContain("rung.difficulty");
+
+        // `concept_id` USED TO BE FORBIDDEN HERE and no longer is. The dealer
+        // reserves two beats for the learner's current concept, which is a
+        // PACING decision -- which eligible question lands in which beat -- of
+        // exactly the kind FOCUS_SLOTS already made with `topic`, itself
+        // curriculum vocabulary. Identity is not difficulty. What stayed
+        // forbidden is above, and the separation that matters is asserted in
+        // eligibility.test.ts: the dealer cannot widen what it was handed.
     });
 
     it("withholds a hard-to-pace question that is an easy curriculum rung", async () => {
@@ -522,22 +538,30 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
     });
 
     it("changes no existing question difficulty", async () => {
-        // The seeded bank's pacing values are untouched by this slice.
+        /*
+         * SCOPED TO THE PRE-CURRICULUM BANK, which is what "existing" means.
+         *
+         * This counted every eligible question, so it failed every time a
+         * curriculum seed added content -- and the comment below already had to
+         * explain one such rise. The claim is that nothing EXISTING moved, so
+         * the curriculum-authored questions are excluded rather than counted.
+         */
         const [spread] = await fx.rows<{ d1: number; d2: number; d3: number; d4: number }>(
             `SELECT COUNT(*) FILTER (WHERE difficulty = 1)::INT d1,
                     COUNT(*) FILTER (WHERE difficulty = 2)::INT d2,
                     COUNT(*) FILTER (WHERE difficulty = 3)::INT d3,
                     COUNT(*) FILTER (WHERE difficulty = 4)::INT d4
-             FROM questions q WHERE ${ELIGIBLE_QUESTION_PREDICATE}`
+             FROM questions q
+             WHERE ${ELIGIBLE_QUESTION_PREDICATE}
+               AND (q.source IS NULL OR q.source NOT LIKE 'jolt-%')`
         );
 
-        // d1 has risen from 78 to 99 as seeds 020 and 021 added beginner
-        // practice, all of it pacing difficulty 1. Nothing EXISTING moved,
-        // which is what this test actually guards.
-        // Only d1 moves as beginner content lands; nothing EXISTING may shift,
-        // which is what this test actually guards.
-        expect({ d2: spread.d2, d3: spread.d3, d4: spread.d4 }).toEqual({ d2: 81, d3: 52, d4: 23 });
-        expect(spread.d1).toBeGreaterThanOrEqual(99);
+        // The legacy bank as it was before any curriculum content existed.
+        // These four numbers are now FIXED: every curriculum seed is excluded
+        // by the source filter above, so this assertion no longer drifts every
+        // time a topic is completed -- it fails only if something that was
+        // already here had its pacing changed, which is the claim.
+        expect(spread).toEqual({ d1: 78, d2: 81, d3: 52, d4: 23 });
     });
 });
 

@@ -8,6 +8,17 @@ import {
     recordDemonstration
 } from "./lessons.js";
 import {
+    evidenceFor,
+    findConceptState,
+    findEncounterView,
+    findExercise,
+    isPlayable,
+    judgeAnswer,
+    mayPlayChallenge,
+    recordActivityCompletion,
+    topicReadyForCheckpoint
+} from "./encounter.js";
+import {
     completeIntroduction,
     findJourney,
     findNextIntroduction,
@@ -102,6 +113,47 @@ curriculumRouter.get("/topics/:topic/standing", requireAuth, async (req: Request
 });
 
 /**
+ * GET /api/curriculum/concepts/:concept/encounter
+ *
+ * Everything the learner-facing encounter needs, decided here rather than in
+ * React: which rungs the concept declares, what can be played at each, which
+ * ones this learner has cleared, which rung is next, what the exercises may
+ * assume they know, and which concept follows.
+ *
+ * ALWAYS 200 FOR A REAL CONCEPT, including one the learner cannot reach yet.
+ * `reachable` and `unmetPrerequisites` say so, and a 403 would leave the world
+ * unable to explain WHY something is locked -- which is the one thing a locked
+ * door has to communicate.
+ *
+ * `playable` is reported separately from `reachable`: a concept can be open to a
+ * learner and still have a declared rung with nothing built for it. Those are
+ * different failures and the client should not have to infer one from the other.
+ */
+curriculumRouter.get(
+    "/concepts/:concept/encounter",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const concept = String(req.params.concept);
+
+        // Same guard as the standing route: a typo should read as a mistake,
+        // not as a concept with an empty ladder.
+        if (!/^[a-z][a-z0-9-]*$/.test(concept)) {
+            res.status(404).json({ error: "No such concept" });
+            return;
+        }
+
+        const encounter = await findEncounterView(req.user!.id, concept);
+
+        if (!encounter) {
+            res.status(404).json({ error: "No such concept" });
+            return;
+        }
+
+        res.status(200).json({ ...encounter, playable: isPlayable(encounter) });
+    }
+);
+
+/**
  * GET /api/curriculum/path
  *
  * The JavaScript Journey: every topic, every concept, and where the learner
@@ -157,6 +209,35 @@ curriculumRouter.post(
         const demand =
             typeof rawDemand === "string" && /^[a-z][a-z-]*$/.test(rawDemand) ? rawDemand : null;
 
+        // EVIDENCE, NOT A CLAIM. The client asking to be marked complete is not
+        // what completes a concept -- clearing every playable rung is. This
+        // endpoint used to accept whatever it was told, which meant reading a
+        // lesson unlocked the next concept.
+        const state = await findConceptState(req.user!.id, concept);
+
+        if (state === null) {
+            res.status(404).json({ error: "No such concept" });
+            return;
+        }
+
+        if (state === "locked") {
+            res.status(403).json({ error: "That concept is not open yet" });
+            return;
+        }
+
+        const evidence = await evidenceFor(req.user!.id, concept);
+
+        if (!evidence.allowed) {
+            res.status(409).json({
+                error: evidence.unplayable
+                    ? "Nothing is built for this concept yet"
+                    : "Not everything here has been done yet",
+                outstanding: evidence.outstanding,
+                unplayable: evidence.unplayable
+            });
+            return;
+        }
+
         const recorded = await recordDemonstration(req.user!.id, concept, neededRetry, demand);
 
         if (!recorded) {
@@ -189,6 +270,24 @@ curriculumRouter.post(
             typeof req.body === "object" &&
             req.body !== null &&
             (req.body as { neededRetry?: unknown }).neededRetry === true;
+
+        // EVIDENCE, NOT A CLAIM -- the same rule /demonstrate follows. Without
+        // this, posting here completed the topic and opened the next one
+        // regardless of what the learner had actually done.
+        const standing = await topicReadyForCheckpoint(req.user!.id, topic);
+
+        if (standing === null) {
+            res.status(404).json({ error: "No such topic" });
+            return;
+        }
+
+        if (!standing.ready) {
+            res.status(409).json({
+                error: "Not every concept in this topic has been demonstrated yet",
+                outstanding: standing.outstanding
+            });
+            return;
+        }
 
         const recorded = await recordChallenge(req.user!.id, topic, neededRetry);
 
@@ -236,5 +335,120 @@ curriculumRouter.post(
         }
 
         res.status(200).json({ completed: true, introduction });
+    }
+);
+
+/**
+ * POST /api/curriculum/challenges/:challenge/completion
+ *
+ * A mission movement was finished. This is the evidence arm for activities
+ * judged in the browser -- Code Blitz and Bug Hunt write their own attempt rows,
+ * and a movement has none. The cleared-rung derivation reads all three alike.
+ *
+ * Body: { neededRetry?: boolean }.
+ *
+ * Deliberately NOT a demonstration. Finishing one movement clears one rung; it
+ * says nothing about whether the concept as a whole is done, which stays the
+ * /demonstrate endpoint's decision and the world's meaning of completion.
+ */
+curriculumRouter.post(
+    "/challenges/:challenge/completion",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const challenge = String(req.params.challenge);
+
+        if (!/^[0-9]+$/.test(challenge)) {
+            res.status(404).json({ error: "No such challenge" });
+            return;
+        }
+
+        const body = typeof req.body === "object" && req.body !== null ? req.body : {};
+        if (!(await mayPlayChallenge(req.user!.id, challenge))) {
+            res.status(403).json({ error: "That concept is not open yet" });
+            return;
+        }
+
+        const neededRetry = (body as { neededRetry?: unknown }).neededRetry === true;
+        const recorded = await recordActivityCompletion(req.user!.id, challenge, neededRetry);
+
+        if (!recorded) {
+            res.status(404).json({ error: "No such challenge" });
+            return;
+        }
+
+        res.status(200).json({ recorded: true });
+    }
+);
+
+/**
+ * GET /api/curriculum/challenges/:challenge/exercise
+ *
+ * The question realising one challenge. Options carry text and id only --
+ * correctness is decided by the endpoint below, never in the browser.
+ */
+curriculumRouter.get(
+    "/challenges/:challenge/exercise",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const challenge = String(req.params.challenge);
+
+        if (!/^[0-9]+$/.test(challenge)) {
+            res.status(404).json({ error: "No such challenge" });
+            return;
+        }
+
+        if (!(await mayPlayChallenge(req.user!.id, challenge))) {
+            res.status(403).json({ error: "That concept is not open yet" });
+            return;
+        }
+
+        const exercise = await findExercise(challenge, req.user!.id);
+
+        if (!exercise) {
+            res.status(404).json({ error: "No such challenge" });
+            return;
+        }
+
+        res.status(200).json(exercise);
+    }
+);
+
+/**
+ * POST /api/curriculum/challenges/:challenge/answer
+ *
+ * Body: { optionId, neededRetry?: boolean }.
+ *
+ * Judges the answer and, when it is right, records the rung as cleared in the
+ * same call. A wrong answer is a 200 with `correct: false` and the explanation
+ * -- being wrong is part of the lesson, not an error, and the reasoning is the
+ * whole reason the learner is here.
+ */
+curriculumRouter.post(
+    "/challenges/:challenge/answer",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const challenge = String(req.params.challenge);
+        const body = typeof req.body === "object" && req.body !== null ? req.body : {};
+        const optionId = String((body as { optionId?: unknown }).optionId ?? "");
+
+        if (!/^[0-9]+$/.test(challenge) || !/^[0-9]+$/.test(optionId)) {
+            res.status(404).json({ error: "No such challenge" });
+            return;
+        }
+
+        if (!(await mayPlayChallenge(req.user!.id, challenge))) {
+            res.status(403).json({ error: "That concept is not open yet" });
+            return;
+        }
+
+        const neededRetry = (body as { neededRetry?: unknown }).neededRetry === true;
+        const judgement = await judgeAnswer(req.user!.id, challenge, optionId, neededRetry);
+
+        if (!judgement) {
+            res.status(404).json({ error: "No such challenge" });
+            return;
+        }
+
+        res.status(200).json(judgement);
     }
 );

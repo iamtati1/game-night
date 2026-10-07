@@ -102,7 +102,7 @@ export function HomePage() {
               name: `${challenge.name} checkpoint`
           }
         : current
-          ? { label: "Continue", to: `/learn/${current.slug}`, name: current.name }
+          ? { label: "Continue", to: `/concept/${current.slug}`, name: current.name }
           : { label: "Open the map", to: "/journey", name: null };
 
     return (

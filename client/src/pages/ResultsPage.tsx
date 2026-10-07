@@ -3,21 +3,45 @@ import { Link, useParams } from "react-router-dom";
 import { splitPrompt } from "../games/prompt.js";
 import { ApiError, api } from "../api/client.js";
 import type { SessionSummary } from "../api/types.js";
+import { rungLabel } from "../api/encounter.js";
 import { RunVerdict } from "../components/RunVerdict.js";
 import { TopicStanding } from "../components/TopicStanding.js";
 import { useRunContext } from "../games/useRunContext.js";
 
+interface RoundCurriculum {
+    concept: { slug: string; name: string } | null;
+    rungs: { cleared: number; playable: number } | null;
+    earned: { conceptSlug: string; conceptName: string; demandSlug: string }[];
+}
+
 export function ResultsPage() {
     const { id } = useParams<{ id: string }>();
     const [session, setSession] = useState<SessionSummary | null>(null);
+    /**
+     * What this round changed, as the SERVER sees it.
+     *
+     * Arrives with the summary rather than being worked out here: which rungs
+     * the run produced evidence for, and where the learner now stands on their
+     * current concept. A results screen that counted its own correct answers
+     * would be a second progress model, and the first thing to disagree with
+     * the map.
+     */
+    const [curriculum, setCurriculum] = useState<RoundCurriculum | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { previousBest, improvement } = useRunContext("code-blitz", id);
 
     useEffect(() => {
         let active = true;
 
-        api.get<{ session: SessionSummary }>(`/api/sessions/${id}`)
-            .then((data) => active && setSession(data.session))
+        api.get<{ session: SessionSummary; curriculum: RoundCurriculum }>(
+            `/api/sessions/${id}`
+        )
+            .then((data) => {
+                if (!active) return;
+
+                setSession(data.session);
+                setCurriculum(data.curriculum ?? null);
+            })
             .catch(
                 (err) =>
                     active &&
@@ -221,10 +245,78 @@ export function ResultsPage() {
                 </div>
             )}
 
-            {/* Two ways to keep going: the same game again, or a different one.
-                A single "home" link ends the session; this continues it. */}
+            {/*
+             * WHAT THE ROUND DID TO THE LEARNING, not just to the score.
+             *
+             * Until now a run ended in points and XP, and the rungs it had
+             * cleared were discoverable only by navigating back to the concept
+             * and noticing. Every number here is the server's.
+             *
+             * It stops short of claiming mastery on purpose: clearing a rung
+             * and demonstrating a concept are different things, and nothing on
+             * this screen calls /demonstrate.
+             */}
+            {curriculum?.concept && (
+                <div className="round-learning">
+                    <p className="round-learning-label">You are learning</p>
+                    <h2 className="round-learning-concept">{curriculum.concept.name}</h2>
+
+                    {curriculum.earned.length > 0 ? (
+                        <ul className="round-learning-earned">
+                            {curriculum.earned.map((rung) => (
+                                <li key={`${rung.conceptSlug}:${rung.demandSlug}`}>
+                                    <span aria-hidden="true">✓</span>{" "}
+                                    <strong>{rungLabel(rung.demandSlug)}</strong>
+                                    {rung.conceptSlug !== curriculum.concept!.slug && (
+                                        <span className="round-learning-elsewhere">
+                                            {" "}
+                                            · {rung.conceptName}
+                                        </span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        /* The honest branch. A run with no correct answer on a
+                           tagged practice question changed nothing, and saying
+                           so beats implying otherwise. */
+                        <p className="round-learning-none">
+                            Nothing cleared this run — the questions that count toward this
+                            concept are the ones marked while you play.
+                        </p>
+                    )}
+
+                    {curriculum.rungs && curriculum.rungs.playable > 0 && (
+                        <p className="round-learning-standing">
+                            {curriculum.rungs.cleared} of {curriculum.rungs.playable} stops done
+                            on this concept
+                            {curriculum.rungs.cleared < curriculum.rungs.playable
+                                ? " — keep going to demonstrate it."
+                                : " — you can demonstrate it now."}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Back to the concept FIRST, because that is where the learner was
+                before the round and where the progress they just made lives.
+                It goes straight there rather than via /play -- a detour through
+                a game grid is how the module and the game came to feel like two
+                applications. */}
             <div className="cta-row">
-                <Link className="button primary" to="/code-blitz">
+                {curriculum?.concept ? (
+                    <Link
+                        className="button primary"
+                        to={`/concept/${curriculum.concept.slug}`}
+                    >
+                        Continue learning
+                    </Link>
+                ) : (
+                    <Link className="button primary" to="/code-blitz">
+                        Play again
+                    </Link>
+                )}
+                <Link className="button ghost" to="/code-blitz">
                     Play again
                 </Link>
                 <Link className="button ghost" to="/play">

@@ -43,15 +43,15 @@ const PATH: JourneyPathResponse = {
         topic("values", "complete"),
         topic("variables", "complete"),
         topic("operators", "current", [
-            { slug: "assignment", name: "Assignment", objective: "", state: "demonstrated", neededRetry: false },
-            { slug: "comparison", name: "Comparison", objective: "", state: "current", neededRetry: false },
-            { slug: "logic", name: "Logic", objective: "", state: "locked", neededRetry: false }
+            { slug: "assignment", name: "Assignment", objective: "", state: "demonstrated", neededRetry: false, rungs: { cleared: 0, playable: 3 } },
+            { slug: "comparison", name: "Comparison", objective: "", state: "current", neededRetry: false, rungs: { cleared: 0, playable: 3 } },
+            { slug: "logic", name: "Logic", objective: "", state: "locked", neededRetry: false, rungs: { cleared: 0, playable: 3 } }
         ]),
         topic("conditionals", "locked", [
-            { slug: "if-else", name: "If else", objective: "", state: "locked", neededRetry: false }
+            { slug: "if-else", name: "If else", objective: "", state: "locked", neededRetry: false, rungs: { cleared: 0, playable: 3 } }
         ])
     ],
-    current: { slug: "comparison", name: "Comparison", objective: "", state: "current", neededRetry: false, topic: "operators" },
+    current: { slug: "comparison", name: "Comparison", objective: "", state: "current", neededRetry: false, rungs: { cleared: 0, playable: 3 }, topic: "operators" },
     points: { total: 150, concepts: 4, challenges: 1 }
 };
 

@@ -17,6 +17,12 @@ export interface ServedQuestion {
     sessionQuestionId: string;
     /** Curriculum unit, so the client can name what is being practiced. */
     topic: string | null;
+    /**
+     * Set by the SERVER when this beat is practice for the concept the learner
+     * is currently on. Null otherwise. The client never works this out -- what
+     * a learner is learning is not the browser's to decide.
+     */
+    practisingNow: { conceptSlug: string; conceptName: string; demandSlug: string } | null;
     /** Which mechanic answers it: pick one option, or assemble tokens into a gap. */
     challengeType: string;
     questionNumber: number;
@@ -24,8 +30,9 @@ export interface ServedQuestion {
     prompt: string;
     options: QuestionOption[];
     servedAt: string;
-    deadlineAt: string;
-    msRemaining: number;
+    /** Null when this beat has no clock -- the opening of a Code Blitz round. */
+    deadlineAt: string | null;
+    msRemaining: number | null;
 }
 
 export interface SessionQuestionResult {
@@ -215,6 +222,23 @@ export interface FlushPlacementResponse {
     /** Both revealed only once the round has ended. */
     correctSequence: string[] | null;
     yourSequence: string[] | null;
+    /**
+     * Why the outputs land in that order. Null for a snippet with no authored
+     * reason, and while the round is still live.
+     *
+     * The sequences above say WHAT the order was; only this says why -- which
+     * is the difference between a reveal that teaches and one that only
+     * confirms what a learner already knew.
+     */
+    explanation: string | null;
+    /**
+     * True when this round cleared a curriculum rung.
+     *
+     * Flush is playable by everyone, but only credits a rung once the learner
+     * has actually reached the concept -- so this is false for most players
+     * most of the time, and that is correct rather than a failure.
+     */
+    credited: boolean;
     complete: boolean;
     round: FlushRound | null;
     session: FlushSessionSummary | null;
@@ -580,6 +604,12 @@ export interface JourneyConcept {
     objective: string;
     state: "demonstrated" | "current" | "locked";
     neededRetry: boolean;
+    /**
+     * How much of this concept is done, derived server-side from the same
+     * evidence that clears a rung anywhere else. `playable` counts only rungs
+     * something actually fills, so 0 means there is nothing to do here yet.
+     */
+    rungs: { cleared: number; playable: number };
 }
 
 export interface JourneyTopic {

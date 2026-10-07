@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { findCurrentConcept } from "../curriculum/lessons.js";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
 import { BUG_HUNT } from "../games/constants.js";
@@ -335,7 +336,15 @@ bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response)
         return;
     }
 
-    const session = await db.createSessionWithRounds(userId);
+    /**
+     * THE CURRICULUM'S ANSWER, NOT THE CLIENT'S -- identical to Code Blitz.
+     * There is no concept field in this route's body and never should be: a
+     * resolved hunt clears a rung, so naming the concept is naming the evidence.
+     * A failure yields an ordinary run rather than a 500.
+     */
+    const current = await findCurrentConcept(userId).catch(() => null);
+
+    const session = await db.createSessionWithRounds(userId, current?.id ?? null);
 
     await respondWithLiveIncident(res, session.id, false, 201);
 });

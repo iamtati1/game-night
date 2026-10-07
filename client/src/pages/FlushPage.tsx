@@ -10,6 +10,7 @@ import type {
     ResumableResponse
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
+import { withCode } from "../components/CodeText.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
 import { PausedRun } from "../components/PausedRun.js";
@@ -50,6 +51,15 @@ interface Reveal {
     roundScore: number | null;
     correctSequence: string[];
     yourSequence: string[];
+    /**
+     * Why the outputs land in that order, from the server.
+     *
+     * THE THING FLUSH COULD NOT DO. The side-by-side diff below shows WHAT the
+     * order was; only this says why. Without it the reveal only helps a learner
+     * who already knew the answer -- which is not the learner who just got it
+     * wrong.
+     */
+    explanation: string | null;
 }
 
 export function FlushPage() {
@@ -344,7 +354,8 @@ export function FlushPage() {
                             outcome: res.outcome === "correct" ? "wrong" : res.outcome,
                             roundScore: res.roundScore,
                             correctSequence: res.correctSequence ?? [],
-                            yourSequence: res.yourSequence ?? []
+                            yourSequence: res.yourSequence ?? [],
+                            explanation: res.explanation ?? null
                         },
                         res.round,
                         res.complete,
@@ -635,6 +646,14 @@ export function FlushPage() {
                             </ol>
                         </div>
                     </div>
+
+                    {/* THE RULE, under the two sequences.
+                        The diff above is the evidence; this is the lesson. It
+                        names what decided the order rather than restating the
+                        order, so it is useful on the NEXT snippet too. */}
+                    {reveal.explanation && (
+                        <p className="reveal-why">{withCode(reveal.explanation)}</p>
+                    )}
                 </div>
             )}
             </div>

@@ -62,7 +62,7 @@ export function ConceptComplete({ concept }: { concept: string }) {
               name: `${challenge.name} checkpoint`
           }
         : next
-          ? { label: "Continue", to: `/learn/${next.slug}`, name: next.name }
+          ? { label: "Continue", to: `/concept/${next.slug}`, name: next.name }
           : { label: "Back to the map", to: "/journey", name: null };
 
     return (

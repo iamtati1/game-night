@@ -274,6 +274,30 @@ export async function findOutput(
 }
 
 /** The full correct order. Only ever read once a round has ended. */
+/**
+ * Why this snippet's outputs land in the order they do, and which rung it is
+ * practice for.
+ *
+ * Null explanation for a snippet nobody has written one for; null challenge for
+ * one that credits nothing. Both are read together because the reveal wants the
+ * words and the completion wants the rung.
+ */
+export async function snippetTeaching(
+    snippetId: string
+): Promise<{ explanation: string | null; challengeId: string | null }> {
+    const result = await pool.query<{ explanation: string | null; challenge_id: string | null }>(
+        `SELECT explanation, challenge_id FROM flush_snippets WHERE id = $1`,
+        [snippetId]
+    );
+
+    const row = result.rows[0];
+
+    return {
+        explanation: row?.explanation ?? null,
+        challengeId: row?.challenge_id ?? null
+    };
+}
+
 export async function correctSequence(snippetId: string): Promise<string[]> {
     const result = await pool.query<{ output_text: string }>(
         `SELECT output_text FROM flush_outputs

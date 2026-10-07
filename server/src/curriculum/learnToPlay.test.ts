@@ -34,8 +34,16 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
  * retyped them would be testing its own copy.
  */
 
-/** The one exercise seed 016 tags: console.log(typeof "5", typeof 5). */
-const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5);';
+/*
+ * THE SEEDED PRACTICE FOR primitive-types.
+ *
+ * Was `console.log(typeof "5", typeof 5)`. That is a typeof question and typeof
+ * comes after primitive-types, so the concept's only exercise required the
+ * concept that follows it; seed 029 moved it and seed 030 gave primitive-types
+ * practice of its own. The concept under test is unchanged -- only which
+ * question is its one tagged exercise.
+ */
+const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(7 / 2);';
 
 const CONCEPT = "primitive-types";
 
@@ -612,7 +620,7 @@ describe("8 · the transitional escape hatch is unchanged", () => {
         });
     });
 
-    it("releases exactly one more question once primitive-types is introduced", async () => {
+    it("releases exactly the practice attached to primitive-types", async () => {
         // Arrives at the specimen first. Completing the curriculum's ROOT
         // introduction releases nothing, because console-output has no practice
         // attached to it yet -- which is a real gap, and a separate one from the
@@ -629,7 +637,11 @@ describe("8 · the transitional escape hatch is unchanged", () => {
 
             await completeIntroduction(learner, introduction!.challengeId);
 
-            expect(await selectable(learner)).toHaveLength(before + 1);
+            // TWO, not one: seed 030 gave primitive-types a recognise exercise
+            // and a predict exercise, where it previously had a single tagged
+            // question. The claim -- introducing a concept releases exactly the
+            // practice attached to it -- is unchanged.
+            expect(await selectable(learner)).toHaveLength(before + 2);
         });
     });
 });

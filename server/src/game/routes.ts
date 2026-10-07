@@ -15,6 +15,7 @@ import {
     resumePausedSession
 } from "../sessions/queries.js";
 import { requestedFocusTopic, wantsFreshSession } from "../sessions/schemas.js";
+import { findCurrentConcept, findJourneyPath } from "../curriculum/lessons.js";
 import { isActiveSessionConflict, resolveSessionRace } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
@@ -22,6 +23,7 @@ import { submitAnswerSchema } from "./schemas.js";
 import {
     QUESTIONS_PER_SESSION,
     isExpired,
+    stanceFor,
     timeLimitFor,
     pointsForAnswer,
     scoreForSession,
@@ -38,6 +40,15 @@ export const gameRouter = Router();
 interface ServedQuestion {
     sessionQuestionId: string;
     displayOrder: number;
+    /**
+     * Set when this beat is practice for the concept the learner is on.
+     *
+     * The visible half of concept targeting: FOCUS_SLOTS reserves beats 1 and 6
+     * for the current concept, and until now nothing told the player that had
+     * happened, so the connection between what they were studying and what the
+     * game asked was invisible.
+     */
+    practisingNow: { conceptSlug: string; conceptName: string; demandSlug: string } | null;
     /** The curriculum unit this question belongs to, so the client can name
      *  what is being practised and decide whether to teach it first. */
     topic: string | null;
@@ -48,8 +59,10 @@ interface ServedQuestion {
     prompt: string;
     options: { id: string; text: string }[];
     servedAt: string;
-    deadlineAt: string;
-    msRemaining: number;
+    /** Null when this beat has no clock. */
+    deadlineAt: string | null;
+    /** Null when this beat has no clock. */
+    msRemaining: number | null;
 }
 
 function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[]) {
@@ -125,7 +138,9 @@ function conflictBody(active: { gameSlug: string; gameName: string }) {
 async function respondResumed(
     res: Response,
     session: db.GameSessionRow,
-    now: Date
+    now: Date,
+    /** Needed only to mark whether the served beat is the learner's concept. */
+    userId: string
 ): Promise<void> {
     const question = await nextPlayableQuestion(session.id, now);
 
@@ -142,7 +157,7 @@ async function respondResumed(
         resumed: true,
         sessionId: session.id,
         scoreSoFar: await db.scoreSoFar(session.id),
-        question: await serveQuestion(question)
+        question: await serveQuestion(question, userId, session.id)
     });
 }
 
@@ -162,6 +177,22 @@ async function finishSession(sessionId: string): Promise<db.GameSessionRow> {
  * next genuinely playable question. Timeouts are resolved lazily on the next
  * request rather than by a background job.
  */
+/**
+ * How this round is going, in the vocabulary scoring.ts speaks.
+ *
+ * The mapping lives here rather than in scoring.ts because that module is
+ * deliberately free of the database -- every rule in it is a pure function of
+ * values passed in, which is what makes them testable without Postgres. One
+ * helper at the boundary keeps it that way.
+ */
+async function roundStance(sessionId: string) {
+    const answers = await db.listSessionQuestions(sessionId);
+
+    return stanceFor(
+        answers.map((a) => ({ status: a.status, isCorrect: a.is_correct }))
+    );
+}
+
 async function nextPlayableQuestion(
     sessionId: string,
     now: Date
@@ -173,7 +204,21 @@ async function nextPlayableQuestion(
             return null;
         }
 
-        if (question.served_at && isExpired(question.served_at, now, question.challenge_type)) {
+        /* The sweep has to read the stance too. Without it a beat served with
+           no clock -- because the learner had just missed twice -- would be
+           timed out here by a deadline they were never shown. */
+        const stance = await roundStance(sessionId);
+
+        if (
+            question.served_at &&
+            isExpired(
+                question.served_at,
+                now,
+                question.challenge_type,
+                question.display_order,
+                stance
+            )
+        ) {
             const correct = await db.findCorrectOptionText(question.question_id);
             await db.recordTimeout(question.id, correct ?? "(unavailable)");
             continue;
@@ -183,15 +228,59 @@ async function nextPlayableQuestion(
     }
 }
 
-async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQuestion> {
+/**
+ * Marks a served question as practice for what the learner is studying now.
+ *
+ * SERVER-DECIDED, like the targeting itself. The browser is told "this one is
+ * your current concept" and never works it out -- it has no authority over what
+ * the learner is learning, and a client that could claim it could make any
+ * question look like progress.
+ *
+ * Null for an untagged question, for a tagged question belonging to some other
+ * concept, and for a learner with no current concept at all. The reserved beats
+ * are the ones this is non-null for, which is what makes the reservation
+ * something the player can SEE rather than only something that happened.
+ */
+async function currentConceptMark(
+    userId: string,
+    question: db.SessionQuestionRow
+): Promise<{ conceptSlug: string; conceptName: string; demandSlug: string } | null> {
+    const [tag, current] = await Promise.all([
+        db.conceptForQuestion(question.question_id),
+        findCurrentConcept(userId).catch(() => null)
+    ]);
+
+    return tag && current && tag.conceptSlug === current.slug ? tag : null;
+}
+
+async function serveQuestion(
+    question: db.SessionQuestionRow,
+    userId: string,
+    sessionId: string
+): Promise<ServedQuestion> {
     const servedAt = question.served_at ?? (await db.markServed(question.id));
     const options = await db.listActiveOptions(question.question_id);
-    const deadline = servedAt.getTime() + timeLimitFor(question.challenge_type);
+
+    /*
+     * HOW THE ROUND IS GOING, read from the answers already given in it.
+     *
+     * A learner who has just missed twice in a row gets no clock on this beat,
+     * wherever they are in the round -- the support someone needs after two
+     * misses is time to think, not a faster version of what they are already
+     * failing. It lifts again as soon as they get one right.
+     */
+    const stance = await roundStance(sessionId);
+
+    /* Null on an untimed beat -- the client shows no clock at all rather than
+       a clock the learner is told to ignore. */
+    const limit = timeLimitFor(question.challenge_type, question.display_order, stance);
+    const deadline = limit === null ? null : servedAt.getTime() + limit;
 
     return {
         sessionQuestionId: question.id,
         displayOrder: question.display_order,
         topic: question.topic,
+        practisingNow: await currentConceptMark(userId, question),
         challengeType: question.challenge_type,
         questionNumber: question.display_order,
         totalQuestions: QUESTIONS_PER_SESSION,
@@ -205,8 +294,8 @@ async function serveQuestion(question: db.SessionQuestionRow): Promise<ServedQue
             text: o.option_text
         })),
         servedAt: servedAt.toISOString(),
-        deadlineAt: new Date(deadline).toISOString(),
-        msRemaining: Math.max(0, deadline - Date.now())
+        deadlineAt: deadline === null ? null : new Date(deadline).toISOString(),
+        msRemaining: deadline === null ? null : Math.max(0, deadline - Date.now())
     };
 }
 
@@ -220,6 +309,23 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     const now = new Date();
     const fresh = wantsFreshSession(req.body);
     const focusTopic = requestedFocusTopic(req.body);
+    /**
+     * THE CURRICULUM'S ANSWER, NOT THE CLIENT'S.
+     *
+     * Resolved here from findCurrentConcept -- which reads findJourneyPath, the
+     * same authority the map and the Home page use -- and never read from the
+     * request. There is deliberately no `concept` field in the body schema: a
+     * client that could name the concept could aim a run at whichever rung it
+     * wanted to clear, and rung clearing is evidence.
+     *
+     * `focusTopic` stays client-supplied because it is a pacing hint that
+     * changes nothing about what may be earned; this is not, so it is not.
+     *
+     * A failure is not fatal. The learner gets an ordinary run rather than a
+     * 500, which is the right trade for a hint: the curriculum gates that decide
+     * what may be DEALT are in the candidate query and are unaffected.
+     */
+    const current = await findCurrentConcept(userId).catch(() => null);
     const active = await findActiveSession(userId);
 
     // The one-active-session index is scoped to the user, not to (user, game).
@@ -262,7 +368,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
         const full = await db.findSessionForUser(existing.id, userId);
 
         if (full && full.status === "in_progress") {
-            await respondResumed(res, full, now);
+            await respondResumed(res, full, now, userId);
             return;
         }
     }
@@ -292,7 +398,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     let session: db.GameSessionRow;
 
     try {
-        session = await db.createSessionWithQuestions(userId, focusTopic);
+        session = await db.createSessionWithQuestions(userId, focusTopic, current?.id ?? null);
     } catch (err) {
         // The check at the top of this route and this INSERT are not atomic, so
         // the single active-session slot can change hands between them: a second
@@ -355,7 +461,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
                     return;
                 }
 
-                await respondResumed(res, full, now);
+                await respondResumed(res, full, now, userId);
                 return;
             }
         }
@@ -367,7 +473,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
         resumed: false,
         sessionId: session.id,
         scoreSoFar: 0,
-        question: question ? await serveQuestion(question) : null
+        question: question ? await serveQuestion(question, userId, session.id) : null
     });
 });
 
@@ -407,7 +513,7 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
         complete: false,
         sessionId: session.id,
         scoreSoFar: await db.scoreSoFar(session.id),
-        question: await serveQuestion(question)
+        question: await serveQuestion(question, userId, session.id)
     });
 });
 
@@ -467,7 +573,19 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
 
     // The deadline is enforced here, against the server's own served_at. A late
     // answer is refused outright, not merely scored zero.
-    if (isExpired(question.served_at, now, question.challenge_type)) {
+    /* The same stance the beat was SERVED under, so a learner cannot be timed
+       out against a clock they were never shown. */
+    const stance = await roundStance(session.id);
+
+    if (
+        isExpired(
+            question.served_at,
+            now,
+            question.challenge_type,
+            question.display_order,
+            stance
+        )
+    ) {
         await db.recordTimeout(question.id, correctOptionText);
 
         const remaining = await nextPlayableQuestion(session.id, now);
@@ -483,7 +601,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
             // The next question is deliberately not served here. serveQuestion
             // stamps served_at, which starts the deadline -- bundling it into this
             // response started the clock while the client was still showing
-            // feedback, costing a measured 1.77s of a 35s window. The client
+            // feedback, costing a measured 1.77s of the window. The client
             // fetches it from GET /sessions/current when it is ready to show it.
             question: null,
             session: finished
@@ -588,5 +706,34 @@ gameRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Response)
         return;
     }
 
-    res.status(200).json({ session: summarize(session, await db.listSessionQuestions(session.id)) });
+    /*
+     * WHAT THIS ROUND CHANGED, from the server's own evidence.
+     *
+     * `earned` is derived from the session's correct answers on practise
+     * challenges -- the same join CLEARED_RUNGS_CTE makes, narrowed to this
+     * one run. `concept` and `rungs` are the learner's position now, read from
+     * the curriculum path rather than counted in the browser.
+     *
+     * Nothing here demonstrates anything. Clearing a rung and demonstrating a
+     * concept stay separate actions, and /demonstrate is still the only thing
+     * that writes concept_demonstrations.
+     */
+    const [earned, current] = await Promise.all([
+        db.rungsEarnedInSession(session.id),
+        findCurrentConcept(req.user!.id).catch(() => null)
+    ]);
+
+    const path = current ? await findJourneyPath(req.user!.id).catch(() => null) : null;
+    const standing = path
+        ?.flatMap((t) => t.concepts)
+        .find((concept) => concept.slug === current!.slug);
+
+    res.status(200).json({
+        session: summarize(session, await db.listSessionQuestions(session.id)),
+        curriculum: {
+            concept: current && standing ? { slug: current.slug, name: standing.name } : null,
+            rungs: standing ? standing.rungs : null,
+            earned
+        }
+    });
 });

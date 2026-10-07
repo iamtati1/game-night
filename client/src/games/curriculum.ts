@@ -477,18 +477,26 @@ export const CONCEPTS: readonly Concept[] = [
         demands: ["recognise", "predict", "diagnose"]
     },
     {
+        id: "arithmetic-operators", topic: "values", label: "Using Arithmetic Operators",
+        objective: "evaluate an arithmetic expression without running it",
+        meaning: "arithmetic operators combine two numbers into a new one",
+        why: "Moved into Values because it is needed THERE. `expressions-produce-values` cannot show that an expression collapses to a value without an expression to collapse, and every one of its questions used arithmetic while arithmetic was still two topics away. Precedence and integer-vs-float surprises still sit underneath every accumulator and index calculation later.",
+        prerequisites: ["console-output"], weight: "core",
+        demands: ["predict", "explain"]
+    },
+    {
         id: "expressions-produce-values", topic: "values", label: "Expressions Produce Values",
         objective: "work out the single value a piece of code collapses to",
         meaning: "an expression is any code that produces a value, and it is replaced by that value before anything else happens",
         why: "The idea the whole language rests on, and the one the curriculum never stated. Arguments, conditions, right-hand sides of assignments and array indexes are all expressions; a learner who cannot see that `total + 1` becomes one number before it is used has to relearn evaluation order separately in every one of those places.",
-        prerequisites: ["console-output"], weight: "load-bearing",
+        prerequisites: ["arithmetic-operators"], weight: "load-bearing",
         demands: ["recognise", "predict", "diagnose", "explain"]
     },
     {
         id: "primitive-types", topic: "values", label: "Identifying Primitive Types",
         objective: "name what kind of thing a value is",
         meaning: "JavaScript has a small set of primitive types, and every literal is one of them",
-        why: "Every later idea is about moving values around, so a learner who cannot name what they are holding cannot reason about what happens to it. It follows the expression idea rather than opening the syllabus, because naming a kind of value only means something once you have watched code produce one.",
+        why: "Every later idea is about moving values around, so a learner who cannot name what they are holding cannot reason about what happens to it. It follows the expression idea rather than opening the syllabus, because naming a kind of value only means something once there is a value in front of you that came from somewhere. Naming a kind of value only means something once you have watched code produce one.",
         prerequisites: ["expressions-produce-values"], weight: "core",
         demands: ["recognise", "predict"]
     },
@@ -498,6 +506,14 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "true and false are values in their own right, and every comparison produces one of them",
         why: "Every condition a learner writes is a boolean underneath, and until now the curriculum only mentioned them in passing. Naming the type before it is used in an `if` is what stops `if (x = 5)` looking reasonable.",
         prerequisites: ["primitive-types"], weight: "core",
+        demands: ["recognise", "predict"]
+    },
+    {
+        id: "comparison-operators", topic: "values", label: "Using Comparison Operators",
+        objective: "work out whether a comparison is true or false",
+        meaning: "comparison operators ask a question about two values and answer true or false",
+        why: "Moved into Values, directly after `booleans`, because that is where booleans actually come from -- the booleans lesson already taught comparison inline and three of its questions required it while comparison itself was two topics away. Every branch and every loop condition is a comparison, so getting these wrong makes control flow unpredictable rather than merely unfamiliar.",
+        prerequisites: ["primitive-types", "booleans"], weight: "core",
         demands: ["recognise", "predict"]
     },
     {
@@ -585,28 +601,12 @@ export const CONCEPTS: readonly Concept[] = [
 
     /* ------------------------------------------------------- operators */
     {
-        id: "arithmetic-operators", topic: "operators", label: "Using Arithmetic Operators",
-        objective: "evaluate an arithmetic expression without running it",
-        meaning: "arithmetic operators combine two numbers into a new one",
-        why: "Precedence and integer-vs-float surprises are small, but they sit underneath every accumulator and index calculation later.",
-        prerequisites: ["primitive-types"], weight: "core",
-        demands: ["predict", "explain"]
-    },
-    {
         id: "assignment-operators", topic: "operators", label: "Updating a Value in Place",
         objective: "update a variable using its own current value",
         meaning: "`+=` and `++` read the variable, change it, and store the result back under the same name",
         why: "The shorthand every counter and running total is written with. Without it `total = total + n` stays a piece of magic, and the accumulator pattern in loops is unreadable rather than merely new.",
         prerequisites: ["reassignment", "arithmetic-operators"], weight: "core",
         demands: ["predict", "produce"]
-    },
-    {
-        id: "comparison-operators", topic: "operators", label: "Using Comparison Operators",
-        objective: "work out whether a comparison is true or false",
-        meaning: "comparison operators ask a question about two values and answer true or false",
-        why: "Every branch and every loop condition is a comparison. Getting these wrong makes control flow unpredictable rather than merely unfamiliar.",
-        prerequisites: ["primitive-types", "booleans"], weight: "core",
-        demands: ["recognise", "predict"]
     },
     {
         id: "type-coercion", topic: "operators", label: "Predicting Type Coercion",
@@ -681,14 +681,6 @@ export const CONCEPTS: readonly Concept[] = [
         why: "The bridge from statements that do something to expressions that are something, which matters as soon as callbacks arrive.",
         prerequisites: ["if-else"], weight: "core",
         demands: ["recognise", "predict", "produce"]
-    },
-    {
-        id: "guard-clauses", topic: "control-flow", label: "Exiting Early with Guard Clauses",
-        objective: "leave a function early instead of nesting the happy path",
-        meaning: "a guard clause handles the exceptional case first and returns",
-        why: "The single habit that most reduces nesting in real code. It follows nesting rather than if/else, because a guard clause is a FIX for nesting -- taught before the problem it solves, it is only a style rule to memorise.",
-        prerequisites: ["nested-conditions"], weight: "core",
-        demands: ["predict", "produce", "explain"]
     },
 
     /* --------------------------------------------------------- strings */
@@ -798,14 +790,6 @@ export const CONCEPTS: readonly Concept[] = [
         prerequisites: ["for-loop-anatomy"], weight: "core",
         demands: ["predict", "produce"]
     },
-    {
-        id: "for-of-for-in", topic: "loops", label: "Choosing `for...of` vs. `for...in`",
-        objective: "choose the right loop form for arrays and for objects",
-        meaning: "for-of walks values, for-in walks keys",
-        why: "Mixing these up is a classic, and the failure is quiet: for-in over an array gives you string indices and nothing throws.",
-        prerequisites: ["for-loop-anatomy"], weight: "core",
-        demands: ["recognise", "predict", "diagnose"]
-    },
 
     /* ------------------------------------------------------- functions */
     {
@@ -833,6 +817,14 @@ export const CONCEPTS: readonly Concept[] = [
         demands: ["predict", "diagnose", "repair", "explain"]
     },
     {
+        id: "guard-clauses", topic: "functions", label: "Exiting Early with Guard Clauses",
+        objective: "leave a function early instead of nesting the happy path",
+        meaning: "a guard clause handles the exceptional case first and returns",
+        why: "MOVED OUT OF CONTROL FLOW, where its own objective could not be met. A guard clause leaves a function early -- that is what makes it a guard rather than an if -- and Functions is three topics later, so the concept asked the learner to write a `return` they had not met. It belongs directly after `return-values`, which is the thing it depends on. Nesting the happy path is still the problem it solves, and `nested-conditions` remains a prerequisite.",
+        prerequisites: ["nested-conditions", "return-values"], weight: "core",
+        demands: ["predict", "produce", "explain"]
+    },
+    {
         id: "arrow-functions", topic: "functions", label: "Writing Arrow Functions",
         objective: "read and write arrow functions, including the implicit return",
         meaning: "an arrow function is shorter, and with no braces it returns its expression automatically",
@@ -847,14 +839,6 @@ export const CONCEPTS: readonly Concept[] = [
         why: "The idea that unlocks callbacks, array methods and closures at once. Calling instead of passing is the single most common beginner slip in the whole curriculum.",
         prerequisites: ["arrow-functions"], weight: "load-bearing",
         demands: ["predict", "diagnose", "explain"]
-    },
-    {
-        id: "default-rest-params", topic: "functions", label: "Using Default and Rest Parameters",
-        objective: "give parameters defaults and gather extra arguments",
-        meaning: "a default fills in a missing argument; rest collects whatever is left into an array",
-        why: "Common in real signatures, and defaults interact with undefined in a way worth seeing deliberately.",
-        prerequisites: ["parameters-arguments"], weight: "light",
-        demands: ["predict", "produce"]
     },
 
     /* ----------------------------------------------------------- scope */
@@ -931,6 +915,14 @@ export const CONCEPTS: readonly Concept[] = [
         why: "Shallow copying is the exact point where most people believe they have made a copy and have not.",
         prerequisites: ["array-mutation"], weight: "load-bearing",
         demands: ["predict", "produce", "explain"]
+    },
+    {
+        id: "default-rest-params", topic: "arrays", label: "Using Default and Rest Parameters",
+        objective: "give parameters defaults and gather extra arguments",
+        meaning: "a default fills in a missing argument; rest collects whatever is left into an array",
+        why: "MOVED OUT OF FUNCTIONS, where half of it could not be taught. Its own meaning says rest collects whatever is left INTO AN ARRAY, and arrays are two topics later -- so a learner met the syntax before the thing it produces. It sits after `array-copy-spread`, which teaches the same three dots in the other direction: spread takes an array apart, rest puts one together.",
+        prerequisites: ["parameters-arguments", "array-copy-spread"], weight: "light",
+        demands: ["predict", "produce"]
     },
     {
         id: "nested-arrays", topic: "arrays", label: "Working with Nested Arrays",
@@ -1039,6 +1031,14 @@ export const CONCEPTS: readonly Concept[] = [
         why: "Real data is nested. Reading an API response is mostly this skill and nothing else.",
         prerequisites: ["object-access"], weight: "core",
         demands: ["recognise", "predict"]
+    },
+    {
+        id: "for-of-for-in", topic: "objects", label: "Choosing `for...of` vs. `for...in`",
+        objective: "choose the right loop form for arrays and for objects",
+        meaning: "for-of walks values, for-in walks keys",
+        why: "MOVED OUT OF LOOPS, where neither half of its objective could be met. `for-of` walks an array and `for-in` walks an object, and Loops is topic 6 -- three topics before arrays and five before objects. Choosing between them is a real decision, but only once there is something to choose between; here, after `object-access`, both shapes are familiar and the comparison is the point.",
+        prerequisites: ["for-loop-anatomy", "array-indexing", "object-access"], weight: "core",
+        demands: ["recognise", "predict", "diagnose"]
     },
     {
         id: "optional-chaining", topic: "objects", label: "Safe Access with Optional Chaining",

@@ -21,6 +21,7 @@ function world(done: number, allDone = false): JourneyPathResponse {
         slug: `c${i}`,
         name,
         objective: "do the thing",
+        rungs: { cleared: 0, playable: 3 },
         state: allDone
             ? "demonstrated"
             : i < done
@@ -100,7 +101,12 @@ describe("what the learner can reach", () => {
         const links = [...container.querySelectorAll(".world-object a")];
 
         expect(links).toHaveLength(1);
-        expect(links[0]!.getAttribute("href")).toBe("/learn/c2");
+
+        // The encounter, not the bare lesson. Reaching a concept from the world
+        // now opens the one screen that teaches it, practises it at the rung the
+        // curriculum says the learner is on, and lets them write code for it --
+        // rather than a lesson that hands off to whatever the topic deals.
+        expect(links[0]!.getAttribute("href")).toBe("/concept/c2");
     });
 
     it("does not render an unreached concept as a disabled control", async () => {

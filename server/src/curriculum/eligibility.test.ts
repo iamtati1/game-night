@@ -347,9 +347,35 @@ describe("D · an unmet prerequisite Jolt CAN teach blocks its dependants", () =
             // correct outcome: tagging it to type-coercion put it behind an
             // unmet primitive-types.
             const removed = before.filter((id) => !dealable.includes(id)).sort();
-            const expected = [teaching.questionId, equalityQuestionId].sort();
+            // Seed 033 gave `type-coercion` its own questions, and they leave
+            // for exactly the same reason the fixture's tagged one does: they
+            // now sit behind an unmet primitive-types. Naming them individually
+            // would pin this test to the content rather than the rule, so
+            // "nothing else" is stated as the rule itself -- everything that
+            // left is inside the type-coercion dependency cone.
+            // type-coercion itself, and every concept that REQUIRES it --
+            // `equality` and `truthy-falsy` both do, so their questions are
+            // gated by the same edge. Read from the prerequisite graph rather
+            // than listed, so the cone stays correct as content grows.
+            const coerced = (
+                await fx.rows<{ id: string }>(
+                    `SELECT q.id FROM questions q
+                     JOIN challenges ch ON ch.id = q.challenge_id
+                     JOIN concepts c    ON c.id  = ch.concept_id
+                     WHERE c.slug = 'type-coercion'
+                        OR c.id IN (
+                            SELECT p.concept_id FROM prerequisites p
+                            JOIN concepts r ON r.id = p.requires_id
+                            WHERE r.slug = 'type-coercion'
+                        )`
+                )
+            ).map((r) => r.id);
+            const inCone = new Set([teaching.questionId, equalityQuestionId, ...coerced]);
 
-            expect(removed).toEqual(expected);
+            expect(removed.filter((id) => !inCone.has(id)), "nothing outside the cone").toEqual([]);
+            expect(removed, "the two the comment names").toEqual(
+                expect.arrayContaining([teaching.questionId, equalityQuestionId])
+            );
         });
     });
 });
@@ -713,21 +739,43 @@ describe("both games consume the shared module rather than a copy", () => {
         expect(topUp).not.toContain("countDealableQuestions");
     });
 
-    it("keeps the dealer curriculum-agnostic", () => {
-        // Pacing and eligibility stay separate. curve.ts is a pure function with
-        // no database access, and it must stay that way -- checked on what it
-        // DOES rather than on the words in its comments, which legitimately
-        // discuss curriculum units.
+    it("keeps the dealer unable to widen what it was given", () => {
+        // THE SEPARATION, STATED AS WHAT IT ACTUALLY IS.
+        //
+        // This used to forbid the strings `challenge_id` and `concept_id` in
+        // curve.ts. That was a proxy for the real rule, and it stopped being a
+        // good one when the dealer began reserving beats for the learner's
+        // current concept: `topic` was already curriculum vocabulary in there,
+        // so "no curriculum identity" was never quite the line.
+        //
+        // The real line is that ELIGIBILITY -- may this learner be shown this at
+        // all? -- is decided in SQL before the candidate array exists, and the
+        // dealer can only choose among the rows it was handed. A pure function
+        // with no imports and no SQL cannot do anything else: it cannot query,
+        // cannot join, and cannot reach a row that the predicates excluded.
         expect(curve, "curve.ts must import nothing at all").not.toMatch(/^import /m);
-        expect(curve, "curve.ts must not carry curriculum identity").not.toContain("challenge_id");
-        expect(curve).not.toContain("concept_id");
+        expect(curve, "the dealer must not be able to query").not.toMatch(/\bSELECT\b/);
+        expect(curve).not.toMatch(/\bFROM\s+\w/);
+        expect(curve, "and must not carry the curriculum's difficulty").not.toContain(
+            "challenge_difficulty"
+        );
     });
 
-    it("leaves the dealer's own signature untouched", () => {
-        // dealSession still takes (candidates, count, random, focusTopic). A new
-        // parameter here would mean eligibility had leaked into pacing.
+    it("keeps the dealer's inputs to pacing hints", () => {
+        // dealSession takes (candidates, count, random, focusTopic, focusConcept).
+        // Both focus arguments are PREFERENCES over the candidate array: each can
+        // only move a row that is already in it into a reserved beat, and neither
+        // can add one. A parameter that could change WHICH rows arrive would mean
+        // eligibility had leaked into pacing.
         expect(curve).toContain("export function dealSession<T extends Dealable>(");
         expect(curve).toContain("focusTopic: string | null = null");
+        expect(curve).toContain("focusConcept: string | null = null");
+
+        // Every reservation is drawn from `remaining`, which is the candidate
+        // array. If a reservation is ever sourced from anywhere else, this is the
+        // test that should have caught it.
+        expect(curve).toContain("remaining.filter((q) => q.concept_id === focusConcept)");
+        expect(curve).toContain("remaining.filter((q) => q.topic === focusTopic)");
     });
 
     it("gates on prerequisites only -- not on role or demand", () => {

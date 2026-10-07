@@ -151,9 +151,13 @@ describe("failure always gives one next thing to try", () => {
     });
 
     it("turns untaught syntax into a sentence rather than a crash", () => {
-        const { note } = attempt(independent!, "if (fuel > 0) { console.log(1); }");
+        // Was `if`, then `for`, then `function`, then `class` -- each left this
+        // test as the curriculum reached it, and `class` left when
+        // this-and-classes was built. What is still genuinely ahead of the
+        // learner is a constructor the allowlist does not name.
+        const { note } = attempt(independent!, "let a = new Thing();");
 
-        expect(note).toContain("`if`");
+        expect(note).toContain("not something we have covered yet");
         expect(note).not.toMatch(/SyntaxError|TypeError/);
     });
 });

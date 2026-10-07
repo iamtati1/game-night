@@ -270,3 +270,61 @@ A Learn Beat is a challenge with role `introduce`. It is not a separate entity.
 XP formulas, session and scoring mechanics, the Game Floor, auth, deployment,
 and the existing dealer's pacing curve. Curriculum progression and XP are
 separate concerns; the two systems only ever read the same session results.
+
+---
+
+# Reconciliation — 2026-10-02
+
+This document was written before the challenge layer existed and describes what
+the implementation was *building toward*. Most of it came true. Three claims
+above are now stale, and one was deliberately **not** followed.
+
+## Now built
+
+**The CHALLENGES layer** — marked "not yet built" in the diagram — exists
+(`migrations/021_create_challenges.sql`). Content points upward at it exactly as
+drawn: `questions.challenge_id`, `bug_hunt_incidents.challenge_id`, and a third
+route the diagram did not anticipate — `challenges.activity = 'mission'`, for a
+rung realised by a written movement that lives in the client and has no content
+row at all (`migrations/030`).
+
+**Coverage:** 16 topics · 100 concepts · 281 declared rungs · **281 realised**.
+
+**The role gate** works as specified: `roleEligible` withholds `practise`
+content until its concept has been encountered, which is what makes
+Learn-before-Practise an enforced order rather than a convention.
+
+## Deliberately not followed
+
+> ### Future — specified, not built
+> `learner_concept_state`, `learner_demand_progress`, Mastery / Skill Map
+
+**This was rejected, on purpose.** `curriculum/eligibility.ts` states the
+reasoning: the evidence already exists durably in the round tables, which keep a
+foreign key to the content played and never lose a row. A stored state table
+would be a second source of truth that can silently disagree with the sessions
+it came from, and would have to be backfilled from exactly the derivation that
+replaces it.
+
+So learner state is **derived, never stored**: `metConceptsCte` for
+reachability, `CLEARED_RUNGS_CTE` for rung evidence. Promote to a materialised
+table when profiling asks, or when state must carry something the query cannot
+derive — decay, a manual placement, an instructor override. Not before.
+
+The one exception is `introduction_completions`, and it earns it: acknowledging
+a Learn Beat is the single fact gameplay cannot produce, because a beat is not
+dealt, not scored and has no round row to read.
+
+## Still accurate, still unbuilt
+
+Reaction and Memory have no content tables, so they still cannot participate as
+reinforcement. The paragraph above about the role gate letting them do so
+describes a capability that is ready for them and that they do not yet use. See
+`GAMEPLAY_SPEC.md` — by the gameplay bar, whether they should is an open product
+question rather than a scheduling one.
+
+## Still true, and worth re-stating
+
+Authoring in TypeScript, enforcement in PostgreSQL, bridged by a generated seed.
+The server still never imports the client's source. Curriculum progression and
+XP remain separate concerns that only ever read the same session results.

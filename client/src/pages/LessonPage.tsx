@@ -7,6 +7,7 @@ import { MissionScene } from "../components/MissionScene.js";
 import { sceneLessonFor } from "../games/scenes.js";
 import { SceneLesson } from "../components/SceneLesson.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
+import { ConceptTeaching } from "../components/ConceptTeaching.js";
 
 /**
  * One concept's lesson: teach, then ask, then answer back.
@@ -268,49 +269,7 @@ export function LessonPage() {
                 <h1 className="lesson-title">{lesson.title}</h1>
                 <p className="lesson-why">{lesson.why}</p>
 
-                <div className="lesson-teach">
-                    {lesson.teach.map((block) => (
-                        <div className="lesson-example" key={block.code}>
-                            <pre className="lesson-code">
-                                <code>{block.code}</code>
-                            </pre>
-
-                            {/* SEE IT. The real output, shown rather than
-                                described — a beginner asked to imagine what a
-                                line prints is already being tested. */}
-                            {block.output !== undefined && (
-                                <div className="lesson-output">
-                                    <span className="lesson-output-tag">displays</span>
-                                    <pre>
-                                        <code>{block.output}</code>
-                                    </pre>
-                                </div>
-                            )}
-
-                            <p className="lesson-note">{block.note}</p>
-
-                            {/* UNDERSTAND IT. Which piece is which, before
-                                anything is asked about any of them. */}
-                            {block.parts && (
-                                <dl className="lesson-parts">
-                                    {block.parts.map((part) => (
-                                        <div className="lesson-part" key={part.piece}>
-                                            <dt>
-                                                <code>{part.piece}</code>
-                                            </dt>
-                                            <dd>{part.means}</dd>
-                                        </div>
-                                    ))}
-                                </dl>
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                <p className="lesson-notice">
-                    <span className="lesson-notice-tag">Notice</span>
-                    {lesson.notice}
-                </p>
+                <ConceptTeaching teach={lesson.teach} notice={lesson.notice} />
 
                 <button className="button primary big" onClick={() => setPhase("ask")}>
                     Got it — try one
