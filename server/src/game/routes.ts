@@ -16,6 +16,7 @@ import {
 } from "../sessions/queries.js";
 import { requestedFocusTopic, wantsFreshSession } from "../sessions/schemas.js";
 import { findCurrentConcept, findJourneyPath } from "../curriculum/lessons.js";
+import { findNextIntroduction } from "../curriculum/queries.js";
 import { isActiveSessionConflict, resolveSessionRace } from "./conflicts.js";
 import { ensureQuestionPool } from "../questions/topUp.js";
 import * as db from "./queries.js";
@@ -383,6 +384,46 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
     const available = await countDealableQuestions(userId, QUESTIONS_PER_SESSION);
 
     if (available < QUESTIONS_PER_SESSION) {
+        /**
+         * A THIN POOL IS USUALLY A CURRICULUM STATE, NOT A FAULT.
+         *
+         * roleEligible withholds practice until its concept has been
+         * ENCOUNTERED, so a learner who has met nothing has nothing to be
+         * dealt -- measured against the real seeds: 0 dealable at
+         * registration, 7 after the console-output Learn Beat, 14 after
+         * arithmetic-operators. The content exists and is correctly tagged;
+         * the learner simply has not been taught yet.
+         *
+         * Answering 503 there told them the server was broken. It is not: the
+         * curriculum already knows what they should do next, and
+         * findNextIntroduction already computes it -- the same two predicates
+         * (curriculumEligible, roleEligible) over the same `met` CTE the
+         * dealer's own gate uses, so this cannot point at a concept the
+         * candidate query disagrees about.
+         *
+         * 200 RATHER THAN AN ERROR STATUS, for the reason GET
+         * /api/curriculum/introduction gives for the mirror case: having
+         * something left to learn is the normal state of a learner, and a 4xx
+         * or 5xx would have the client render it as a failure. The body is the
+         * SAME `{ introduction }` shape that endpoint returns, so the client
+         * reuses the type and the Learn Beat it already knows how to draw
+         * rather than carrying a second representation of the same fact.
+         *
+         * NOT A BYPASS. Nothing is dealt, no session row is created, and no
+         * eligibility gate is relaxed. The learner meets the concept through
+         * the existing introduction endpoints and comes back through this same
+         * check.
+         */
+        const introduction = await findNextIntroduction(userId);
+
+        if (introduction) {
+            res.status(200).json({ resumed: false, introduction });
+            return;
+        }
+
+        // Nothing to deal AND nothing left to teach. That is a genuine content
+        // fault rather than a learner who is early, so it keeps the answer it
+        // has always had -- and in particular is still never a short session.
         res.status(503).json({
             error: "Not enough questions available",
             details: [

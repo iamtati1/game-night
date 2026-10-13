@@ -81,6 +81,17 @@ export interface StartSessionResponse {
     scoreSoFar?: number;
     question?: ServedQuestion | null;
     session?: SessionSummary;
+    /**
+     * Set INSTEAD of a session when the learner has not met enough of the
+     * curriculum for a round to be dealt yet.
+     *
+     * Practice is withheld until its concept has been encountered, so an early
+     * learner's pool is genuinely empty -- not broken. The server answers with
+     * the concept to meet next rather than an error, in the same shape GET
+     * /api/curriculum/introduction uses, and the page shows that Learn Beat
+     * before trying again. `sessionId` and `question` are absent here.
+     */
+    introduction?: Introduction;
 }
 
 export interface CurrentQuestionResponse {

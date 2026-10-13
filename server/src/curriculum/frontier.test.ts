@@ -545,6 +545,15 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
          * curriculum seed added content -- and the comment below already had to
          * explain one such rise. The claim is that nothing EXISTING moved, so
          * the curriculum-authored questions are excluded rather than counted.
+         *
+         * AND IT DELIBERATELY IGNORES is_active. Seed 079 retired the untagged
+         * legacy bank, which is a change to whether those questions are DEALT,
+         * not to how hard any of them is to pace. Reading this through
+         * ELIGIBLE_QUESTION_PREDICATE would have conflated the two and reported
+         * {11, 2, 0, 0} -- making a retirement look like a mass difficulty
+         * edit. The options checks are kept because a malformed row was never
+         * part of "the existing bank"; only the activity filter is dropped, and
+         * the expected numbers below are unchanged because nothing moved.
          */
         const [spread] = await fx.rows<{ d1: number; d2: number; d3: number; d4: number }>(
             `SELECT COUNT(*) FILTER (WHERE difficulty = 1)::INT d1,
@@ -552,8 +561,12 @@ describe("7 · curriculum difficulty and pacing difficulty are different numbers
                     COUNT(*) FILTER (WHERE difficulty = 3)::INT d3,
                     COUNT(*) FILTER (WHERE difficulty = 4)::INT d4
              FROM questions q
-             WHERE ${ELIGIBLE_QUESTION_PREDICATE}
-               AND (q.source IS NULL OR q.source NOT LIKE 'jolt-%')`
+             WHERE (SELECT COUNT(*) FROM question_options o
+                    WHERE o.question_id = q.id AND o.is_active) >= 2
+               AND (SELECT COUNT(*) FROM question_options o
+                    WHERE o.question_id = q.id AND o.is_active AND o.is_correct) = 1
+               AND (q.source IS NULL
+                    OR (q.source NOT LIKE 'jolt-%' AND q.source NOT LIKE 'fixture%'))`
         );
 
         // The legacy bank as it was before any curriculum content existed.

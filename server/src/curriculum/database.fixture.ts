@@ -56,6 +56,9 @@ export interface CurriculumFixture {
      */
     makeTeachable(concept: string): Promise<{ challengeId: string; questionId: string }>;
 
+    /** One fixture-owned untagged question, for the "earns nothing" invariant. */
+    untaggedQuestion(): Promise<string>;
+
     /**
      * The inverse: deactivates every challenge on a concept, so the
      * prerequisite layer stops considering it teachable.
@@ -151,25 +154,34 @@ export async function buildCurriculumFixture(): Promise<CurriculumFixture> {
             [concept, role, difficulty, demand]
         );
 
-        // Restricted to a question ELIGIBLE_QUESTION_PREDICATE would actually
-        // deal. Without this the helper can hand back a retired question or one
-        // with no single correct option, and a test asserting it is offered can
-        // never pass for a reason that has nothing to do with the curriculum.
+        // TAGS AN EXISTING UNTAGGED QUESTION, which is the documented
+        // contract and not an implementation detail: eligibility.test.ts
+        // snapshots the dealable set BEFORE calling makeTeachable and asserts
+        // the question leaves it, so a row created here could never appear in
+        // that snapshot. Briefly changing this to an INSERT turned that test
+        // green on the type checker and silently false in substance.
+        //
+        // The source is the fixture's own pool rather than the legacy bank,
+        // which seed 079 retired. See seedUntaggedPool for why the pool is
+        // small and parked at the deepest topic.
         const [question] = await rows<{ id: string }>(
             `UPDATE questions SET challenge_id = $1
              WHERE id = (
                  SELECT q.id FROM questions q
                  WHERE q.challenge_id IS NULL
                    AND q.is_active
-                   AND (SELECT COUNT(*) FROM question_options o
-                        WHERE o.question_id = q.id AND o.is_active) >= 2
-                   AND (SELECT COUNT(*) FROM question_options o
-                        WHERE o.question_id = q.id AND o.is_active AND o.is_correct) = 1
+                   AND q.source = 'fixture-untagged'
                  ORDER BY q.id LIMIT 1
              )
              RETURNING id`,
             [challenge!.id]
         );
+
+        if (!question) {
+            throw new Error(
+                "fixture untagged pool exhausted -- raise UNTAGGED_POOL_SIZE in database.fixture.ts"
+            );
+        }
 
         return { challengeId: challenge!.id, questionId: question!.id };
     }
@@ -294,12 +306,84 @@ export async function buildCurriculumFixture(): Promise<CurriculumFixture> {
         );
     }
 
+    /**
+     * The fixture's own untagged questions, seeded once before any scenario.
+     *
+     * WHY THEY EXIST. Seed 079 retired the legacy bank, and several tests need
+     * an untagged question to prove the invariant that still matters: a
+     * question with no challenge earns no curriculum credit. questions.
+     * challenge_id is still nullable, so that invariant has to keep being
+     * tested, and the test needs a row to test it with.
+     *
+     * WHY THEY ARE PARKED AT THE DEEPEST TOPIC. question_journey reads
+     * questions.topic for an untagged row, so these sit at algorithms -- out of
+     * reach of any beginner's journey ceiling. Parked anywhere earlier they
+     * would be dealt to a learner with no history, which is exactly the
+     * behaviour seed 079 removed and journey.test.ts now asserts is gone.
+     *
+     * WHY THE POOL IS SMALL. journeyCte's floor opens a topic once its
+     * cumulative dealable count reaches QUESTIONS_PER_SESSION. Fewer than ten
+     * rows cannot trip that, so the pool cannot drag a beginner's ceiling to
+     * the end of the curriculum. Raise it only with that in mind.
+     *
+     * They never leave the fixture: this database is built in memory from the
+     * repository's migrations and seeds and discarded with the process.
+     */
+    const UNTAGGED_POOL_SIZE = 8;
+
+    async function seedUntaggedPool(): Promise<void> {
+        for (let i = 0; i < UNTAGGED_POOL_SIZE; i += 1) {
+            const [question] = await rows<{ id: string }>(
+                `INSERT INTO questions
+                     (prompt, difficulty, topic, challenge_type, challenge_id, source)
+                 VALUES ($1, 1, 'algorithms', 'predict-output', NULL, 'fixture-untagged')
+                 RETURNING id`,
+                [`fixture untagged question ${i}`]
+            );
+
+            await db.query(
+                `INSERT INTO question_options (question_id, option_text, display_order, is_correct)
+                 VALUES ($1, 'right', 1, TRUE), ($1, 'wrong', 2, FALSE)`,
+                [question!.id]
+            );
+        }
+    }
+
+    /**
+     * One untagged question, created on demand inside the caller's scenario.
+     *
+     * Separate from the pool because the callers are different. challengeFor
+     * needs a row that PRE-EXISTS the caller's snapshot; this is for tests that
+     * simply need something untagged to answer, and creating it per scenario
+     * keeps them independent of how many challengeFor has claimed.
+     */
+    async function untaggedQuestion(): Promise<string> {
+        const [question] = await rows<{ id: string }>(
+            `INSERT INTO questions
+                 (prompt, difficulty, topic, challenge_type, challenge_id, source)
+             VALUES ('fixture untagged on demand ' || clock_timestamp()::TEXT,
+                     1, 'algorithms', 'predict-output', NULL, 'fixture-untagged-on-demand')
+             RETURNING id`
+        );
+
+        await db.query(
+            `INSERT INTO question_options (question_id, option_text, display_order, is_correct)
+             VALUES ($1, 'right', 1, TRUE), ($1, 'wrong', 2, FALSE)`,
+            [question!.id]
+        );
+
+        return question!.id;
+    }
+
+    await seedUntaggedPool();
+
     return {
         db,
         rows,
         insertUser,
         scenario,
         challengeFor,
+        untaggedQuestion,
         makeTeachable: (concept) => challengeFor(concept, "practise"),
         makeUnteachable: async (concept) => {
             await rows(

@@ -181,10 +181,34 @@ export function journeyCte(userParam: string, minimumPool: number): string {
                     (SELECT MAX(s.display_order) FROM journey_stocked s WHERE s.stocked)
                 ),
                 -- never below the point where a session can be filled
+                --
+                -- THE FALLBACK IS THE FIRST STOCKED TOPIC, NOT THE LAST, and
+                -- that is the whole point of it. It fires when NO topic can
+                -- fill a session, which is a learner with almost nothing
+                -- dealable -- someone who has just registered. Falling back to
+                -- MAX would answer "you cannot fill a round anywhere" with "then
+                -- take the entire curriculum", which is the opposite of a floor:
+                -- ceiling 16, and Bug Hunt deals a beginner a null-property
+                -- read. Measured, with the untagged bank retired: ceiling 16 at
+                -- 0 and 1 Learn Beats, and a 39-incident Bug Hunt pool that is
+                -- large enough that the route does not even refuse the session.
+                --
+                -- MIN keeps the gate shut instead. The learner stays at the
+                -- first topic until they have played enough for the cumulative
+                -- count to carry them, which is what every other line of this
+                -- CTE already assumes.
+                --
+                -- (No backticks anywhere in this comment: it lives inside a
+                -- template literal, and one would end the string.)
+                --
+                -- Invisible until now because journey_dealable was never
+                -- empty: 221 untagged questions guaranteed a floor at topic 2,
+                -- so this branch could not be reached. Retiring them is what
+                -- exposed it, not what caused it.
                 COALESCE(
                     (SELECT MIN(s.display_order) FROM journey_stocked s
                      WHERE s.cumulative >= ${minimumPool}),
-                    (SELECT MAX(s.display_order) FROM journey_stocked s WHERE s.stocked)
+                    (SELECT MIN(s.display_order) FROM journey_stocked s WHERE s.stocked)
                 )
             ) AS ceiling
         FROM journey_reached r

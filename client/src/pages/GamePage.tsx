@@ -427,6 +427,20 @@ export function GamePage() {
         try {
             const data = await api.post<StartSessionResponse>("/api/sessions");
 
+            /*
+             * Resuming reaches the availability check only if the paused run
+             * has gone, so this should not happen -- but if it does, taking the
+             * normal path would clear the question and leave the player on an
+             * un-paused screen with nothing on it. Keep the paused card up and
+             * say what is needed instead.
+             */
+            if (data.introduction) {
+                setIntroduction(data.introduction);
+                setResuming(false);
+                setError("Finish the next Learn Beat before playing again.");
+                return;
+            }
+
             setSessionId(data.sessionId ?? null);
             setQuestion(data.question ?? null);
             setRunningScore(data.scoreSoFar ?? 0);
@@ -572,6 +586,25 @@ export function GamePage() {
 
             if (data.session) {
                 finish(data.session.id);
+                return;
+            }
+
+            /*
+             * The curriculum has something to teach before this round can be
+             * dealt, so the beat comes back instead of a session.
+             *
+             * This is the loop closing rather than a failure, and it can fire
+             * more than once: one Learn Beat unlocks seven practice questions
+             * and a round needs ten, so an early learner meets two concepts
+             * before their first game. Showing the next beat each time is what
+             * makes that feel like a course instead of a locked door.
+             *
+             * `entered` is deliberately left alone -- nothing is in progress,
+             * and the finally below drops out of the count-in.
+             */
+            if (data.introduction) {
+                setIntroduction(data.introduction);
+                setLearning(true);
                 return;
             }
 

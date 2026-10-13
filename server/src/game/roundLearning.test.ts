@@ -65,9 +65,25 @@ beforeAll(async () => {
 
     tagged = { questionId: t!.question_id, conceptSlug: t!.concept_slug, demandSlug: t!.demand_slug };
 
-    [{ id: untagged }] = await rows<{ id: string }>(
-        `SELECT id FROM questions WHERE is_active AND challenge_id IS NULL ORDER BY id LIMIT 1`
+    // Fixture-owned, since seed 079 retired the legacy untagged bank. The
+    // assertions below are unchanged and still worth holding: questions.
+    // challenge_id is nullable, so a question with no rung must earn nothing.
+    // Parked at `algorithms` so it can never reach a beginner's journey.
+    const [fresh] = await rows<{ id: string }>(
+        `INSERT INTO questions
+             (prompt, difficulty, topic, challenge_type, challenge_id, source)
+         VALUES ('fixture untagged question', 1, 'algorithms',
+                 'predict-output', NULL, 'fixture-untagged')
+         RETURNING id`
     );
+
+    await db.query(
+        `INSERT INTO question_options (question_id, option_text, display_order, is_correct)
+         VALUES ($1, 'right', 1, TRUE), ($1, 'wrong', 2, FALSE)`,
+        [fresh!.id]
+    );
+
+    untagged = fresh!.id;
 });
 
 /** An answered question, filled the way the game fills one. */

@@ -458,19 +458,33 @@ describe("untagged content is transitional fallback, not curriculum content", ()
             // playing UNTAGGED content adds nothing to it -- unchanged, not
             // empty.
             const before = await state(learner);
-            // Drawn from the POOL, not from a dealt run: a learner who has
-            // reached primitive-types is now dealt ten tagged Values questions
-            // and no legacy content at all, which is the outcome this slice was
-            // built for. The claim being tested is narrower and still worth
-            // holding -- serving legacy content moves nothing -- so the sample
-            // comes from what is available rather than from what is chosen.
-            const untagged = (await candidates(learner)).filter((r) => r.concept_id === null);
+            /*
+             * AUTHORED HERE SINCE SEED 079, which retired the legacy bank: a
+             * learner at primitive-types is now dealt tagged Values content and
+             * nothing else, so there is no untagged row in the pool to sample.
+             *
+             * The claim is unchanged and is the narrow one this test always
+             * made -- serving untagged content moves no curriculum state. It
+             * holds for any untagged row, because every arm of metConceptsCte
+             * and CLEARED_RUNGS_CTE joins through questions.challenge_id, so
+             * supplying the row is more honest than hoping the dealer offers
+             * one. challenge_id is still nullable; the invariant still matters.
+             */
+            const [untagged] = await fx.rows<{ id: string }>(
+                `INSERT INTO questions
+                     (prompt, difficulty, topic, challenge_type, challenge_id, source)
+                 VALUES ('untagged question, no rung', 1, 'values',
+                         'predict-output', NULL, 'fixture-untagged')
+                 RETURNING id`
+            );
 
-            expect(untagged.length, "there is untagged content to test").toBeGreaterThan(0);
+            await fx.db.query(
+                `INSERT INTO question_options (question_id, option_text, display_order, is_correct)
+                 VALUES ($1, 'right', 1, TRUE), ($1, 'wrong', 2, FALSE)`,
+                [untagged!.id]
+            );
 
-            for (const question of untagged) {
-                await answer(learner, question.id);
-            }
+            await answer(learner, untagged!.id);
 
             expect(
                 await state(learner),
