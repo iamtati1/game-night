@@ -3,11 +3,15 @@ import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import type { MemorySessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
+import { NextStepActions } from "../components/NextStepActions.js";
 import { SymbolGlyph } from "../components/SymbolGlyph.js";
 import { MEMORY } from "../games/catalog.js";
 import { useRunContext } from "../games/useRunContext.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
 export function MemoryResultsPage() {
+    usePageTitle("Memory results");
     const { id } = useParams<{ id: string }>();
     const [session, setSession] = useState<MemorySessionSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -37,7 +41,7 @@ export function MemoryResultsPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/play">
-                    Back to Jolt
+                    {ACTION.backToGames}
                 </Link>
             </section>
         );
@@ -67,6 +71,16 @@ export function MemoryResultsPage() {
                 score={session.score}
                 previousBest={previousBest}
                 improvement={improvement}
+            />
+
+            {/* Back to the course first; playing again beside it. Right under the
+                outcome, so a phone reaches it without scrolling past the details. */}
+            <NextStepActions
+                replay={(cls) => (
+                    <Link className={cls} to="/memory">
+                        Play again
+                    </Link>
+                )}
             />
 
             <dl className="run-figures">
@@ -134,10 +148,17 @@ export function MemoryResultsPage() {
                                                     }
                                                 >
                                                     {played ? (
-                                                        <SymbolGlyph name={played} />
+                                                        <SymbolGlyph name={played} labelled />
                                                     ) : (
-                                                        <span>—</span>
+                                                        <span aria-hidden="true">-</span>
                                                     )}
+                                                    <span className="visually-hidden">
+                                                        {played === undefined
+                                                            ? "nothing played"
+                                                            : played === symbol
+                                                              ? ", right"
+                                                              : ", wrong"}
+                                                    </span>
                                                 </li>
                                             );
                                         })}
@@ -147,7 +168,7 @@ export function MemoryResultsPage() {
                                     <ol className="mem-row is-answer">
                                         {(r.sequence ?? []).map((symbol, i) => (
                                             <li key={i}>
-                                                <SymbolGlyph name={symbol} />
+                                                <SymbolGlyph name={symbol} labelled />
                                             </li>
                                         ))}
                                     </ol>
@@ -157,15 +178,6 @@ export function MemoryResultsPage() {
                     </ol>
                 </>
             )}
-
-            <div className="cta-row">
-                <Link className="button primary" to="/memory">
-                    Play again
-                </Link>
-                <Link className="button ghost" to="/play">
-                    Pick another Jolt
-                </Link>
-            </div>
         </section>
     );
 }

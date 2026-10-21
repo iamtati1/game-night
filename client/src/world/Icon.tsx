@@ -18,7 +18,9 @@ export type IconName =
     | "lock"
     | "check"
     | "arrow"
-    | "exit";
+    | "exit"
+    | "sound-on"
+    | "sound-off";
 
 const PATHS: Record<IconName, string> = {
     // A world with an orbit, not a house. Home in Jolt is where you are in the
@@ -34,7 +36,11 @@ const PATHS: Record<IconName, string> = {
     lock: "M7 10.5V8a5 5 0 0 1 10 0v2.5 M5.5 10.5h13v9h-13Z",
     check: "M5 12.5 10 17.5 19.5 7",
     arrow: "M4.5 12h14 M13 6.5 18.5 12 13 17.5",
-    exit: "M14 4.5H6.5v15H14 M11 12h9.5 M17 8.5 20.5 12 17 15.5"
+    exit: "M14 4.5H6.5v15H14 M11 12h9.5 M17 8.5 20.5 12 17 15.5",
+    // A speaker with sound waves, and the same speaker struck through: the
+    // marks every learner already knows for "sound".
+    "sound-on": "M4 9.5h3.5L12 5.5v13l-4.5-4H4Z M15.5 9a4 4 0 0 1 0 6 M18 6.5a7.5 7.5 0 0 1 0 11",
+    "sound-off": "M4 9.5h3.5L12 5.5v13l-4.5-4H4Z M16 9.5l5 5 M21 9.5l-5 5"
 };
 
 interface IconProps {

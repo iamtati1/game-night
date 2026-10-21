@@ -33,6 +33,8 @@ export interface ServedQuestion {
     /** Null when this beat has no clock -- the opening of a Code Blitz round. */
     deadlineAt: string | null;
     msRemaining: number | null;
+    /** True for a run the learner chose to play without a clock. */
+    relaxed?: boolean;
 }
 
 export interface SessionQuestionResult {
@@ -71,6 +73,8 @@ export interface SessionSummary extends RunMetrics {
     correctCount: number;
     incorrectCount: number;
     timedOutCount: number;
+    /** Played without a clock: every correct answer scored base points, no speed bonus. */
+    relaxed?: boolean;
     questions: SessionQuestionResult[];
 }
 
@@ -168,20 +172,27 @@ export interface FlushTile {
 }
 
 export interface FlushRound {
-    /** This round's window, which scales with its output count. */
-    limitMs?: number;
+    /** This round's window, which scales with its output count. Null when relaxed. */
+    limitMs?: number | null;
     roundId: string;
     roundNumber: number;
     totalRounds: number;
     prompt: string;
+    /**
+     * The concept this puzzle practises, null for an untagged one. Optional
+     * because a server older than this field omits it.
+     */
+    practising?: { name: string; meaning: string } | null;
     tiles: FlushTile[];
     /** Tiles already placed this round, in the order they were placed. */
     placed: { outputId: string; text: string }[];
     totalOutputs: number;
     pointsBanked: number;
     servedAt: string;
-    deadlineAt: string;
-    msRemaining: number;
+    /** Null in a relaxed run: no clock. */
+    deadlineAt: string | null;
+    msRemaining: number | null;
+    relaxed?: boolean;
 }
 
 export interface FlushRoundResult {
@@ -333,7 +344,9 @@ export interface ReactionRoundRef {
 
 export interface ReactionRoundResult {
     roundNumber: number;
-    status: "pending" | "reacted" | "false_start";
+    /** `timed_out`: the signal came and nothing was pressed in time. The server
+     *  has always sent it; the type had left it out. */
+    status: "pending" | "reacted" | "false_start" | "timed_out";
     reactionMs: number | null;
     tier: ReactionTier | null;
     pointsAwarded: number;
@@ -537,6 +550,8 @@ export interface BugHuntIncidentResult {
     title: string;
     theme: string;
     bugCategory: string;
+    /** The lesson concept this incident practises; null when untagged. */
+    concept?: string | null;
     difficulty: number;
     status: "pending" | "resolved" | "failed";
     attempts: number;

@@ -87,6 +87,14 @@ beforeAll(async () => {
          FROM questions q
          JOIN challenges ch ON ch.id = q.challenge_id
          WHERE q.is_active AND ch.is_active AND ch.role = 'practise'
+           -- A rung no introduction shares, so the introduce-role check below
+           -- can only see an introduction if clearing really counted one. It
+           -- used to rely on the lowest id happening to be such a rung, and
+           -- seed 086 retiring that question showed it.
+           AND NOT EXISTS (
+               SELECT 1 FROM challenges i
+               WHERE i.concept_id = ch.concept_id AND i.demand_id = ch.demand_id
+                 AND i.role = 'introduce')
          ORDER BY q.id
          LIMIT 1`
     );

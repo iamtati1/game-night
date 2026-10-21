@@ -67,7 +67,7 @@ export function PausedRun({ slug, progress, score, busy, onResume }: PausedRunPr
             )}
 
             <p className="paused-note">
-                The clock is stopped. Come back whenever — this run will be waiting.
+                The clock is stopped. Come back whenever: this run will be waiting.
             </p>
 
             {error && (

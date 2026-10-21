@@ -56,13 +56,13 @@ export function ConceptObject({
         >
             <defs>
                 <radialGradient id={glow} cx="50%" cy="50%" r="50%">
-                    <stop offset="40%" stopColor={lit ? "#ffd166" : "#5ee7f0"} stopOpacity="0" />
+                    <stop offset="40%" stopColor={lit ? "#ffd166" : "#d8bf96"} stopOpacity="0" />
                     <stop
                         offset="70%"
-                        stopColor={lit ? "#ffd166" : "#5ee7f0"}
+                        stopColor={lit ? "#ffd166" : "#d8bf96"}
                         stopOpacity={lit ? 0.3 : live ? 0.22 : 0}
                     />
-                    <stop offset="100%" stopColor={lit ? "#ffd166" : "#5ee7f0"} stopOpacity="0" />
+                    <stop offset="100%" stopColor={lit ? "#ffd166" : "#d8bf96"} stopOpacity="0" />
                 </radialGradient>
             </defs>
 
@@ -84,7 +84,7 @@ export function ConceptObject({
             {live && (
                 <g>
                     <rect x="30" y="4" width="4" height="12" rx="2" fill="#aab4e8" />
-                    <circle className="concept-beacon" cx="32" cy="4" r="5" fill="#5ee7f0" />
+                    <circle className="concept-beacon" cx="32" cy="4" r="5" fill="#d8bf96" />
                     <circle cx="30.5" cy="2.5" r="1.6" fill="#fff" opacity="0.8" />
                 </g>
             )}

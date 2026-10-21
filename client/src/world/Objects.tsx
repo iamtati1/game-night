@@ -57,7 +57,7 @@ export function WorldLandmark({ kind, size = 30 }: { kind: Landmark; size?: numb
             >
                 <path d="M16 46 L11 30 h10 Z" fill="#8f9bd4" />
                 <rect x="14" y="14" width="4" height="18" rx="2" fill="#cbd6ff" />
-                <circle className="beacon-lamp" cx="16" cy="12" r="6" fill="#5ee7f0" />
+                <circle className="beacon-lamp" cx="16" cy="12" r="6" fill="#d8bf96" />
                 <circle cx="14" cy="10" r="2" fill="#fff" opacity="0.8" />
             </svg>
         );

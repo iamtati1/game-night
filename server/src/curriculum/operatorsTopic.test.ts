@@ -184,7 +184,11 @@ describe("the Operators topic", () => {
              ORDER BY c.display_order`
         );
 
-        expect(rows).toHaveLength(5);
+        // Six since operator-precedence was added between assignment-operators
+        // and type-coercion. The literal is the topic's size, not a property of
+        // the rule under test -- the rule is the loop below, which asserts every
+        // declared rung on every concept is playable.
+        expect(rows).toHaveLength(6);
 
         for (const row of rows) {
             expect(row.playable, row.concept).toBe(row.declared);

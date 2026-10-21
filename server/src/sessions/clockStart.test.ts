@@ -52,7 +52,7 @@ describe("feedback never consumes the next unit's deadline", () => {
         // A correct placement returns the same round with its tiles updated.
         // served_at is already set, so markServed leaves it alone -- but the
         // re-serve itself must survive, or the board stops updating mid-round.
-        expect(FLUSH_ROUTES).toMatch(/: await serveRound\(\(await db\.findRound\(round\.id, sessionId\)\)!\)/);
+        expect(FLUSH_ROUTES).toMatch(/: await serveRound\(\(await db\.findRound\(round\.id, sessionId\)\)!(, relaxed)?\)/);
     });
 
     it("both clients fetch the next unit when they are ready to show it", () => {
@@ -113,7 +113,8 @@ describe("Flush timing", () => {
     it("sends the round's own limit so the bar matches the deadline", () => {
         // The window varies per round now, so a fixed client constant would size
         // the countdown wrongly on every round that is not four outputs long.
-        expect(FLUSH_ROUTES).toMatch(/const limitMs = roundTimeLimitMs\(round\.total_outputs\)/);
+        // A relaxed run sends null instead (no clock); a timed one, the round's own limit.
+        expect(FLUSH_ROUTES).toMatch(/const limitMs = relaxed \? null : roundTimeLimitMs\(round\.total_outputs\)/);
         expect(FLUSH_ROUTES).toMatch(/^\s+limitMs,$/m);
         expect(FLUSH_PAGE).toMatch(/totalMs=\{round\.limitMs \?\? FALLBACK_ROUND_LIMIT_MS\}/);
     });

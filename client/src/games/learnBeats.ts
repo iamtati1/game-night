@@ -30,6 +30,8 @@ export interface LearnBeat {
     output: string;
     /** The rule, in one sentence. */
     rule: string;
+    /** Optional: what happened in the example, in plain words. */
+    note?: string;
 }
 
 /**

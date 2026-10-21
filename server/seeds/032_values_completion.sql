@@ -32,14 +32,38 @@
 BEGIN;
 
 CREATE OR REPLACE FUNCTION seed_values(
-    p_concept TEXT, p_demand TEXT, p_prompt TEXT,
+    p_ref TEXT, p_concept TEXT, p_demand TEXT, p_prompt TEXT,
     p_correct TEXT, p_wrong TEXT[], p_why TEXT
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1; v_type TEXT;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-values-completion' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    -- ADOPTION for rows seeded before names existed: give the existing row the
+    -- name rather than inserting beside it. Only rows with no name yet, so this
+    -- can never take a question that already belongs to another.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-values-completion' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     v_type := CASE WHEN p_demand IN ('recognise', 'recall', 'explain')
                    THEN 'match-concept' ELSE 'predict-output' END;
@@ -51,8 +75,8 @@ BEGIN
     RETURNING id INTO v_challenge;
 
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
-    VALUES (p_prompt, 1, 'values', v_type, v_challenge, 'jolt-values-completion', p_why)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation, external_ref)
+    VALUES (p_prompt, 1, 'values', v_type, v_challenge, 'jolt-values-completion', p_why, p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -67,13 +91,25 @@ END;
 $$;
 
 -- 1 · console-output / recognise
-SELECT seed_values('console-output', 'recognise',
+SELECT seed_values(
+    'values-completion-001','console-output', 'recognise',
     E'Which line displays something?',
     'console.log("Ready");', ARRAY['"Ready";', 'console.log;', 'Ready'],
     'Displaying takes both parts: `console.log` names the action, and the brackets carry the thing to display. Text on its own is a value nobody asked to be shown.');
 
--- 2 · arithmetic-operators / explain  (mechanism, not outcome)
-SELECT seed_values('arithmetic-operators', 'explain',
+-- 2 · operator-precedence / explain  (mechanism, not outcome)
+--
+-- RE-ANCHORED, NOT REWRITTEN. This question was authored against
+-- arithmetic-operators, which teaches one operation at a time and says nothing
+-- about which operator runs first -- so the mechanism it asks for was never
+-- taught. operator-precedence now owns that rule. The prompt, the options and
+-- the explanation are untouched; only the concept it hangs from changed.
+--
+-- `seed_values` returns early when the prompt already exists, so on a database
+-- seeded before this change the row stays where it was and
+-- 081_operator_precedence.sql moves it. Fresh databases get it right here.
+SELECT seed_values(
+    'values-completion-002','operator-precedence', 'explain',
     E'Why does console.log(2 + 3 * 4) display 14?',
     'Multiplication is worked out before addition, so 3 * 4 becomes 12 first',
     ARRAY['Because 14 is the correct total of those three numbers',
@@ -82,13 +118,15 @@ SELECT seed_values('arithmetic-operators', 'explain',
     'The order operators are applied in is the mechanism. Multiplication binds tighter than addition, so the expression becomes 2 + 12 before anything is added. It is not that addition goes last -- with 2 + 3 + 4 there is no multiplication to go first.');
 
 -- 3 · expressions-produce-values / recognise
-SELECT seed_values('expressions-produce-values', 'recognise',
+SELECT seed_values(
+    'values-completion-003','expressions-produce-values', 'recognise',
     E'Which of these produces a value?',
     '6 / 2', ARRAY['console.log', 'the brackets', 'the semicolon'],
     'An expression is code that turns into a single value. `6 / 2` turns into 3. `console.log` is an action, and brackets and semicolons are punctuation that shape the code rather than values in their own right.');
 
 -- 4 · expressions-produce-values / explain
-SELECT seed_values('expressions-produce-values', 'explain',
+SELECT seed_values(
+    'values-completion-004','expressions-produce-values', 'explain',
     E'Why does console.log(5 + 5) display 10 rather than 5 + 5?',
     'The expression is replaced by the value it produces before console.log runs',
     ARRAY['Because console.log adds up any numbers it is given',
@@ -97,25 +135,29 @@ SELECT seed_values('expressions-produce-values', 'explain',
     'Order is the mechanism: the expression is worked out first, so by the time console.log runs there is nothing left but the value 10. console.log does no arithmetic of its own -- give it `"5 + 5"` in quotes and it displays exactly that.');
 
 -- 5 · booleans / recognise
-SELECT seed_values('booleans', 'recognise',
+SELECT seed_values(
+    'values-completion-005','booleans', 'recognise',
     E'Which of these is a boolean?',
     'false', ARRAY['"false"', '0', 'nothing'],
     'There are exactly two booleans, `true` and `false`, and neither is written with quotes. `"false"` is text that spells the word, and 0 is a number -- a different kind of value that people often confuse with false.');
 
 -- 6 · comparison-operators / recognise
-SELECT seed_values('comparison-operators', 'recognise',
+SELECT seed_values(
+    'values-completion-006','comparison-operators', 'recognise',
     E'Which part of this line produced a boolean?\n\nconsole.log(8 > 2);',
     '8 > 2', ARRAY['console.log', '8', '2'],
     'The comparison is what produces the answer; console.log only displays it. Neither number is the answer -- they are the things being compared.');
 
 -- 7 · typeof / recall  (no code: remembered, not read)
-SELECT seed_values('typeof', 'recall',
+SELECT seed_values(
+    'values-completion-007','typeof', 'recall',
     E'What does typeof report for a piece of text?',
     '"string"', ARRAY['"text"', '"char"', '"word"'],
     'JavaScript calls text a string, and typeof answers with that name as a piece of text itself. The name comes from a string of characters joined together.');
 
 -- 8 · null-vs-undefined / recognise
-SELECT seed_values('null-vs-undefined', 'recognise',
+SELECT seed_values(
+    'values-completion-008','null-vs-undefined', 'recognise',
     E'Which value does JavaScript produce on its own when nothing was supplied?',
     'undefined', ARRAY['null', '0', '"empty"'],
     'undefined is what JavaScript reaches for by itself. null is the opposite case: it only ever appears because somebody wrote it down, which is why it means a deliberate emptiness.');
@@ -150,7 +192,8 @@ WHERE ch.concept_id = c.id AND ch.demand_id = d.id
   AND q.challenge_id IS NULL;
 
 -- 10 · null-vs-undefined / explain
-SELECT seed_values('null-vs-undefined', 'explain',
+SELECT seed_values(
+    'values-completion-009','null-vs-undefined', 'explain',
     E'Why are null and undefined not interchangeable?',
     'undefined records that no value was supplied; null records that emptiness was chosen',
     ARRAY['Because null is older than undefined',
@@ -158,6 +201,6 @@ SELECT seed_values('null-vs-undefined', 'explain',
           'Because they report the same type as each other'],
     'The difference is where each one came from, not what it looks like. undefined is an absence JavaScript noticed; null is an absence a programmer decided on. They also report different types, which is a consequence of the difference rather than the reason for it.');
 
-DROP FUNCTION seed_values(TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
+DROP FUNCTION seed_values(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
 
 COMMIT;

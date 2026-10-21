@@ -113,7 +113,8 @@ describe("architecture boundaries", () => {
         const handlers = ROUTES.match(/flushRouter\.(get|post)\(/g) ?? [];
         const guarded = ROUTES.match(/flushRouter\.(get|post)\([^,]+, requireAuth,/g) ?? [];
 
-        expect(handlers.length).toBe(4);
+        // Five: the four game routes and the read-only /readiness.
+        expect(handlers.length).toBe(5);
         expect(guarded.length).toBe(handlers.length);
         expect(ROUTES).not.toMatch(/flushRouter\.use\(requireAuth\)/);
     });
@@ -131,5 +132,26 @@ describe("architecture boundaries", () => {
         expect(recordPlacement).toMatch(/COMMIT/);
         expect(recordPlacement).toMatch(/ROLLBACK/);
         expect(recordPlacement).toMatch(/client\.release\(\)/);
+    });
+});
+
+describe("a learner short of a full game", () => {
+    it("is dealt a shorter game down to the minimum, and refused only below it", () => {
+        expect(ROUTES).toMatch(/const ready = available >= FLUSH_MIN_ROUNDS_PER_SESSION/);
+        expect(ROUTES).not.toMatch(/available < FLUSH_ROUNDS_PER_SESSION/);
+    });
+
+    it("refuses a start on the same readiness the Games page reads", () => {
+        expect(ROUTES).toMatch(/flushRouter\.get\("\/readiness"[\s\S]*?flushReadiness\(req\.user!\.id\)/);
+        expect(ROUTES).toMatch(/const readiness = await flushReadiness\(userId\);\s*if \(!readiness\.ready\)/);
+    });
+
+    it("is told the dealt game's length, not the full-game constant", () => {
+        expect(SERVE_ROUND_BODY).toMatch(/const totalRounds = await db\.countRoundsInSessionOf\(round\.id\)/);
+        expect(SERVE_ROUND_BODY).not.toMatch(/totalRounds: FLUSH_ROUNDS_PER_SESSION/);
+    });
+
+    it("no longer says finishing a lesson does not count", () => {
+        expect(ROUTES).not.toMatch(/Finishing a lesson does not/);
     });
 });

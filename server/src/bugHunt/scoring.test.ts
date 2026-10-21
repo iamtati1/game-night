@@ -191,6 +191,28 @@ describe("dealing a run", () => {
         expect(dealRun(candidates)[0]!.id).toBe("fresh");
     });
 
+    it("deals every candidate when the pool is smaller than a run", () => {
+        const dealt = dealRun(bank({ 1: 2, 3: 1 }));
+
+        expect(dealt).toHaveLength(3);
+        expect(new Set(dealt.map((d) => d.id)).size).toBe(3);
+    });
+
+    it("keeps the bug held for the last hunt when a short pool runs out first", () => {
+        // Two on-concept incidents are reserved for hunts one and six. With only
+        // three candidates the ramp runs dry at hunt three, and the second
+        // reserved one used to vanish from the run.
+        const candidates = [
+            { id: "focus-a", difficulty: 1, concept_id: "11" },
+            { id: "focus-b", difficulty: 2, concept_id: "11" },
+            { id: "other", difficulty: 1, concept_id: null }
+        ];
+        const dealt = dealRun(candidates, "11");
+
+        expect(dealt.map((d) => d.id).sort()).toEqual(["focus-a", "focus-b", "other"]);
+        expect(dealt[0]!.id).toBe("focus-a");
+    });
+
     it("falls back to the nearest tier rather than dealing a short run", () => {
         // A run three hunts short because one tier ran dry is worse than a run
         // where one hunt is a shade off the intended difficulty.

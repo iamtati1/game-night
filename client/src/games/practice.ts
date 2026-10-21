@@ -83,7 +83,7 @@ const CLASSES_PRACTICE: Practice = {
                 "class: the behaviour is written once and every instance has it.",
             check: (run, source) => {
                 if (!/\bclass\s+Dog\b/.test(source)) {
-                    return "Start with `class Dog {` — that is what makes it a class rather than an object.";
+                    return "Start with `class Dog {`: that is what makes it a class rather than an object.";
                 }
 
                 if (!/\bconstructor\s*\(/.test(source)) {
@@ -95,7 +95,7 @@ const CLASSES_PRACTICE: Practice = {
                 }
 
                 if (!/\bspeak\s*\(/.test(source)) {
-                    return "Give the class a `speak()` method — the behaviour both dogs will share.";
+                    return "Give the class a `speak()` method: the behaviour both dogs will share.";
                 }
 
                 const built = source.match(/new\s+Dog\s*\(/g) ?? [];
@@ -145,7 +145,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "function-declaration",
                 demand: "produce",
                 brief:
-                    "Write a function called `greet` that prints `Hello` — then call it so it actually runs.",
+                    "Write a function called `greet` that prints `Hello`, then call it so it actually runs.",
                 starter: "",
                 after: "Defining stored the work. The call did it. Those are two separate things.",
                 check: (run, source) => {
@@ -158,7 +158,7 @@ export const PRACTICES: readonly Practice[] = [
                     if (broke) return broke;
 
                     if (!/\bgreet\s*\(\s*\)/.test(source.replace(/function\s+greet\s*\(\s*\)/, ""))) {
-                        return "Defining it is not enough — call `greet()` so it runs.";
+                        return "Defining it is not enough: call `greet()` so it runs.";
                     }
 
                     const printed = run.output[run.output.length - 1];
@@ -182,12 +182,12 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "guard-clauses",
                 demand: "produce",
                 brief:
-                    "Write `describe(n)` that returns `negative` when n is below zero and `ok` otherwise — using a guard, with no else. Print `describe(-4)`.",
+                    "Write `describe(n)` that returns `negative` when n is below zero and `ok` otherwise, using a guard, with no else. Print `describe(-4)`.",
                 starter: "",
                 after: "The early return ended the function, so the line below it is already the other case.",
                 check: (run, source) => {
                     if (/\belse\b/.test(source)) {
-                        return "No `else` — the point of a guard is that returning early makes one unnecessary.";
+                        return "No `else`: the point of a guard is that returning early makes one unnecessary.";
                     }
 
                     if (!/\breturn\b/.test(source)) {
@@ -221,14 +221,14 @@ export const PRACTICES: readonly Practice[] = [
                 brief:
                     "Write `double` as an arrow function with no braces, so its value comes back automatically. Print `double(4)`.",
                 starter: "",
-                after: "No braces, no `return` — one expression, handed back for you.",
+                after: "No braces, no `return`: one expression, handed back for you.",
                 check: (run, source) => {
                     if (!/=>/.test(source)) {
                         return "Use an arrow function: `const double = (n) => ...`.";
                     }
 
                     if (/=>\s*\{/.test(source)) {
-                        return "No braces here — the point is the implicit return you get without them.";
+                        return "No braces here: the point is the implicit return you get without them.";
                     }
 
                     if (/\bfunction\b/.test(source)) {
@@ -282,7 +282,7 @@ export const PRACTICES: readonly Practice[] = [
                     }
 
                     if (!/return\s*(\(|function\b)/.test(source)) {
-                        return "The `return` should hand back a function — `return (…) => …` or `return function …`.";
+                        return "The `return` should hand back a function: `return (…) => …` or `return function …`.";
                     }
 
                     const broke = ran(run);
@@ -327,7 +327,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "array-copy-spread",
                 demand: "produce",
                 brief:
-                    "`scores` holds [90, 80]. Use spread to make a COPY that does not share with it, push 100 onto the copy, then print `scores.length` — which should still be 2.",
+                    "`scores` holds [90, 80]. Use spread to make a COPY that does not share with it, push 100 onto the copy, then print `scores.length`, which should still be 2.",
                 starter: "let scores = [90, 80];\n",
                 after: "A new list, so the push never reached the original.",
                 check: (run, source) => {
@@ -347,7 +347,7 @@ export const PRACTICES: readonly Practice[] = [
 
                     if (printed !== "2") {
                         return printed === "3"
-                            ? "That printed `3`, so the push reached the original — the copy is still the same list."
+                            ? "That printed `3`, so the push reached the original: the copy is still the same list."
                             : `That printed \`${printed ?? "nothing"}\`. Print \`scores.length\`, which should still be 2.`;
                     }
 
@@ -410,10 +410,10 @@ export const PRACTICES: readonly Practice[] = [
                 demand: "produce",
                 brief: "Use `map` to turn `[1, 2, 3]` into `[10, 20, 30]`, and print the result.",
                 starter: "let a = [1, 2, 3];\n",
-                after: "One in, one out — a new list the same length.",
+                after: "One in, one out: a new list the same length.",
                 check: (run, source) => {
                     if (!/\.map\s*\(/.test(source)) {
-                        return "Use `.map(...)` here — a loop gives the same answer by a different route.";
+                        return "Use `.map(...)` here: a loop gives the same answer by a different route.";
                     }
 
                     const broke = ran(run);
@@ -424,7 +424,7 @@ export const PRACTICES: readonly Practice[] = [
 
                     if (printed !== "[10, 20, 30]") {
                         return printed === "[undefined, undefined, undefined]"
-                            ? "The arrow body needs to RETURN something — drop the braces, or add `return`."
+                            ? "The arrow body needs to RETURN something: drop the braces, or add `return`."
                             : `That printed \`${printed ?? "nothing"}\`. It should print \`[10, 20, 30]\`.`;
                     }
 
@@ -479,7 +479,7 @@ export const PRACTICES: readonly Practice[] = [
                 after: "A whole list folded into a single number.",
                 check: (run, source) => {
                     if (!/\.reduce\s*\(/.test(source)) {
-                        return "Use `.reduce(...)` here — an accumulator loop is the thing it replaces.";
+                        return "Use `.reduce(...)` here: an accumulator loop is the thing it replaces.";
                     }
 
                     const broke = ran(run);
@@ -490,7 +490,7 @@ export const PRACTICES: readonly Practice[] = [
 
                     if (printed !== "10") {
                         return printed === "1234"
-                            ? "That joined the numbers instead of adding them — the starting value should be `0`, not `\"\"`."
+                            ? "That joined the numbers instead of adding them: the starting value should be `0`, not `\"\"`."
                             : `That printed \`${printed ?? "nothing"}\`. 1 + 2 + 3 + 4 is \`10\`.`;
                     }
 
@@ -514,7 +514,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "method-chaining",
                 demand: "produce",
                 brief:
-                    "From `[1, 2, 3, 4]`, keep the numbers above 2 and then multiply each by 100 — in ONE chain — and print the result.",
+                    "From `[1, 2, 3, 4]`, keep the numbers above 2 and then multiply each by 100, in ONE chain, and print the result.",
                 starter: "let a = [1, 2, 3, 4];\n",
                 after: "filter handed [3, 4] straight to map.",
                 check: (run, source) => {
@@ -607,7 +607,7 @@ export const PRACTICES: readonly Practice[] = [
                 brief:
                     "Turn `p` into JSON text, read that text back into a new object, and print the new object's `name`.",
                 starter: 'let p = { name: "Tati", age: 3 };\n',
-                after: "Out as text and back again — which is how data travels.",
+                after: "Out as text and back again, which is how data travels.",
                 check: (run, source) => {
                     if (!/JSON\.stringify\s*\(/.test(source)) {
                         return "Use `JSON.stringify(...)` to turn the object into text.";
@@ -647,12 +647,12 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "event-loop",
                 demand: "produce",
                 brief:
-                    "Print `one`, then `two`, then `three` — but write the `three` line BEFORE the `two` line, and use `setTimeout` so it still arrives last.",
+                    "Print `one`, then `two`, then `three`, but write the `three` line BEFORE the `two` line, and use `setTimeout` so it still arrives last.",
                 starter: 'console.log("one");\n',
                 after: "Queued work waits for the ordinary lines to finish.",
                 check: (run, source) => {
                     if (!/setTimeout\s*\(/.test(source)) {
-                        return "Use `setTimeout(...)` — that is what puts the line in the queue.";
+                        return "Use `setTimeout(...)`: that is what puts the line in the queue.";
                     }
 
                     const three = source.indexOf('"three"');
@@ -689,7 +689,7 @@ export const PRACTICES: readonly Practice[] = [
                 starter: "",
                 after: "The promise became a value, and the rest of the line waited for it.",
                 check: (run, source) => {
-                    if (!/\basync\b/.test(source)) return "Mark the function `async` — `await` only works inside one.";
+                    if (!/\basync\b/.test(source)) return "Mark the function `async`: `await` only works inside one.";
                     if (!/\bawait\b/.test(source)) {
                         return "Use `await` to turn the promise into the value it settles with.";
                     }
@@ -702,7 +702,7 @@ export const PRACTICES: readonly Practice[] = [
 
                     if (printed !== "10") {
                         return printed?.startsWith("Promise")
-                            ? "That printed the promise itself — `await` is what turns it into the value."
+                            ? "That printed the promise itself: `await` is what turns it into the value."
                             : `That printed \`${printed ?? "nothing"}\`. It should print \`10\`.`;
                     }
 
@@ -770,11 +770,11 @@ export const PRACTICES: readonly Practice[] = [
                     const body = source.slice(source.indexOf("total"));
 
                     if ((body.match(/\btotal\s*\(/g) ?? []).length < 2) {
-                        return "`total` has to call itself — that is what makes it recursive.";
+                        return "`total` has to call itself: that is what makes it recursive.";
                     }
 
                     if (/\bfor\s*\(|\bwhile\s*\(/.test(source)) {
-                        return "No loop here — let the function call itself instead.";
+                        return "No loop here: let the function call itself instead.";
                     }
 
                     const broke = ran(run);
@@ -807,7 +807,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "loop-conditions",
                 demand: "produce",
                 brief:
-                    "Print every character of `word` on its own line — all four, and nothing past the end.",
+                    "Print every character of `word` on its own line: all four, and nothing past the end.",
                 starter: 'let word = "Jolt";\n',
                 after: "Positions run from 0 to length minus one, which is what `<` gives you.",
                 check: (run, source) => {
@@ -820,7 +820,7 @@ export const PRACTICES: readonly Practice[] = [
                     }
 
                     if (!/\.length/.test(source)) {
-                        return "Use `word.length` for the bound rather than typing 4 — the loop should work for any word.";
+                        return "Use `word.length` for the bound rather than typing 4: the loop should work for any word.";
                     }
 
                     const printed = run.output.join(",");
@@ -853,7 +853,7 @@ export const PRACTICES: readonly Practice[] = [
                     if (broke) return broke;
 
                     if (!/\bfor\b|\bwhile\b/.test(source)) {
-                        return "Use a loop — adding the four numbers by hand is not the exercise.";
+                        return "Use a loop: adding the four numbers by hand is not the exercise.";
                     }
 
                     const printed = run.output[run.output.length - 1];
@@ -883,7 +883,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "nested-loops",
                 demand: "produce",
                 brief:
-                    "Print every pair from 0-0 up to 1-1 — four lines, in the form `0-0`. Use one loop inside another.",
+                    "Print every pair from 0-0 up to 1-1: four lines, in the form `0-0`. Use one loop inside another.",
                 starter: "",
                 after: "The inner loop ran all the way through on each pass of the outer one.",
                 check: (run, source) => {
@@ -920,7 +920,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "string-concatenation",
                 demand: "produce",
                 brief:
-                    "`bays` holds 4. Print exactly `Bays: 4` — joining the name in, not typing the number into the message.",
+                    "`bays` holds 4. Print exactly `Bays: 4`, joining the name in, not typing the number into the message.",
                 starter: "let bays = 4;\n",
                 after: "One piece of text, one value, joined. Change `bays` and the message follows.",
                 check: (run) => {
@@ -932,7 +932,7 @@ export const PRACTICES: readonly Practice[] = [
                     const usedName = run.namesUsedInOutput.some((names) => names.includes("bays"));
 
                     if (printed === "Bays: 4" && !usedName) {
-                        return "That is the right message — but `4` is typed into it. Join `bays` in instead.";
+                        return "That is the right message, but `4` is typed into it. Join `bays` in instead.";
                     }
 
                     if (!usedName) return "Use the name `bays` inside `console.log`.";
@@ -956,7 +956,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "string-methods",
                 demand: "produce",
                 brief:
-                    "`name` has stray spaces around it. Print it with the spaces removed and every letter capital — `TATI`.",
+                    "`name` has stray spaces around it. Print it with the spaces removed and every letter capital: `TATI`.",
                 starter: 'let name = "  tati  ";\n',
                 after: "Each method handed back new text, and the next one worked on that.",
                 check: (run, source) => {
@@ -993,7 +993,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "template-literals",
                 demand: "produce",
                 brief:
-                    "Print exactly `Tati has 4 bays` — using a template literal with backticks, not `+`.",
+                    "Print exactly `Tati has 4 bays`, using a template literal with backticks, not `+`.",
                 starter: 'let name = "Tati";\nlet bays = 4;\n',
                 after: "Backticks and two holes. Easier to read than three joins, and it does the same thing.",
                 check: (run, source) => {
@@ -1002,7 +1002,7 @@ export const PRACTICES: readonly Practice[] = [
                     if (broke) return broke;
 
                     if (!/`/.test(source)) {
-                        return "Use backticks rather than quotes — that is what makes it a template.";
+                        return "Use backticks rather than quotes: that is what makes it a template.";
                     }
 
                     if (!/\$\{/.test(source)) {
@@ -1010,7 +1010,7 @@ export const PRACTICES: readonly Practice[] = [
                     }
 
                     if (/\+/.test(source)) {
-                        return "No `+` needed here — the holes do the joining.";
+                        return "No `+` needed here: the holes do the joining.";
                     }
 
                     const printed = run.output[run.output.length - 1];
@@ -1080,7 +1080,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "ternary",
                 demand: "produce",
                 brief:
-                    "`fuel` is 20. Store `Low` in `status` when fuel is 50 or less, and `Plenty` when it is more — using a ternary, then print `status`.",
+                    "`fuel` is 20. Store `Low` in `status` when fuel is 50 or less, and `Plenty` when it is more: using a ternary, then print `status`.",
                 starter: "let fuel = 20;\n",
                 after: "One expression, one value, stored in one place. An `if` could not sit on the right of that `=`.",
                 check: (run, source) => {
@@ -1093,7 +1093,7 @@ export const PRACTICES: readonly Practice[] = [
                     }
 
                     if (/\bif\b/.test(source)) {
-                        return "No `if` here — the whole point is that a ternary produces a value on its own.";
+                        return "No `if` here: the whole point is that a ternary produces a value on its own.";
                     }
 
                     if (!run.declared.includes("status")) {
@@ -1134,7 +1134,7 @@ export const PRACTICES: readonly Practice[] = [
                 brief:
                     "`fuel` starts at 100 and the burn costs 20. Subtract it using `-=`, then print what is left.",
                 starter: "let fuel = 100;\n",
-                after: "`fuel -= 20` reads the current value, takes 20 off it, and stores it back — in one step.",
+                after: "`fuel -= 20` reads the current value, takes 20 off it, and stores it back: in one step.",
                 check: (run, source) => {
                     const broke = ran(run);
 
@@ -1146,7 +1146,7 @@ export const PRACTICES: readonly Practice[] = [
                     // Said BEFORE the output is praised, so a learner who got
                     // the right number the long way does not read "correct".
                     if (printed === "80" && !compound) {
-                        return "That is the right number — but it was worked out the long way. Use `fuel -= 20;` so the update reads as one step.";
+                        return "That is the right number, but it was worked out the long way. Use `fuel -= 20;` so the update reads as one step.";
                     }
 
                     if (!compound) return "Use `-=` to take 20 off `fuel`.";
@@ -1198,7 +1198,7 @@ export const PRACTICES: readonly Practice[] = [
                 demand: "produce",
                 brief: "Name the number of passengers `crew`, starting at 3, and print it.",
                 starter: "",
-                after: "Declared and given a starting value in one line — that is initialisation.",
+                after: "Declared and given a starting value in one line: that is initialisation.",
                 check: (run) => {
                     const broke = ran(run);
 
@@ -1229,7 +1229,7 @@ export const PRACTICES: readonly Practice[] = [
                 concept: "assignment",
                 demand: "produce",
                 brief:
-                    "`total` starts at 5. Add 3 to it — storing the result back in `total` — then print it.",
+                    "`total` starts at 5. Add 3 to it: storing the result back in `total`, then print it.",
                 starter: "let total = 5;\n",
                 after: "The right-hand side was worked out first, then stored back under the same name.",
                 check: (run) => {
@@ -1244,7 +1244,7 @@ export const PRACTICES: readonly Practice[] = [
                     const printed = run.output[run.output.length - 1];
 
                     if (printed === "5") {
-                        return "That is still 5. Working out `total + 3` is not enough — store it back with `total = total + 3;`.";
+                        return "That is still 5. Working out `total + 3` is not enough: store it back with `total = total + 3;`.";
                     }
 
                     if (printed !== "8") {
@@ -1265,7 +1265,7 @@ export const PRACTICES: readonly Practice[] = [
             {
                 concept: "reading-variables",
                 demand: "apply",
-                brief: "`fuel` already holds 80. Print `Fuel: 80` — using the name, not the number.",
+                brief: "`fuel` already holds 80. Print `Fuel: 80`, using the name, not the number.",
                 starter: "let fuel = 80;\nconsole.log(___);",
                 after: "The message asked `fuel` what it held rather than containing 80 itself.",
                 check: (run) => {
@@ -1277,7 +1277,7 @@ export const PRACTICES: readonly Practice[] = [
                     const usedName = run.namesUsedInOutput.some((names) => names.includes("fuel"));
 
                     if (printed === "Fuel: 80" && !usedName) {
-                        return "Right output — but `80` is typed into the message. Use the name `fuel` instead.";
+                        return "Right output, but `80` is typed into the message. Use the name `fuel` instead.";
                     }
 
                     if (!usedName) return "Use the name `fuel` inside `console.log`.";
@@ -1310,7 +1310,7 @@ export const PRACTICES: readonly Practice[] = [
                     if (broke) return broke;
 
                     if (run.reassigned.length === 0) {
-                        return "Change it on a line of its own: `fuel = 60;` — no `let` the second time.";
+                        return "Change it on a line of its own, `fuel = 60;`, with no `let` the second time.";
                     }
 
                     const printed = run.output[run.output.length - 1];

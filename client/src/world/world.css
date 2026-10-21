@@ -27,7 +27,11 @@
       on grey. Space photographed honestly is not black.
    ========================================================================= */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=Outfit:wght@300..700&display=swap");
+/* No web fonts for text. The display serif and the geometric UI face were both
+   replaced in the readability pass by the platform sans (San Francisco, Segoe
+   UI, Roboto): it is tuned for screen reading at every size, it is already on
+   the device, and it has no first-load swap. JetBrains Mono stays for code
+   (imported by index.css). */
 
 /* ---------------------------------------------------------------- 1. tokens */
 
@@ -36,26 +40,33 @@
        Deep blue-violet, and every one of these is a hue rather than a grey.
        The brief's phrase for the target was "beautiful illustrated night sky",
        and a night sky is blue. */
-    --void: #141a52;
-    --void-deep: #0e1240;
-    --void-lift: #232a72;
-    --void-high: #313a94;
+    /* WARM DUSK, NOT BLUE-VIOLET (readability pass). The saturated #1c1916
+       ground and its violet/teal/magenta glows put secondary text under AA
+       wherever the glow crossed it, and read as louder than a place to study.
+       These are warm near-neutrals: calm behind long reading, still clearly a
+       night sky with the stars and planets kept. */
+    --void: #1c1916;
+    --void-deep: #141210;
+    --void-lift: #28231f;
+    --void-high: #353029;
 
-    --bg: #141a52;
+    --bg: #1c1916;
     /* Raised surfaces are SOLID. No blur, no transparency stack. */
-    --surface: #1f2668;
-    --surface-2: #2a3282;
-    --border: #4a54ad;
-    --hairline: #ffffff1f;
+    --surface: #26211d;
+    --surface-2: #312b26;
+    --border: #5a5048;
+    --hairline: #ffffff1a;
 
     /* ---- the palette -------------------------------------------------------
-       Eight colours, and they have jobs. Cyan is Jolt and every affordance that
-       moves you forward. Warm yellow is achievement, and is spent almost
+       Eight colours, and they have jobs. Sand is Jolt and every affordance that
+       moves you forward -- a muted, warm tone that was a neon cyan until a
+       learner said it was too bright on the eye; on this deep violet ground a
+       saturated cyan with a glow is glare, and sand reads as clearly without it. Warm yellow is achievement, and is spent almost
        nowhere else -- gold used as decoration stops reading as a reward.
        Mint is correct, coral is wrong. Lavender, blue and peach are the world:
        they colour the sky and the planets and never the controls. */
-    --cyan: #5ee7f0;
-    --cyan-deep: #22a9c4;
+    --sand: #d8bf96;
+    --sand-deep: #b3956a;
     --blue: #6d9bff;
     --lavender: #b9a7ff;
     --violet: #9b7bff;
@@ -64,17 +75,27 @@
     --peach: #ffb08a;
     --coral: #ff8098;
 
-    --accent: #5ee7f0;
-    --accent-soft: #5ee7f033;
-    --jolt: #5ee7f0;
+    --accent: #d8bf96;
+    --accent-soft: #d8bf9633;
+    --jolt: #d8bf96;
     --jolt-2: #ff8098;
 
     /* Warm white rather than pure white: on a blue ground, a cold white reads
        as clinical and a warm one reads as lamplight. */
-    --text: #f6f3ff;
-    --text-2: #cfd0f5;
-    --muted: #9fa2dd;
-    --dim: #6f74b8;
+    --text: #f7f2ea;
+    --text-2: #e2d9cc;
+    /* Lightened for the readability pass: secondary text sat at 2.6:1 where
+       it crossed the old blue glow. Measured against the calmer ground below. */
+    --muted: #cdc3b5;
+    /* RAISED FROM #6f74b8, which measured 3.75:1 on the ground and 2.59:1 on
+       --surface-2 -- under AA for text in both. It labels the editor, the
+       console and the names of modules you have not reached, which are exactly
+       the things a learner is trying to read ahead to. */
+    --dim: #bfb4a5;
+    /* index.css defines --muted-2 as #6b7492, which is 3.49:1 here. It is the
+       generic tertiary tone and reaches .home-label and the .muted-2 utility,
+       so the value is corrected once rather than at each call site. */
+    --muted-2: #cdc3b5;
 
     --correct: #6ee7b7;
     --incorrect: #ff8098;
@@ -83,7 +104,7 @@
     /* Per-game accents, retuned for the brighter ground. */
     --blitz: #b9a7ff;
     --flush: #ffb86b;
-    --reaction: #5ee7f0;
+    --reaction: #d8bf96;
     --memory: #d4b8ff;
     --bughunt: #ffb08a;
 
@@ -98,18 +119,55 @@
                  you operate rather than read.
        JetBrains Mono  every character of JavaScript. It disambiguates 1/l/I and
                  0/O, which matters when a lesson turns on "5" versus 5. */
-    --display: "Fraunces", "Iowan Old Style", Georgia, serif;
-    --ui: "Outfit", "Inter", system-ui, sans-serif;
+    --display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-    --display-soft: "SOFT" 60, "WONK" 1;
+    /* WONK 0, NOT 1. The wonk axis swaps in Fraunces' swashed, single-storey,
+       italic-leaning forms. It is charming on a poster and it is the wrong
+       thing to set every concept name, module name and completion headline in
+       for someone who is reading a programming term for the first time. SOFT
+       stays, at 40 rather than 60: the warmth was never the problem. */
+    --display-soft: normal;
 
-    --t-hero: clamp(1.95rem, 7vw, 5rem);
-    --t-title: clamp(1.6rem, 4.5vw, 3.2rem);
-    --t-section: 1.4rem;
-    --t-body: 1.0625rem;
+    /* ONE RAMP. These were five tokens against 75 distinct font-size values in
+       the two sheets, so the tokens described almost nothing. Everything on the
+       learning path is being moved onto this ramp; the game HUDs keep their own
+       dense chrome, which is a different job. --t-micro is a FLOOR: nothing a
+       learner has to read ships smaller than 13px. */
+    --t-micro: 0.875rem;
+    --t-label: 0.875rem;
     --t-small: 0.9375rem;
-    --t-label: 0.75rem;
+    --t-body: 1.0625rem;
+    --t-lead: 1.1875rem;
+    --t-section: 1.4rem;
+    --t-h3: 1.375rem;
+    --t-h2: 1.75rem;
+    --t-title: clamp(1.6rem, 4.5vw, 3.2rem);
+    --t-hero: clamp(1.95rem, 7vw, 5rem);
+
+    /* Code, which is the content here rather than decoration, so it is named
+       rather than guessed per screen. It was being set at seven sizes between
+       0.88rem and 1.25rem depending on which screen you were on. */
+    --t-code: 1.1875rem;
+    --t-code-inline: 1.0625rem;
+
+    /* Tracking for the uppercase labels. Several were at 0.18em-0.24em, which
+       at 10px stops being a word and becomes a row of letters. */
+    --tracking-label: 0.08em;
+
+    /* ---- the shell --------------------------------------------------------
+       ONE WIDTH, SHARED. The header sized itself (min(66rem, 100% - 2.5rem))
+       and .app sized the pages (820px), so the bar and the content underneath
+       it were two different boxes that happened to sit near each other. They
+       read from the same two values now, which is what makes their outer
+       edges line up at every width.
+
+       90rem rather than no limit: past about 1440px a bar whose ends are a
+       metre apart stops being a bar. The gutter grows with the viewport, so a
+       phone gets 16px and a desktop 48px. */
+    --shell: 90rem;
+    --gutter: clamp(1rem, 3.5vw, 3rem);
 
     --radius: 18px;
     --radius-sm: 11px;
@@ -118,8 +176,8 @@
 
     /* Elevation under one light source is a warm rim above plus a coloured cast
        below -- never a grey blur in every direction. */
-    --lift: 0 1px 0 #ffffff26 inset, 0 12px 32px -14px #05072acc;
-    --lift-lg: 0 1px 0 #ffffff33 inset, 0 30px 70px -24px #05072ae6;
+    --lift: 0 1px 0 #ffffff1a inset, 0 12px 32px -14px #0000008c;
+    --lift-lg: 0 1px 0 #ffffff26 inset, 0 30px 70px -24px #000000b3;
 
     --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
 }
@@ -133,11 +191,11 @@ body {
        deepening to indigo at the foot of the page. Fixed attachment, so it
        belongs to the window rather than to the document -- a scrolling gradient
        on a long map visibly bands. */
+    /* One soft warm light overhead and a plain warm floor. The three coloured
+       radial glows that were here sat behind the words. */
     background:
-        radial-gradient(115% 62% at 50% -8%, #3b2f9e 0%, transparent 58%),
-        radial-gradient(85% 55% at 88% 12%, #2f5bb5 0%, transparent 52%),
-        radial-gradient(70% 50% at 8% 34%, #46277f 0%, transparent 55%),
-        linear-gradient(176deg, #1b2166 0%, var(--void) 48%, var(--void-deep) 100%);
+        radial-gradient(110% 55% at 50% -10%, #2a241e 0%, transparent 60%),
+        linear-gradient(180deg, var(--void) 0%, var(--void-deep) 100%);
     background-attachment: fixed;
     color: var(--text);
     font-family: var(--ui);
@@ -150,9 +208,13 @@ h1, h2, h3,
 .journey-title, .home-topic, .welcome-title {
     font-family: var(--display);
     font-variation-settings: var(--display-soft);
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1.06;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    /* 1.06 was tighter than the cap height, so any heading that wrapped -- and
+       concept names wrap -- collided with itself. Display sizes legitimately
+       take less leading than body text, so the two clamped headlines below sit
+       at 1.12; everything else reads at 1.18. */
+    line-height: 1.18;
     text-wrap: balance;
 }
 
@@ -174,6 +236,9 @@ code, pre, .mono { font-family: var(--mono); }
    drifts on its own long period, and no two periods share a factor, so the sky
    never returns to an arrangement you have seen. */
 .cosmos-nebula {
+    /* Off since the readability pass: three blurred colour clouds were the
+       glow behind the reading surface. The stars stay. */
+    display: none;
     position: absolute;
     border-radius: 50%;
     filter: blur(90px);
@@ -185,7 +250,7 @@ code, pre, .mono { font-family: var(--mono); }
     left: -12vw;
     width: 66vw;
     height: 66vw;
-    background: radial-gradient(circle, #8b5cf680, transparent 66%);
+    background: radial-gradient(circle, #8b5cf640, transparent 66%);
     animation: drift-a 64s ease-in-out infinite;
 }
 
@@ -194,7 +259,7 @@ code, pre, .mono { font-family: var(--mono); }
     right: -20vw;
     width: 58vw;
     height: 58vw;
-    background: radial-gradient(circle, #3fc8e459, transparent 66%);
+    background: radial-gradient(circle, #3fc8e42c, transparent 66%);
     animation: drift-b 81s ease-in-out infinite;
 }
 
@@ -203,13 +268,14 @@ code, pre, .mono { font-family: var(--mono); }
     left: 14vw;
     width: 62vw;
     height: 62vw;
-    background: radial-gradient(circle, #ff789651, transparent 66%);
+    background: radial-gradient(circle, #ff789628, transparent 66%);
     animation: drift-c 97s ease-in-out infinite;
 }
 
 /* The galactic plane. One soft diagonal band; it gives the sky an up and a
    down, which a uniform scatter of stars has not got. */
 .cosmos-band {
+    display: none;
     position: absolute;
     top: 16%;
     left: -20%;
@@ -271,7 +337,7 @@ code, pre, .mono { font-family: var(--mono); }
     background-image:
         radial-gradient(1.6px 1.6px at 17% 27%, #ffffffcc, transparent),
         radial-gradient(1.6px 1.6px at 72% 12%, #ffffffb3, transparent),
-        radial-gradient(2.2px 2.2px at 88% 44%, #5ee7f0dd, transparent),
+        radial-gradient(2.2px 2.2px at 88% 44%, #d8bf96dd, transparent),
         radial-gradient(1.6px 1.6px at 29% 58%, #ffffff99, transparent),
         radial-gradient(1.6px 1.6px at 58% 76%, #ffffff8c, transparent),
         radial-gradient(2.2px 2.2px at 9% 88%, #b9a7ffdd, transparent),
@@ -306,7 +372,7 @@ code, pre, .mono { font-family: var(--mono); }
 }
 
 .cosmos-mote-1 { top: 72%; left: 12%; animation: rise 28s linear infinite; }
-.cosmos-mote-2 { top: 88%; left: 34%; background: var(--cyan); animation: rise 37s linear 4s infinite; }
+.cosmos-mote-2 { top: 88%; left: 34%; background: var(--sand); animation: rise 37s linear 4s infinite; }
 .cosmos-mote-3 { top: 64%; left: 58%; animation: rise 44s linear 9s infinite; }
 .cosmos-mote-4 { top: 92%; left: 77%; background: var(--coral); animation: rise 33s linear 2s infinite; }
 .cosmos-mote-5 { top: 78%; left: 90%; animation: rise 51s linear 14s infinite; }
@@ -354,29 +420,56 @@ code, pre, .mono { font-family: var(--mono); }
     position: relative;
     z-index: 40;
     margin: 0 auto 2.5rem;
-    width: min(66rem, calc(100% - 2.5rem));
+    /* Fills .app's content box, so the bar's ends sit exactly where the page
+       content's ends sit. The gutter belongs to .app now. */
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 1.25rem;
     padding: 1.1rem 0 0.9rem;
     border-bottom: 1px solid var(--hairline);
     background: none;
+    /* THE HEADER WRAPS, THE NAV DOES NOT -- see the nav rule below. */
+    flex-wrap: wrap;
 }
 
-.site-header .brand { margin-right: auto; display: flex; align-items: center; }
+.site-header .brand {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+}
 
 .site-header nav {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    flex-wrap: wrap;
+    /* BRAND -- DESTINATIONS -- ACCOUNT, spread rather than bunched. The nav
+       takes the rest of the bar; an auto margin before the first destination
+       and another before the pilot divide what is left into two flexible
+       gaps, so the three groups sit apart without a wrapper element. */
+    flex: 1;
+    /* `wrap` here broke the nav apart instead of moving it: at 768px the five
+       items need 584px beside an 84px brand in a 688px bar, so "Log out" alone
+       dropped to a second row and sat under the wordmark. The nav stays on one
+       line and the HEADER wraps, so a narrow screen gets a brand row and a
+       nav row rather than a broken nav. */
+    flex-wrap: nowrap;
 }
+
+.site-header nav > a:first-of-type { margin-left: auto; }
 
 .site-header nav a:not(.button) {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.45rem;
+    /* A 44px target. These measured 36x34 as icons and 89x37 with labels --
+       the Log link was 32x30. Set as a minimum rather than as padding so a
+       labelled link keeps its own width and only the short ones grow. */
+    min-height: 44px;
+    min-width: 44px;
     padding: 0.4rem 0.7rem;
     border-radius: var(--radius-sm);
     font-family: var(--ui);
@@ -402,7 +495,7 @@ code, pre, .mono { font-family: var(--mono); }
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: var(--cyan);
+    background: var(--sand);
     opacity: 0;
     transform: translate(-50%, 4px);
     transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
@@ -413,14 +506,33 @@ code, pre, .mono { font-family: var(--mono); }
     transform: translate(-50%, 0);
 }
 
+/* The area you are in: brighter text, a full-strength icon and the star mark
+   held on. Not colour alone -- the mark is a shape, and aria-current says it
+   to a screen reader. */
+.site-header nav a[aria-current="page"]:not(.button) { color: var(--text); }
+.site-header nav a[aria-current="page"] .icon { opacity: 1; }
+.site-header nav a[aria-current="page"]:not(.button)::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
 .site-header nav a .icon { opacity: 0.7; transition: opacity 0.18s var(--ease); }
 .site-header nav a:hover .icon { opacity: 1; }
+
+.nav-aside {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+}
 
 .nav-pilot {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    margin-left: 0.5rem;
+    /* Pushes the account group to the far end of the bar. */
+    margin-left: auto;
     padding-left: 1rem;
     border-left: 1px solid var(--hairline);
     font-size: var(--t-small);
@@ -433,10 +545,10 @@ code, pre, .mono { font-family: var(--mono); }
     width: 1.9rem;
     height: 1.9rem;
     border-radius: 50%;
-    background: linear-gradient(140deg, var(--cyan), var(--violet));
+    background: linear-gradient(140deg, var(--sand), var(--violet));
     color: #0d1140;
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.875rem;
 }
 
 /*
@@ -450,6 +562,9 @@ code, pre, .mono { font-family: var(--mono); }
 .button {
     font-family: var(--ui);
     font-weight: 600;
+    /* .button.small was 38px tall and Pause was 37px. The big and primary
+       variants are already 49px, so this only lifts the small ones. */
+    min-height: 44px;
     border-radius: var(--radius-pill);
     border: 1px solid transparent;
     transition: transform 0.16s var(--ease), box-shadow 0.16s ease, filter 0.16s ease;
@@ -459,11 +574,11 @@ code, pre, .mono { font-family: var(--mono); }
     position: relative;
     overflow: hidden;
     color: #08163a;
-    background: linear-gradient(135deg, #9ff6fb 0%, var(--cyan) 46%, var(--cyan-deep) 100%);
+    background: linear-gradient(135deg, #e8d6b8 0%, var(--sand) 46%, var(--sand-deep) 100%);
     border-color: #ffffff4d;
     box-shadow:
         0 1px 0 #ffffff8c inset,
-        0 12px 28px -10px #5ee7f0bf;
+        0 12px 28px -10px #d8bf96bf;
 }
 
 .button.primary::after {
@@ -479,12 +594,12 @@ code, pre, .mono { font-family: var(--mono); }
 
 .button.primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 1px 0 #ffffff99 inset, 0 18px 38px -10px #5ee7f0e6;
+    box-shadow: 0 1px 0 #ffffff99 inset, 0 18px 38px -10px #d8bf96e6;
 }
 
 .button.primary:active {
     transform: translateY(0);
-    box-shadow: 0 1px 0 #ffffff66 inset, 0 5px 14px -6px #5ee7f0cc;
+    box-shadow: 0 1px 0 #ffffff66 inset, 0 5px 14px -6px #d8bf96cc;
 }
 
 .button.big { padding: 1rem 2.15rem; font-size: 1.0625rem; }
@@ -500,7 +615,7 @@ code, pre, .mono { font-family: var(--mono); }
 a:focus-visible,
 button:focus-visible,
 .button:focus-visible {
-    outline: 2px solid var(--cyan);
+    outline: 2px solid var(--sand);
     outline-offset: 3px;
 }
 
@@ -549,7 +664,7 @@ button:focus-visible,
 }
 
 .welcome-stage .planet {
-    filter: drop-shadow(0 20px 56px #5ee7f04d);
+    filter: drop-shadow(0 20px 56px #d8bf964d);
     animation: bob 9s ease-in-out infinite;
 }
 
@@ -582,7 +697,7 @@ button:focus-visible,
    read as emphasis. */
 .welcome-title em {
     font-style: normal;
-    background: linear-gradient(100deg, var(--cyan) 0%, var(--lavender) 55%, var(--coral) 100%);
+    background: linear-gradient(100deg, var(--sand) 0%, var(--lavender) 55%, var(--coral) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -596,7 +711,7 @@ button:focus-visible,
 }
 
 .welcome-note { margin-top: 1.5rem; color: var(--muted); font-size: var(--t-small); }
-.welcome-note a { color: var(--cyan); }
+.welcome-note a { color: var(--sand); }
 
 /* ------------------------------------------------------------- 4b. home --- */
 
@@ -608,9 +723,9 @@ button:focus-visible,
    the same things in five stacked paragraphs and three stat cards.
 */
 .home {
-    max-width: 62rem;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 0.5rem 1.5rem 6rem;
+    padding: 0.5rem 0 6rem;
 }
 
 .home-sky {
@@ -634,7 +749,7 @@ button:focus-visible,
     font-size: var(--t-label);
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--cyan);
+    color: var(--sand);
     margin: 0 0 0.5rem;
 }
 
@@ -680,7 +795,7 @@ button:focus-visible,
     position: absolute;
     top: 3%;
     right: 14%;
-    filter: drop-shadow(0 6px 16px #05072acc);
+    filter: drop-shadow(0 6px 16px #0000008c);
     animation: cruise 8s ease-in-out infinite;
 }
 
@@ -699,6 +814,20 @@ button:focus-visible,
 }
 
 .home-next strong { color: var(--text); font-weight: 600; }
+.home-progress { color: var(--text-2); }
+
+/* A paused or unfinished game: one quiet line, not a second primary action. */
+.home-held {
+    margin: 1.25rem 0 0;
+    font-size: var(--t-small);
+    color: var(--text-2);
+}
+.home-held a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 600;
+}
 .home-action { min-width: 15rem; }
 
 /*
@@ -739,6 +868,8 @@ button:focus-visible,
     margin-top: 1.5rem;
     display: flex;
     flex-wrap: wrap;
+    /* Under the centred button, so centred with it. */
+    justify-content: center;
     gap: 1.5rem;
     font-size: var(--t-small);
 }
@@ -746,13 +877,15 @@ button:focus-visible,
 .home-aside a {
     display: inline-flex;
     align-items: center;
+    /* A 44px target: these measured 24px tall as bare text links. */
+    min-height: 44px;
     gap: 0.45rem;
     color: var(--text-2);
     text-decoration: none;
     transition: color 0.18s var(--ease);
 }
 
-.home-aside a:hover { color: var(--cyan); }
+.home-aside a:hover { color: var(--sand); }
 
 /* --------------------------------------------------------- 4c. the map ---- */
 
@@ -773,9 +906,9 @@ button:focus-visible,
    and the road it sits on cannot disagree about where it is.
 */
 .journey {
-    max-width: 62rem;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 0.5rem 1.5rem 7rem;
+    padding: 0.5rem 0 7rem;
 }
 
 .journey-head { text-align: center; margin-bottom: 1rem; }
@@ -785,7 +918,7 @@ button:focus-visible,
     font-size: var(--t-label);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--cyan);
+    color: var(--sand);
     margin: 0 0 0.6rem;
 }
 
@@ -837,10 +970,10 @@ button:focus-visible,
 
 .journey-road-pulse {
     fill: none;
-    stroke: var(--cyan);
+    stroke: var(--sand);
     stroke-width: 3.2;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 6px var(--cyan));
+    filter: drop-shadow(0 0 6px var(--sand));
     animation: travel 5.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 
@@ -898,10 +1031,52 @@ button:focus-visible,
     pointer-events: none;
 }
 
+/*
+   THE CAPTION IS CENTRED ON ITS PLANET, AND THE PLANETS SIT WHERE THEY SIT.
+   A station near the right of the route therefore threw its caption off the
+   screen on a phone: at 430px the furthest station centre is x=357, so a
+   192px caption ran to x=453 -- 23px past the edge, taking the module name
+   and its "opens when you finish..." line with it. The document reported no
+   horizontal scroll, because overflow-x: hidden was swallowing it.
+
+   Measured, not guessed. The widest a caption can be and still fit is twice
+   the smaller of (viewport - furthest centre) and (nearest centre):
+
+       320px -> 99    360px -> 116    375px -> 122    430px -> 146
+       500px -> 175   560px -> 200    640px -> 238    768px -> 300
+
+   30vw sits under every one of those, and 12rem is already safe from 560px
+   up -- which is why this stops there rather than applying everywhere. The
+   planets, the orbit path, the ship and every interaction are untouched;
+   only the width of the text block beneath each world changes.
+*/
+@media (max-width: 35rem) {
+    /* The route needs to stop short of the edges so the captions have an edge
+       to stop short of. Removing .journey's own padding let the map reach the
+       full shell, which pushed the outermost station from x=270 to x=281 at
+       320px and took its caption off-screen with it. Pulling the route in to
+       78% gives every caption its margin back without moving a planet
+       relative to the route it sits on -- the whole map scales, the orbit
+       keeps its shape, and nothing is repositioned by hand. */
+    .journey-map { max-width: 78%; }
+
+    .journey-caption { width: min(12rem, 30vw); }
+
+    /* Narrowing the box is not enough on its own: a grid item is sized by its
+       longest unbreakable word, so "Asynchronous JavaScript" still pushed 8px
+       past a 96px caption at 320px. min-width lets the item shrink to the
+       track, and anywhere lets the one over-long word break rather than
+       escape. Only reachable on the very narrowest phones. */
+    .journey-caption > * { min-width: 0; }
+
+    .journey-name,
+    .journey-meta { overflow-wrap: anywhere; }
+}
+
 /* The world you are at gets a live halo and the parked craft. Nothing else on
    the map glows, so the eye finds "here" before it reads a single word. */
 .journey-station.is-here .planet {
-    filter: drop-shadow(0 0 30px #5ee7f099);
+    filter: drop-shadow(0 0 30px #d8bf9699);
     animation: bob 8s ease-in-out infinite;
 }
 
@@ -914,7 +1089,7 @@ button:focus-visible,
     height: 9rem;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 1px solid #5ee7f066;
+    border: 1px solid #d8bf9666;
     animation: ping 3.4s ease-out infinite;
 }
 
@@ -926,7 +1101,7 @@ button:focus-visible,
     top: -1.6rem;
     right: -2.4rem;
     z-index: 3;
-    filter: drop-shadow(0 4px 12px #05072acc);
+    filter: drop-shadow(0 4px 12px #0000008c);
     animation: approach 1.5s var(--ease) both, cruise 8s ease-in-out 1.5s infinite;
 }
 
@@ -981,8 +1156,15 @@ button:focus-visible,
     z-index: 4;
 }
 
-.journey-stops.opens-left { right: 100%; transform: translate(-1.4rem, -50%); }
-.journey-stops.opens-right { left: 100%; transform: translate(1.4rem, -50%); }
+/* Opens DOWNWARD from its marker. Centred on it (-50%), a nine-step list on a
+   world near the top of the map rose over the header and covered its
+   Continue button. */
+.journey-stops.opens-left { right: 100%; top: 0; transform: translate(-3.5rem, -0.75rem); }
+.journey-stops.opens-right { left: 100%; top: 0; transform: translate(3.5rem, -0.75rem); }
+
+/* The world you are at carries "Go down" 3.4rem below its centre, so its
+   caption starts beneath that rather than under it. */
+.journey-station.is-here .journey-caption { margin-top: 3rem; }
 
 .journey-stop {
     display: grid;
@@ -998,10 +1180,10 @@ button:focus-visible,
 .journey-stop.is-demonstrated .icon { color: var(--mint); }
 .journey-stop.is-demonstrated { color: var(--muted); }
 .journey-stop.is-current { color: var(--text); font-weight: 600; }
-.journey-stop.is-current .icon { color: var(--cyan); }
+.journey-stop.is-current .icon { color: var(--sand); }
 .journey-stop.is-locked { color: var(--dim); }
 .journey-stop a { color: inherit; text-decoration: none; }
-.journey-stop a:hover { color: var(--cyan); }
+.journey-stop a:hover { color: var(--sand); }
 
 .journey-stop.journey-challenge {
     margin-top: 0.35rem;
@@ -1047,7 +1229,7 @@ button:focus-visible,
 }
 
 .scene-place .planet { flex: none; }
-.scene-place-topic { color: var(--cyan); font-weight: 600; }
+.scene-place-topic { color: var(--sand); font-weight: 600; }
 .scene-place-sep { color: var(--dim); }
 .scene-place-lesson { color: var(--muted); letter-spacing: 0.1em; }
 
@@ -1085,12 +1267,12 @@ button:focus-visible,
     transition: background 240ms ease, box-shadow 240ms ease, transform 240ms ease;
 }
 
-.scene-beat.is-done { background: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+.scene-beat.is-done { background: var(--sand); box-shadow: 0 0 0 1px var(--sand); }
 
 .scene-beat.is-now {
-    background: var(--cyan);
+    background: var(--sand);
     transform: scale(1.55);
-    box-shadow: 0 0 0 1px var(--cyan), 0 0 14px 2px #5ee7f0b3;
+    box-shadow: 0 0 0 1px var(--sand), 0 0 14px 2px #d8bf96b3;
 }
 
 /*
@@ -1141,29 +1323,41 @@ button:focus-visible,
 */
 .scene-stage { display: grid; gap: 0; margin-bottom: 1.75rem; }
 
+/* .lesson-code is the block the learner actually reads in every question --
+   it was on index.css's pre-redesign styling at 16px on a grey wash, while
+   every .scene-* block (which only the unreachable scene lesson renders) had
+   the full treatment. It joins the rule rather than getting a copy of it. */
 .scene-code,
 .teach-code,
+.lesson-code,
 pre.code {
     font-family: var(--mono);
-    font-size: 1.25rem;
+    font-size: var(--t-code);
     line-height: 1.7;
     margin: 0;
     padding: 1.5rem 1.6rem;
-    color: #eef3ff;
+    color: #f5efe6;
     border-radius: var(--radius) var(--radius) 0 0;
     border: 1px solid #ffffff21;
     /* Darker than the sky around it, so the program reads as a screen in the
        room rather than as a paragraph with a border. */
-    background: linear-gradient(180deg, #ffffff12, transparent 40%), #0a0e33;
+    background: linear-gradient(180deg, #ffffff12, transparent 40%), #12100e;
     box-shadow: var(--lift);
     overflow-x: auto;
     transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
+/* Square corners on .scene-code are for the conduit that hangs under it.
+   .lesson-code stands on its own, so it closes. */
+.lesson-code {
+    border-radius: var(--radius);
+    padding: 1.15rem 1.3rem;
+}
+
 .scene-code.is-quiet {
     font-size: 1.15rem;
     border-radius: var(--radius);
-    background: #0a0e33b3;
+    background: #12100eb3;
     box-shadow: none;
     margin-bottom: 1.5rem;
 }
@@ -1171,8 +1365,8 @@ pre.code {
 /* The moment RUN is pressed: the program lights up, because it is the thing
    currently doing something. */
 .scene-code.is-running {
-    border-color: #5ee7f0a6;
-    box-shadow: 0 0 0 1px #5ee7f066, 0 0 40px -6px #5ee7f08c;
+    border-color: #d8bf96a6;
+    box-shadow: 0 0 0 1px #d8bf9666, 0 0 40px -6px #d8bf968c;
 }
 
 /* THE CONDUIT. A channel between the code and the console, lit only while
@@ -1189,7 +1383,7 @@ pre.code {
        the violet sky through, which made the channel read as a GAP splitting
        the program from its output -- the exact opposite of the idea. It is one
        object with a channel running down it. */
-    background: linear-gradient(180deg, #0a0e33, #070a26);
+    background: linear-gradient(180deg, #12100e, #0d0b0a);
     font-size: 0;
     color: transparent;
 }
@@ -1214,8 +1408,8 @@ pre.code {
     height: 1.6rem;
     transform: translateX(-50%);
     border-radius: 3px;
-    background: linear-gradient(180deg, transparent, var(--cyan));
-    box-shadow: 0 0 14px 2px #5ee7f0cc;
+    background: linear-gradient(180deg, transparent, var(--sand));
+    box-shadow: 0 0 14px 2px #d8bf96cc;
     animation: conduit 0.72s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
@@ -1230,31 +1424,31 @@ pre.code {
     border: 1px solid #ffffff21;
     border-top: 0;
     border-radius: 0 0 var(--radius) var(--radius);
-    background: #070a26;
+    background: #0d0b0a;
     box-shadow: inset 0 10px 20px -14px #000000e6;
 }
 
 .scene-console-tag {
     display: block;
     font-family: var(--mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.24em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--dim);
+    color: var(--muted);
     margin-bottom: 0.5rem;
 }
 
-.scene-console-empty { margin: 0; font-family: var(--mono); font-size: 1.05rem; color: var(--dim); }
+.scene-console-empty { margin: 0; font-family: var(--mono); font-size: var(--t-code-inline); color: var(--muted); }
 
 /* What the program said. Cyan, because it is the one thing on screen the
    learner caused -- and as large as the code, for the same reason. */
 .scene-output {
     margin: 0;
     font-family: var(--mono);
-    font-size: 1.25rem;
-    line-height: 1.5;
-    color: var(--cyan);
-    text-shadow: 0 0 20px #5ee7f080;
+    font-size: var(--t-code);
+    line-height: 1.7;
+    color: var(--sand);
+    text-shadow: 0 0 20px #d8bf9680;
     animation: land 0.42s var(--ease);
 }
 
@@ -1299,7 +1493,11 @@ pre.code {
     padding: 0;
 }
 
-.scene-choice {
+/* Likewise the answer choices. These were 6px radii and a grey hairline on a
+   blue-violet ground, with no hover and no answer colours -- the single most
+   used control on the learning path, still wearing the old skin. */
+.scene-choice,
+.lesson-choice {
     width: 100%;
     text-align: left;
     padding: 1rem 1.25rem;
@@ -1312,28 +1510,34 @@ pre.code {
         box-shadow 0.16s ease;
 }
 
-.scene-choice code { font-family: var(--mono); font-size: 1.08rem; color: inherit; }
+.scene-choice code,
+.lesson-choice code { font-family: var(--mono); font-size: var(--t-code-inline); color: inherit; }
 
-.scene-choice:hover:not(:disabled) {
+.scene-choice:hover:not(:disabled),
+.lesson-choice:hover:not(:disabled) {
     transform: translateY(-2px);
     background: #ffffff1a;
-    border-color: #5ee7f080;
-    box-shadow: 0 12px 28px -14px #5ee7f0cc;
+    border-color: #d8bf9680;
+    box-shadow: 0 12px 28px -14px #d8bf96cc;
 }
 
-.scene-choice:disabled { cursor: default; }
+.scene-choice:disabled,
+.lesson-choice:disabled { cursor: default; }
 
 /* The right answer is always marked, including when it was not the one picked
    -- being shown the answer is the point of getting it wrong. */
-.scene-choice.is-answer { border-color: var(--mint); background: #6ee7b724; }
+.scene-choice.is-answer,
+.lesson-choice.is-answer { border-color: var(--mint); background: #6ee7b724; }
 
-.scene-choice.is-right {
+.scene-choice.is-right,
+.lesson-choice.is-right {
     border-color: var(--mint);
     background: #6ee7b733;
     box-shadow: 0 0 0 1px var(--mint), 0 0 32px -8px #6ee7b7cc;
 }
 
-.scene-choice.is-wrong { border-color: var(--coral); background: #ff809929; }
+.scene-choice.is-wrong,
+.lesson-choice.is-wrong { border-color: var(--coral); background: #ff809929; }
 
 /* ---- feedback ---- */
 
@@ -1384,9 +1588,9 @@ pre.code {
 .scene-eyebrow {
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.22em;
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--cyan);
+    color: var(--sand);
     margin: 0 0 1rem;
 }
 
@@ -1395,7 +1599,7 @@ pre.code {
     font-variation-settings: var(--display-soft);
     font-size: clamp(1.9rem, 5.5vw, 3rem);
     font-weight: 600;
-    line-height: 1.06;
+    line-height: 1.12;
     margin: 0 0 1.25rem;
     text-wrap: balance;
 }
@@ -1435,7 +1639,7 @@ pre.code {
 }
 
 .scene-part:last-child { border-bottom: 0; }
-.scene-part dt code { font-family: var(--mono); font-size: 1.08rem; color: var(--yellow); }
+.scene-part dt code { font-family: var(--mono); font-size: var(--t-code-inline); color: var(--yellow); }
 .scene-part dd { margin: 0; color: var(--text-2); line-height: 1.55; }
 
 /* ---- arriving ----
@@ -1475,9 +1679,9 @@ pre.code {
 .complete-label {
     font-family: var(--ui);
     font-size: var(--t-label);
-    letter-spacing: 0.2em;
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--cyan);
+    color: var(--sand);
     margin: 0 0 0.6rem;
 }
 
@@ -1524,9 +1728,17 @@ pre.code {
     color: var(--text);
 }
 
-.complete-aside { margin-top: 1.75rem; font-size: var(--t-small); }
-.complete-aside a { color: var(--muted); }
-.complete-aside a:hover { color: var(--cyan); }
+.complete-aside {
+    margin-top: 1.75rem;
+    font-size: var(--t-small);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+}
+/* 44px targets, side by side: back to the journey, or into practice. */
+.complete-aside a { color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; }
+.complete-aside a:hover { color: var(--sand); }
 
 /* --------------------------------------------------- 4e. the mission ---- */
 
@@ -1552,15 +1764,15 @@ pre.code {
 
 .mission-editor-label {
     font-family: var(--mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.24em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--dim);
+    color: var(--muted);
     padding: 0.9rem 1.6rem 0;
     border: 1px solid #ffffff21;
     border-bottom: 0;
     border-radius: var(--radius) var(--radius) 0 0;
-    background: linear-gradient(180deg, #ffffff12, transparent 60%), #0a0e33;
+    background: linear-gradient(180deg, #ffffff12, transparent 60%), #12100e;
 }
 
 /* The editor IS the code slab -- same face, same size, same ground as the
@@ -1568,15 +1780,15 @@ pre.code {
    "code" to "a form field". */
 .mission-editor {
     font-family: var(--mono);
-    font-size: 1.15rem;
+    font-size: var(--t-code);
     line-height: 1.7;
     margin: 0;
     padding: 0.85rem 1.6rem 1.4rem;
-    color: #eef3ff;
+    color: #f5efe6;
     border: 1px solid #ffffff21;
     border-top: 0;
     border-radius: 0;
-    background: #0a0e33;
+    background: #12100e;
     resize: vertical;
     width: 100%;
     display: block;
@@ -1585,18 +1797,18 @@ pre.code {
 
 .mission-editor:focus {
     outline: none;
-    border-color: #5ee7f066;
-    box-shadow: 0 0 0 1px #5ee7f04d inset;
+    border-color: #d8bf9666;
+    box-shadow: 0 0 0 1px #d8bf964d inset;
 }
 
 .mission-editor.is-running {
-    border-color: #5ee7f0a6;
-    box-shadow: 0 0 0 1px #5ee7f066, 0 0 40px -6px #5ee7f08c;
+    border-color: #d8bf96a6;
+    box-shadow: 0 0 0 1px #d8bf9666, 0 0 40px -6px #d8bf968c;
 }
 
 .mission-editor:disabled {
     opacity: 1;
-    -webkit-text-fill-color: #eef3ff;
+    -webkit-text-fill-color: #f5efe6;
 }
 
 .mission .scene-console { border-radius: 0 0 var(--radius) var(--radius); border-top: 0; }
@@ -1771,9 +1983,13 @@ pre.code {
 }
 
 /* A route mounting. */
+/* Movement only, never opacity. The route used to start at opacity 0 with
+   `both` fill, so a paused, throttled or interrupted animation left the whole
+   page invisible. Now the content is always fully visible and only settles a
+   few pixels into place; reduced motion turns even that off (below). */
 @keyframes arrive {
-    0% { opacity: 0; transform: translateY(14px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% { transform: translateY(8px); }
+    100% { transform: translateY(0); }
 }
 
 /* The beacon lamp, and the engine plume. The plume flickers in uneven steps
@@ -1806,11 +2022,11 @@ pre.code {
    exactly the moment the curriculum says so.
 */
 .ship.is-challenge {
-    filter: drop-shadow(0 0 14px #ffd16699) drop-shadow(0 4px 10px #05072acc);
+    filter: drop-shadow(0 0 14px #ffd16699) drop-shadow(0 4px 10px #0000008c);
 }
 
 .ship.is-departing {
-    filter: drop-shadow(0 0 16px #5ee7f0a6) drop-shadow(0 4px 10px #05072acc);
+    filter: drop-shadow(0 0 16px #d8bf96a6) drop-shadow(0 4px 10px #0000008c);
 }
 
 /* Parked is genuinely still: a topic behind you is not doing anything. */
@@ -1900,26 +2116,76 @@ pre.code {
 @media (max-width: 40rem) {
     .site-header {
         gap: 0.6rem;
-        width: calc(100% - 1.75rem);
         padding: 0.9rem 0 0.75rem;
         margin-bottom: 1.75rem;
     }
 
-    .site-header nav { gap: 0.15rem; flex-wrap: nowrap; }
+    /* At 375px the brand (84px) and the nav (294px) need 378px inside a
+       315px header, so the Log out button used to end at x=418 -- 43px past
+       the right edge of the screen, reachable only because something further
+       up sets overflow-x: hidden, which conceals it rather than solving it.
+       The header wraps (see the base rule) and the nav takes its own row. */
+    .site-header nav { gap: 0.15rem; justify-content: flex-end; }
     .site-header nav a:not(.button) { padding: 0.45rem 0.5rem; }
+    /* 320px IS 38px SHORT, and the targets are not what gives way. The bar
+       there is 272px (it sits inside .app's 1rem padding) and three 40px
+       icons, the Log link and "Log out" need 310px. Shrinking the targets
+       back to 36x34 would undo the point of this change, so the avatar goes
+       instead: it is an identity badge, not a control, the username beside
+       it is already hidden at this width, and "Log out" still says plainly
+       that someone is signed in. Everything you can press stays on screen at
+       44px tall, on one row. */
+    @media (max-width: 25rem) {
+        /* HEIGHT IS KEPT, WIDTH IS CONCEDED, AND THE ROW STAYS ONE ROW.
+           Measured: the bar is 272px here (it sits inside .app's 1rem
+           padding). Natural widths plus the avatar need 279px -- which is
+           why "Learn" used to start at x=-4. Without the avatar they need
+           245px and fit. Forcing 44px WIDE as well needs 310px, and the
+           only ways to buy that are a second nav row (which took the header
+           to 175px, a fifth of the screen) or hiding a control. Neither is
+           worth it, so below 352px the icons keep their natural width and
+           every target is still 44px tall. Documented rather than hidden.
+
+           The avatar goes because it is an identity badge, not a control --
+           the username beside it is already hidden at this width, and
+           "Log out" still says plainly that someone is signed in. */
+        .nav-avatar { display: none; }
+        .nav-pilot { gap: 0; margin-left: 0; padding-left: 0.35rem; }
+        .site-header nav a:not(.button),
+        .nav-aside { min-width: 0; }
+        .site-header .brand { min-height: 0; }
+        .site-header nav .button.small { padding: 0.45rem 0.8rem; }
+    }
     .nav-label, .nav-pilot .nav-name { display: none; }
     .nav-pilot { margin-left: 0.25rem; padding-left: 0.6rem; }
     .site-header nav .button.small { padding: 0.45rem 0.9rem; font-size: 0.85rem; }
 
     .welcome { padding: 0.5rem 1.25rem 4rem; }
     .welcome-stage { height: 12rem; }
-    .home, .journey, .scene { padding-left: 1.1rem; padding-right: 1.1rem; }
+    /* .app owns the gutter now; a reading column still keeps its own. */
+    .scene { padding-left: 1.1rem; padding-right: 1.1rem; }
     .scene-code, .scene-output { font-size: 1.05rem; }
 }
 
-@media (max-width: 22rem) {
-    .site-header { flex-wrap: wrap; justify-content: center; }
+/*
+   THE COMPACT BAR, entered on purpose at 400px rather than by accident.
+
+   The old threshold was 22rem (352px), and the moment it released, the avatar
+   came back (+30px) and the icons grew 36 -> 44px (+24px) while the bar gained
+   one pixel. From 353px the nav was wider than its own bar: "Learn" sat at
+   x = -7 at 353px and the row was still spilling into the gutter at 375px.
+   25rem is where the labelled layout genuinely stops fitting, so compact is a
+   decision now rather than a rescue.
+*/
+@media (max-width: 25rem) {
+    .site-header {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
     .site-header .brand { margin-right: 0; }
+    /* Spreading belongs to a bar with room to spread in. */
+    .site-header nav > a:first-of-type { margin-left: 0; }
+    .nav-pilot { margin-left: 0; }
 }
 
 /* ---------------------------------------------------- 4f. one world ------ */
@@ -1938,9 +2204,9 @@ pre.code {
 */
 .world {
     position: relative;
-    max-width: 62rem;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 0.5rem 1.5rem 5rem;
+    padding: 0.5rem 0 5rem;
     text-align: center;
 }
 
@@ -1951,7 +2217,7 @@ pre.code {
     font-size: var(--t-label);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--cyan);
+    color: var(--sand);
     margin: 0 0 0.5rem;
 }
 
@@ -2022,7 +2288,7 @@ pre.code {
     position: absolute;
     bottom: 26%;
     right: 30%;
-    filter: drop-shadow(0 4px 12px #05072acc);
+    filter: drop-shadow(0 4px 12px #0000008c);
     animation: cruise 9s ease-in-out infinite;
 }
 
@@ -2055,14 +2321,14 @@ pre.code {
 .world-object a:hover { transform: translateY(-3px); }
 
 .world-object a:focus-visible {
-    outline: 2px solid var(--cyan);
+    outline: 2px solid var(--sand);
     outline-offset: 6px;
     border-radius: var(--radius);
 }
 
 .world-object-name {
     font-family: var(--ui);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     line-height: 1.25;
     max-width: 9rem;
     text-wrap: balance;
@@ -2112,7 +2378,7 @@ pre.code {
     text-decoration: none;
 }
 
-.world-exit a:hover { color: var(--cyan); }
+.world-exit a:hover { color: var(--sand); }
 
 /* The way in, on the map's current station. */
 .journey-enter {
@@ -2121,24 +2387,27 @@ pre.code {
     left: 50%;
     transform: translate(-50%, 3.4rem);
     z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     padding: 0.3rem 0.85rem;
     border-radius: var(--radius-pill);
-    border: 1px solid #5ee7f066;
+    border: 1px solid #d8bf9666;
     background: rgb(16 20 58 / 0.86);
     font-family: var(--ui);
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: var(--cyan);
+    font-size: var(--t-small);
+    letter-spacing: 0.04em;
+    color: var(--sand);
     text-decoration: none;
     white-space: nowrap;
 }
 
-.journey-enter:hover { background: #5ee7f01f; }
+.journey-enter:hover { background: #d8bf961f; }
 
 @media (max-width: 46rem) {
     /* The ellipse has no width to spread into, so the field grows taller. */
     .world-field { aspect-ratio: 1 / 1.25; max-width: 24rem; }
-    .world-object-name { max-width: 5.5rem; font-size: 0.72rem; }
+    .world-object-name { max-width: 5.5rem; font-size: 0.875rem; }
 }
 
 /*
@@ -2188,4 +2457,547 @@ pre.code {
 
     .world-field::before,
     .world-body .planet { transition: none; }
+}
+
+/* "Newly open", in words and on the page.
+   Not a colour change and not an animation: the first is invisible to anyone
+   reading with a screen reader, and the second is over before a first-time
+   player has looked up. It clears itself when they clear a stop here, so it
+   cannot linger on a world they are halfway through. */
+.journey-new {
+    margin-left: 0.5rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--mint);
+    font-family: var(--ui);
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--mint);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* ── a module as a sequence ──────────────────────────────────────────────
+   Replaces the orbit as the readable surface. The planet and the craft above
+   it stay: arriving somewhere is the whole idea, and a list alone would make
+   this a settings page. What changed is that the curriculum is now something
+   you read rather than something you decode. */
+.steps {
+    /* WITHOUT THIS THE LIST IS SIZED BY ITS LONGEST ROW. .world-field is a
+       column flex container with align-items: center, so a child with no
+       explicit cross size shrink-wraps -- 384px inside a 736px field at
+       1280px and above, on a page whose whole job is to be read.
+
+       align-self: stretch does NOT fix it: the auto inline margins below are
+       cross-axis auto margins, and those disable stretch outright (measured:
+       still 384px with stretch, 544px with stretch + margin-inline: 0). This
+       one declaration reaches max-width instead, and the auto margins go on
+       centring it exactly as before. */
+    width: 100%;
+    max-width: 34rem;
+    margin: 2rem auto 0;
+}
+
+.steps-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.step {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr auto;
+    gap: 0.9rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+/* THE ONE ROW THAT MATTERS. Brighter surface, a real border, and the only
+   button on the page. Everything else steps back so this does not have to
+   shout to be found. */
+.step.is-current {
+    border-color: var(--mint);
+    background: rgba(94, 234, 212, 0.07);
+}
+
+/* Locked steps step back by their name and mark, not by fading the whole
+   row: at 55% opacity the reason -- the one line saying what opens it -- fell
+   to about 3:1 contrast. The lock icon and the word "Locked" still say it. */
+.step.is-locked .step-name { color: var(--text-2); }
+.step.is-locked .step-mark { opacity: 0.6; }
+
+.step-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+}
+
+.step.is-complete .step-mark { color: var(--mint); }
+.step.is-current .step-mark { color: var(--mint); }
+
+.step-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.step-state {
+    font-family: var(--ui);
+    /* The three words that answer "where am I" were the smallest text in the
+       product at 9.9px. They are now the size of secondary prose. */
+    font-size: var(--t-small);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+
+.step.is-current .step-state { color: var(--mint); }
+
+.step-name {
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.step.is-current .step-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.step-note {
+    font-size: var(--t-small);
+    color: var(--muted);
+}
+
+/* Quiet by design: returning to finished work is allowed, not encouraged, and
+   it must never compete with the current step. */
+.step-again {
+    /* A 44px target: these measured 24px tall and 33px wide as bare text. */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 0.25rem;
+    font-size: var(--t-small);
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.step-again:hover { opacity: 0.9; }
+
+@media (max-width: 30rem) {
+    .step {
+        grid-template-columns: 1.4rem 1fr;
+        row-gap: 0.6rem;
+    }
+
+    .step-go,
+    .step-again {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+/* ── the field, now that it holds a list rather than an orbit ────────────
+   .world-field was a 3:2 stage with the planet absolutely centred in it and
+   the concepts scattered around. With the sequence in its place the planet
+   sat ON the rows: the glow still belongs, the overlap does not. The field
+   becomes a normal flow container, the planet keeps its own band above the
+   list, and the atmosphere still warms as the topic fills in. */
+.world-field {
+    aspect-ratio: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.world-body {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 9.5rem;
+    display: grid;
+    place-items: center;
+}
+
+.world-body .planet {
+    width: auto;
+    max-height: 7.5rem;
+}
+
+/* ===================================================================== */
+/* READABILITY LAYER                                                      */
+/*                                                                        */
+/* One place, loaded last, for the readability pass rather than edits    */
+/* scattered through two stylesheets. Each rule says what it fixes.      */
+/* ===================================================================== */
+
+/* Primary buttons clip their sheen with overflow, and overflow: hidden made a
+   flex item's minimum width zero -- a squeezed button cut its own label off.
+   `clip` does not create a scroll container, so the content-based minimum
+   stays; min-content keeps long labels wrapping instead of clipping. */
+.button.primary {
+    overflow: clip;
+    min-width: min-content;
+}
+
+/* Inside the paper lesson card the palette is redefined for paper (see
+   .lesson in index.css). The dark console and editor nested in it inherited
+   those paper inks -- dark brown on near-black, 1.4 to 3.3:1. They get the
+   dark palette back. */
+.lesson :is(.scene-console, .mission-editor, .mission-editor-label) {
+    --text: #f7f2ea;
+    --text-2: #e2d9cc;
+    --muted: #cdc3b5;
+    --ink-soft: #cdc3b5;
+}
+
+/* Links on paper used the global sand accent: 1.66:1 on #FAF7F2. */
+.lesson a:not(.button) {
+    color: #6b4c12;
+}
+
+/* A game card's category and Play label were drawn in the game's raw accent;
+   Code Blitz's violet was 3.2:1 on the card. A lighter tint of the same hue. */
+.card-category,
+.card-play {
+    color: color-mix(in srgb, var(--card-accent) 55%, #ffffff);
+}
+
+/* The readable floor for labels a learner needs: eyebrows, stat labels,
+   HUD labels, results and Bug Hunt tags. Many sat at 10-12px in uppercase.
+   Decorative bits (keyboard hints, line-number gutters, counters inside tiny
+   boxes) keep their sizes. */
+.eyebrow,
+.label-caps,
+.game-intro-eyebrow,
+.game-intro-shape,
+.learn-eyebrow,
+.run-eyebrow,
+.paused-eyebrow,
+.rx-eyebrow,
+.rx-shape,
+.mem-eyebrow,
+.mem-shape,
+.mem-compare-label,
+.hud-label,
+.hud-title,
+.round-label,
+.board-label,
+.stat-row dt,
+.run-figures dt,
+.run-figures .unit,
+.run-score span,
+.xp-earned,
+.resume-label,
+.review-head,
+.review-n,
+.verdict,
+.verdict-label,
+.next-label,
+.countdown-status,
+.game-chip,
+.hint,
+.ask-practising,
+.playground-value-tag,
+.playground-trace,
+.bh-brief-stats dt,
+.bh-results-stats dt,
+.bh-integrity-label,
+.bh-theme,
+.bh-patches-legend,
+.bh-hint-tag,
+.bh-readout-tag,
+.bh-log-boss,
+.bh-log-status,
+.bh-log-meta,
+.bh-voice-tag,
+.bh-severity,
+.bh-phase,
+.bh-service,
+.bh-targeted,
+.bh-diagnostic-head,
+.progress-topic-state,
+.card-category {
+    font-size: max(0.875rem, 1em);
+}
+
+/* Code a learner reads, in results breakdowns and Flush's console. */
+.prompt.small,
+.console-line {
+    font-size: 0.9375rem;
+}
+
+/* Overflowing code scrolls inside its own box rather than widening the page. */
+.prompt,
+.lesson-code,
+.bh-code,
+.console {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+
+/* Resting nav links were --muted on the header, 4.1:1 at the right-hand end
+   where the sky is lightest. The current page stays brighter and underlined. */
+.site-header nav a:not(.button) {
+    color: var(--text-2);
+}
+
+/* Status pills, the Games page's topic line and the header's small buttons
+   were 13.6px; the topic line also sat at 65% opacity. */
+.tag,
+.play-focus-topic,
+.site-header nav .button.small {
+    font-size: 0.875rem;
+}
+
+.play-focus-topic {
+    opacity: 1;
+    color: var(--muted);
+}
+
+/* "nothing printed" in an empty console sat at 35% opacity: 2.2:1. The
+   muted ink alone already reads as a placeholder. */
+.scene-console-empty {
+    opacity: 1;
+}
+
+/* Small buttons (Pause, the header's Log out), Flush's output tiles on a
+   phone, the lesson's quiet "or see your journey" link, and Bug Hunt's alert
+   pill were 12.5-13.8px. Tiles are answers the learner reads, so they get the
+   code size. */
+.button.small,
+.lesson-aside-link,
+.bh-alert {
+    font-size: 0.875rem;
+}
+
+.tile {
+    font-size: 0.9375rem;
+}
+
+/* The in-progress pill was the accent on its own soft tint: 4.3:1. */
+.tag.in-progress {
+    color: color-mix(in srgb, var(--accent) 70%, #ffffff);
+}
+
+/* A Learn Beat's output can be several lines (one per console.log). */
+.learn-output-value {
+    white-space: pre-wrap;
+    font-family: var(--mono);
+}
+
+.learn-arrow {
+    font-size: 0.875rem;
+}
+
+/* "What you are learning" sat at 78% opacity in 11.8px capitals. */
+.ask-practising {
+    opacity: 1;
+    color: var(--text-2);
+}
+
+/* Flush's version carries the concept's one-line meaning under its name. */
+.flush-practising {
+    flex-wrap: wrap;
+    margin: 0 0 0.75rem;
+}
+
+.flush-practising-meaning {
+    flex-basis: 100%;
+    padding-left: calc(0.42rem + 0.45rem);
+    font-size: 0.9375rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--muted);
+}
+
+/* The pace choice on a curriculum game's intro: one checkbox and a line that
+   says exactly what the current choice means. */
+.pace-choice {
+    margin: 0 auto 1.25rem;
+    max-width: 30rem;
+    text-align: center;
+}
+
+.pace-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 44px;
+    padding: 0 0.5rem;
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.pace-toggle input {
+    margin: 0;
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: var(--sand);
+}
+
+.pace-explain {
+    margin: 0.25rem 0 0;
+    font-size: 0.9375rem;
+    color: var(--muted);
+}
+
+.results-pace {
+    margin: 0 0 1rem;
+    text-align: center;
+    font-size: 0.9375rem;
+}
+
+/* Experiment's quiet way back to the journey was 13.8px. */
+.playground-back {
+    font-size: 0.9375rem;
+}
+
+/* The Learn Beat's example is the same "code on paper" card the lesson uses,
+   so it gets the lesson card's breathing room rather than sitting flush. */
+pre.learn-code {
+    padding: 1rem 1.15rem;
+    border-radius: var(--radius);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+}
+
+/* A disabled primary button (mid-request: "Starting…") was the whole button at
+   55% opacity -- dark ink fading into the dark sky, unreadable. It now keeps
+   its ink and only loses its colour, which still reads as "not now". */
+.button.primary:disabled {
+    opacity: 1;
+    filter: saturate(0.35) brightness(0.82);
+}
+
+/* The concept's name is the point of the line, not a footnote to its label:
+   it was 13.8px beside a 14px label. */
+.ask-practising strong {
+    font-size: 1rem;
+    color: var(--text);
+}
+
+/* Results screens: the last labels under the floor, measured at 12.1-13.6px. */
+.bh-results-state,
+.topic-tally .topic-score,
+.round-learning-elsewhere,
+.round-learning-none,
+.round-learning-standing,
+.round-learning-because,
+.bh-replay-note {
+    font-size: 0.875rem;
+}
+
+.bh-log-answer {
+    font-size: 0.9375rem;
+}
+
+/* These secondary lines were dimmed with opacity on top of muted ink; the ink
+   alone already reads as secondary. */
+.round-learning-elsewhere,
+.round-learning-none,
+.round-learning-standing,
+.round-learning-because {
+    opacity: 1;
+    color: var(--muted);
+}
+
+/* Steps already done on the results checklist sat at 60% opacity: 4.1:1. */
+.standing-step.is-done .standing-name {
+    opacity: 1;
+    color: var(--muted);
+}
+
+/* A long primary label ("Demonstrate Using Arithmetic Operators") overflowed
+   its button on a phone. Labels wrap inside the button instead, centred. */
+.button.primary {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    text-wrap: balance;
+}
+
+/* The XP pill was the accent on its own soft tint: 4.3-4.5:1 depending on the
+   sky behind it. Same lighter tint as the in-progress pill. */
+.xp-earned,
+.xp-earned strong {
+    color: color-mix(in srgb, var(--accent) 70%, #ffffff);
+}
+
+/* Upcoming steps were dimmed with opacity too (4.1:1). Muted ink marks them as
+   not yet without making them hard to read. */
+.standing-step.is-upcoming {
+    opacity: 1;
+    color: var(--muted);
+}
+
+/* Code inside a Bug Hunt answer shrank again from its box's size. */
+.bh-log-answer code {
+    font-size: inherit;
+}
+
+/* At 320px the nav icons were being squeezed to 16px -- invisible, and far
+   under a usable tap target -- once the header's small button grew to the
+   readable 14px. The icons keep a real width; the compact bar (max-width:
+   25rem, above) already wraps, so the nav takes its own row when it must. */
+@media (max-width: 22rem) {
+    .site-header nav {
+        flex: 1 0 100%;
+        justify-content: center;
+    }
+    .site-header nav a:not(.button) {
+        flex: none;
+        min-width: 44px;
+        justify-content: center;
+    }
+}
+
+/* The stops caption is a sentence; forced lowercase made it read as a typo. */
+.run-caption {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* ---------------------------------------------------------- sound toggle --
+   The speaker in the header. A 44px target, the same quiet chrome as the nav
+   icons, and the standard focus ring. Off reads dimmer, so the state is
+   visible without the tooltip. */
+.sound-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sound-toggle:hover {
+    background: #ffffff12;
+    color: var(--text);
+}
+
+.sound-toggle[aria-pressed="false"] {
+    color: var(--muted);
+}
+
+.sound-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }

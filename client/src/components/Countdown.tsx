@@ -13,15 +13,26 @@ interface CountdownProps {
      * meant to read as the system's chances rather than as a number.
      */
     statusLabels?: { calm: string; warn: string; urgent: string };
+    /**
+     * Hold the bar where it is. For a round that has already ended while its
+     * feedback is on screen -- Flush's reveal now stays until the learner moves
+     * on, and a bar still draining under it read as time still running out.
+     * Omitted everywhere else, which behaves exactly as before. While paused
+     * nothing ticks, so `onExpire` cannot fire.
+     */
+    paused?: boolean;
 }
 
 /** Purely cosmetic. The server enforces the deadline against its own served_at,
  *  so a tampered or frozen clock here changes nothing about scoring. */
-export function Countdown({ deadlineAt, totalMs, onExpire, statusLabels }: CountdownProps) {
+export function Countdown({ deadlineAt, totalMs, onExpire, statusLabels, paused = false }: CountdownProps) {
     const deadline = new Date(deadlineAt).getTime();
     const [remaining, setRemaining] = useState(() => Math.max(0, deadline - Date.now()));
 
     useEffect(() => {
+        // Frozen: keep the last value shown, and run no interval at all.
+        if (paused) return;
+
         setRemaining(Math.max(0, deadline - Date.now()));
 
         const id = setInterval(() => {
@@ -35,7 +46,7 @@ export function Countdown({ deadlineAt, totalMs, onExpire, statusLabels }: Count
         }, 100);
 
         return () => clearInterval(id);
-    }, [deadline, onExpire]);
+    }, [deadline, onExpire, paused]);
 
     const seconds = Math.ceil(remaining / 1000);
     const pct = Math.max(0, Math.min(100, (remaining / totalMs) * 100));

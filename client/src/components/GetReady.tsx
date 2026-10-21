@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface GetReadyProps {
     /** Fired once the count reaches zero. */
@@ -33,16 +33,39 @@ const TICK_MS = 550;
 export function GetReady({ onDone, label = "Get ready" }: GetReadyProps) {
     const [tick, setTick] = useState(0);
 
+    /*
+     * ONCE, NO MATTER HOW OFTEN THE PARENT RENDERS.
+     *
+     * Every caller passes an inline arrow, so `onDone` is a new function on
+     * each render -- and onDone itself sets state in the parent. With onDone
+     * in the effect's dependencies, the parent's re-render re-ran the effect at
+     * the final tick and fired onDone a second time: two concurrent "start a
+     * session" requests, the second of which collided with the first on the
+     * one-active-game index and came back as a 500. Memory showed that 500 as
+     * "Internal Server Error" over a game the first request had started fine.
+     *
+     * The latest onDone is kept in a ref so the call still uses current state.
+     */
+    const latest = useRef(onDone);
+    const fired = useRef(false);
+
+    useEffect(() => {
+        latest.current = onDone;
+    });
+
     useEffect(() => {
         if (tick >= TICKS.length) {
-            onDone();
+            if (!fired.current) {
+                fired.current = true;
+                latest.current();
+            }
             return;
         }
 
         const id = window.setTimeout(() => setTick((n) => n + 1), TICK_MS);
 
         return () => window.clearTimeout(id);
-    }, [tick, onDone]);
+    }, [tick]);
 
     return (
         <section className="resume-count" aria-live="assertive">

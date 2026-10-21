@@ -7,8 +7,12 @@ import { Ship } from "../world/Ship.js";
 import { WorldLandmark } from "../world/Objects.js";
 import { worldFor } from "../world/atlas.js";
 import { Icon } from "../world/Icon.js";
-import type { JourneyPathResponse } from "../api/types.js";
+import type { JourneyPathResponse, ResumableResponse, ResumableSession } from "../api/types.js";
+import { gameBySlug } from "../games/catalog.js";
+import { nextAction, sectionProgress } from "../games/progression.js";
+import { ACTION, STATE } from "../vocabulary.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 /**
  * THE FRONT DOOR — as a location rather than a dashboard.
  *
@@ -29,8 +33,33 @@ import type { JourneyPathResponse } from "../api/types.js";
  * the first screen should be the thing, not a description of it.
  */
 export function HomePage() {
+    usePageTitle("Home");
     const { user, loading } = useAuth();
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
+    /** The path could not be read. Said, rather than covered by a button that
+     *  guesses -- it used to fall back to "Ready when you are" and a map link,
+     *  which told a returning learner they had no progress. */
+    const [failed, setFailed] = useState(false);
+    /** Bumped by "Try again" to re-run the fetch. */
+    const [attempt, setAttempt] = useState(0);
+    /** A game left unfinished, so Home can say where it is and offer it back. */
+    const [held, setHeld] = useState<ResumableSession | null>(null);
+
+    useEffect(() => {
+        if (!user) return;
+
+        let active = true;
+
+        // Best effort: Home still works without it, and a failure says nothing
+        // rather than guessing.
+        api.get<ResumableResponse>("/api/me/sessions/resumable")
+            .then((data) => active && setHeld(data.sessions[0] ?? null))
+            .catch(() => undefined);
+
+        return () => {
+            active = false;
+        };
+    }, [user]);
 
     useEffect(() => {
         if (!user) return;
@@ -43,15 +72,14 @@ export function HomePage() {
 
                 if (active) setPath(data);
             } catch {
-                // The page still works without it; the button falls back to the
-                // journey rather than to a specific concept.
+                if (active) setFailed(true);
             }
         })();
 
         return () => {
             active = false;
         };
-    }, [user]);
+    }, [user, attempt]);
 
     if (loading) {
         return <p className="muted center">…</p>;
@@ -76,7 +104,7 @@ export function HomePage() {
 
                 <p className="welcome-lede">
                     No experience needed. Write a line, press RUN, and find out what it
-                    does — then keep going, one small discovery at a time.
+                    does, then keep going, one small discovery at a time.
                 </p>
 
                 <Link className="button primary big welcome-start" to="/register">
@@ -90,30 +118,71 @@ export function HomePage() {
         );
     }
 
-    /* ------------------------------------------------------------ in orbit */
-    const current = path?.current ?? null;
-    const currentTopic = path?.topics.find((t) => t.state === "current") ?? null;
-    const challenge = path?.topics.find((t) => t.challenge?.state === "current") ?? null;
+    /* ------------------------------------------- signed in, path not read */
+    if (failed) {
+        return (
+            <section className="home">
+                <div className="home-brief">
+                    <h1 className="home-topic">Your progress did not load</h1>
+                    <p className="home-principle" role="alert">
+                        Nothing is lost. Try again, or open your journey directly.
+                    </p>
+                    <div className="cta-row">
+                        <button
+                            className="button primary"
+                            onClick={() => {
+                                setFailed(false);
+                                setAttempt((n) => n + 1);
+                            }}
+                        >
+                            Try again
+                        </button>
+                        <Link className="button ghost" to="/journey">
+                            Open your journey
+                        </Link>
+                    </div>
+                </div>
+            </section>
+        );
+    }
 
-    const action = challenge
+    /* No button until the path is read. A guessed one ("Open the map") flashed
+       up for every returning learner and pointed somewhere other than their
+       next step. */
+    if (!path) {
+        return (
+            <p className="muted center" role="status">
+                Loading your progress…
+            </p>
+        );
+    }
+
+    /* ------------------------------------------------------------ in orbit */
+    const currentTopic = path.topics.find((t) => t.state === "current") ?? null;
+    const step = nextAction(path);
+    const progress = currentTopic ? sectionProgress(currentTopic) : null;
+    /** Nothing demonstrated and no checkpoint passed: a first visit, whatever
+     *  the account's age. "Welcome back" and "Continue" would both be wrong. */
+    const fresh = path.points.concepts === 0 && !path.topics.some((t) => t.state === "complete");
+
+    const action = step
         ? {
-              label: "Take the checkpoint",
-              to: `/challenge/${challenge.slug}`,
-              name: `${challenge.name} checkpoint`
+              label: step.kind === "checkpoint" ? ACTION.takeCheckpoint : fresh ? ACTION.startLearning : ACTION.continueLearning,
+              to: step.href
           }
-        : current
-          ? { label: "Continue", to: `/concept/${current.slug}`, name: current.name }
-          : { label: "Open the map", to: "/journey", name: null };
+        : { label: ACTION.seeJourney, to: "/journey" };
 
     return (
         <section className="home">
             <div className="home-sky">
                 <div className="home-brief">
-                    <p className="home-greeting">Welcome back, {user.username}.</p>
+                    <p className="home-greeting">
+                        {fresh ? `Welcome, ${user.username}.` : `Welcome back, ${user.username}.`}
+                    </p>
 
                     {currentTopic ? (
                         <>
-                            <p className="home-label">You are orbiting</p>
+                            <p className="home-label">{STATE.currentTopic}</p>
                             <h1 className="home-topic">{currentTopic.name}</h1>
                             {currentTopic.principle && (
                                 <p className="home-principle">{currentTopic.principle}</p>
@@ -121,20 +190,51 @@ export function HomePage() {
                         </>
                     ) : (
                         <>
-                            <p className="home-label">Your course</p>
-                            <h1 className="home-topic">Ready when you are</h1>
+                            <p className="home-label">Your journey</p>
+                            <h1 className="home-topic">Every topic is complete</h1>
                         </>
                     )}
 
-                    {action.name && (
+                    {step && (
                         <p className="home-next">
-                            Next — <strong>{action.name}</strong>
+                            {fresh ? "First step" : "Next step"}: <strong>{step.name}</strong>
+                            {progress && !fresh && (
+                                <>
+                                    <br />
+                                    <span className="home-progress">{progress.label}</span>
+                                </>
+                            )}
                         </p>
                     )}
 
                     <Link className="button primary big home-action" to={action.to}>
                         {action.label}
                     </Link>
+
+                    {/* A game left unfinished, said quietly under the one primary
+                        action: leaving a game pauses it, and this is the way back. */}
+                    {held && gameBySlug(held.game.slug) && (
+                        <p className="home-held">
+                            {held.status === "paused" ? "Paused" : "In progress"}:{" "}
+                            <strong>{held.game.name}</strong>,{" "}
+                            {(gameBySlug(held.game.slug)!.unit ?? "Round").toLowerCase()}{" "}
+                            {Math.min(held.unitsDone + 1, held.unitsTotal)} of {held.unitsTotal}.{" "}
+                            <Link to={gameBySlug(held.game.slug)!.path}>Resume</Link>
+                        </p>
+                    )}
+
+                    {/* Secondary on purpose. The games are practice for what the course
+                        teaches, so they sit below the one thing Jolt wants next -- directly
+                        below it, so on a phone they are on screen rather than
+                        under the planet. */}
+                    <p className="home-aside">
+                        <Link to="/journey">
+                            <Icon name="map" size={17} /> {ACTION.seeJourney}
+                        </Link>
+                        <Link to="/play">
+                            <Icon name="play" size={17} /> {ACTION.playGame}
+                        </Link>
+                    </p>
                 </div>
 
                 {/* The craft in orbit around the world you are at. Same planet
@@ -145,7 +245,7 @@ export function HomePage() {
                         slug={currentTopic?.slug ?? "values"}
                         state="here"
                         size={150}
-                        label={currentTopic ? `${currentTopic.name}, your current world` : undefined}
+                        label={currentTopic ? `${currentTopic.name}, your current topic` : undefined}
                     />
                     <Ship size={40} rotate={28} />
                     <WorldLandmark
@@ -157,8 +257,9 @@ export function HomePage() {
 
             {/* Progress as a flight log: what you have earned and what you can
                 do. No bar, no percentage -- neither is a thing a learner would
-                ever say about themselves. */}
-            {path && (
+                ever say about themselves. Not shown on a first visit, where it
+                would be a row of zeros before anything has happened. */}
+            {!fresh && (
                 <div className="home-log">
                     <p className="home-stat">
                         <span className="home-stat-value">{path.points.total}</span>
@@ -174,21 +275,12 @@ export function HomePage() {
                         <span className="home-stat-value">
                             {path.topics.filter((t) => t.state === "complete").length}
                         </span>
-                        <span className="home-stat-label">worlds charted</span>
+                        <span className="home-stat-label">
+                            {path.topics.filter((t) => t.state === "complete").length === 1 ? "topic complete" : "topics complete"}
+                        </span>
                     </p>
                 </div>
             )}
-
-            {/* Secondary on purpose. The games are practice for what the course
-                teaches, so they sit below the one thing Jolt wants next. */}
-            <p className="home-aside">
-                <Link to="/journey">
-                    <Icon name="map" size={17} /> See the whole map
-                </Link>
-                <Link to="/play">
-                    <Icon name="play" size={17} /> Practice with a game
-                </Link>
-            </p>
         </section>
     );
 }

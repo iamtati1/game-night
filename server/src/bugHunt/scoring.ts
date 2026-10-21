@@ -23,6 +23,18 @@ import { COMPLETION_BONUS_XP, perUnitXp } from "../games/xp.js";
 export const BUG_HUNT_INCIDENTS_PER_SESSION = 6;
 
 /**
+ * The fewest bugs a Bug Hunt run is dealt with.
+ *
+ * Below six the run is dealt short rather than refused, from real incidents
+ * only, and totalIncidents reports the true length. Three keeps the streak --
+ * the game's emotional mechanic -- able to build; one or two would be a single
+ * question. A short run has no boss: the boss is positional (hunt six) and a
+ * short run never reaches it, so nothing is scored at a boss multiplier that
+ * was never faced. XP stays per resolved incident, so it earns proportionally.
+ */
+export const BUG_HUNT_MIN_INCIDENTS_PER_SESSION = 3;
+
+/**
  * Which difficulty each hunt of a run is drawn from.
  *
  * Two trivial openers before anything real is asked of the player, then a

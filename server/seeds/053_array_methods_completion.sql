@@ -25,14 +25,50 @@
 BEGIN;
 
 CREATE OR REPLACE FUNCTION seed_am(
-    p_concept TEXT, p_demand TEXT, p_prompt TEXT,
+    p_ref TEXT, p_concept TEXT, p_demand TEXT, p_prompt TEXT,
     p_correct TEXT, p_wrong TEXT[], p_why TEXT
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1; v_type TEXT;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    /*
+     * IDENTITY FIRST, WORDING SECOND.
+     *
+     * p_ref is this question's name: authored once, never derived from its
+     * content, and never edited afterwards. It is namespaced by `source`, and
+     * questions_external_ref_idx -- UNIQUE on (source, external_ref) -- is what
+     * actually enforces one row per name. The guard below is the fast path, not
+     * the protection.
+     *
+     * THE DEFECT THIS REPLACES. This used to read `WHERE prompt = p_prompt`.
+     * Five later seeds rewrite prompts -- 059 and 060 reorder the blocks, 029
+     * rewrites wording outright -- so the stored text stopped matching the
+     * authored text, the guard stopped matching anything, and EVERY subsequent
+     * `npm run seed` inserted another copy. 41 questions had reached three
+     * copies each. A name cannot drift that way; wording can.
+     */
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-array-methods-completion' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    /*
+     * ADOPTION, for rows seeded before names existed. They carry the right
+     * content and no name, so the first run after this change gives them one
+     * rather than inserting beside them. Restricted to rows that have no name
+     * yet, so it can never steal a question that already belongs to another.
+     */
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-array-methods-completion' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     v_type := CASE WHEN p_demand IN ('recognise', 'recall', 'explain')
                    THEN 'match-concept' ELSE 'predict-output' END;
@@ -46,8 +82,8 @@ BEGIN
     RETURNING id INTO v_challenge;
 
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
-    VALUES (p_prompt, 3, 'array-methods', v_type, v_challenge, 'jolt-array-methods-completion', p_why)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation, external_ref)
+    VALUES (p_prompt, 3, 'array-methods', v_type, v_challenge, 'jolt-array-methods-completion', p_why, p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -63,18 +99,24 @@ $$;
 
 /* ── 1 · map ────────────────────────────────────────────────────────────── */
 
-SELECT seed_am('map', 'recall',
+SELECT seed_am(
+    'map-recall-01',
+    'map', 'recall',
     E'Which method builds a NEW list by passing every item through a function?',
     '.map()', ARRAY['.forEach()', '.filter()', '.find()'],
     '`map` gives back a new list the same length as the original, with each item replaced by whatever your function returned. `forEach` returns nothing, and `filter` keeps items rather than changing them.');
 
-SELECT seed_am('map', 'recognise',
+SELECT seed_am(
+    'map-recognise-01',
+    'map', 'recognise',
     E'Which one doubles every number into a new list?\n\nlet a = [1, 2, 3];',
     'a.map((n) => n * 2)',
     ARRAY['a.forEach((n) => n * 2)', 'a.filter((n) => n * 2)', 'a.map(n * 2)'],
     '`map` collects what the function returns. `forEach` throws those values away, `filter` would read them as true or false, and the last one passes a number where a function is wanted.');
 
-SELECT seed_am('map', 'predict',
+SELECT seed_am(
+    'map-predict-01',
+    'map', 'predict',
     E'What does this log?\n\nlet a = [1, 2, 3];\nlet b = a.map((n) => n * 2);\nconsole.log(a);',
     '[1, 2, 3]', ARRAY['[2, 4, 6]', '[1, 2, 3, 2, 4, 6]', 'undefined'],
     '`a` is untouched — the doubled numbers went into `b`. Building a new list rather than changing the old one is the whole habit `map` is for.');
@@ -82,37 +124,49 @@ SELECT seed_am('map', 'predict',
 -- NOT the forEach-instead-of-map mix-up, tempting though it is: `forEach` is
 -- the NEXT concept, and a learner meeting it here would be meeting it early.
 -- That confusion is covered where it belongs, at for-each's own explain rung.
-SELECT seed_am('map', 'diagnose',
-    E'This should hold the doubled numbers and holds [undefined, undefined, undefined].\n\nlet a = [1, 2, 3];\nlet doubled = a.map((n) => { n * 2; });\nconsole.log(doubled);\n\nWhich line is the cause?',
+SELECT seed_am(
+    'map-diagnose-01',
+    'map', 'diagnose',
+    E'This should hold the doubled numbers and holds [undefined, undefined, undefined]. Which line is the cause?\n\nlet a = [1, 2, 3];\nlet doubled = a.map((n) => { n * 2; });\nconsole.log(doubled);',
     'let doubled = a.map((n) => { n * 2; });',
     ARRAY['let a = [1, 2, 3];', 'console.log(doubled);', 'nothing — it works'],
     'The arrow has braces, which make a body — and a body that never says `return` gives undefined. `map` collected that answer once per item, which is why there are exactly three of them.');
 
-SELECT seed_am('map', 'repair',
-    E'let a = [1, 2, 3];\nlet doubled = a.map((n) => { n * 2; });\nconsole.log(doubled);\n\nThis prints [undefined, undefined, undefined]. Which change fixes it?',
+SELECT seed_am(
+    'map-repair-01',
+    'map', 'repair',
+    E'This prints [undefined, undefined, undefined]. Which change fixes it?\n\nlet a = [1, 2, 3];\nlet doubled = a.map((n) => { n * 2; });\nconsole.log(doubled);',
     'Remove the braces, so the arrow returns n * 2',
     ARRAY['Change map to forEach', 'Add 0 as a second argument to map', 'Declare doubled with const'],
     'The braces made it a body, and a body with no `return` gives undefined — once per item, which is why every slot is undefined. `(n) => n * 2` returns without saying so.');
 
 /* ── 2 · for-each ───────────────────────────────────────────────────────── */
 
-SELECT seed_am('for-each', 'recall',
+SELECT seed_am(
+    'for-each-recall-01',
+    'for-each', 'recall',
     E'Which method runs a function for every item and hands nothing back?',
     '.forEach()', ARRAY['.map()', '.filter()', '.reduce()'],
     '`forEach` is for doing something with each item — printing it, say — rather than producing a value. The other three all hand something back, which is why they can be stored or chained.');
 
-SELECT seed_am('for-each', 'recognise',
+SELECT seed_am(
+    'for-each-recognise-01',
+    'for-each', 'recognise',
     E'Which one prints each name on its own line?\n\nlet names = ["Tati", "Sam"];',
     'names.forEach((n) => { console.log(n); })',
     ARRAY['console.log(names);', 'names.map((n) => n);', 'names.join("-");'],
     'Printing once per item is exactly what `forEach` is for. Logging the list prints it as one line, and the other two produce a value without printing anything.');
 
-SELECT seed_am('for-each', 'predict',
+SELECT seed_am(
+    'for-each-predict-01',
+    'for-each', 'predict',
     E'What does this log?\n\nlet a = [1, 2];\nlet out = a.forEach((n) => n * 2);\nconsole.log(out);',
     'undefined', ARRAY['[2, 4]', '[1, 2]', '2'],
     'The function ran twice and its answers were discarded. `forEach` always gives `undefined`, whatever the function returns.');
 
-SELECT seed_am('for-each', 'explain',
+SELECT seed_am(
+    'for-each-explain-01',
+    'for-each', 'explain',
     E'Why can another method not be chained onto forEach?',
     'It hands back undefined, so there is nothing for the next method to be called on',
     ARRAY['Because forEach must always be the last method in a chain',
@@ -122,35 +176,47 @@ SELECT seed_am('for-each', 'explain',
 
 /* ── 3 · filter ─────────────────────────────────────────────────────────── */
 
-SELECT seed_am('filter', 'recall',
+SELECT seed_am(
+    'filter-recall-01',
+    'filter', 'recall',
     E'Which method keeps only the items that pass a test?',
     '.filter()', ARRAY['.map()', '.find()', '.some()'],
     '`filter` gives back a new list holding however many items passed — none, some or all. `find` gives one item, `some` gives true or false, and `map` keeps every item but changes it.');
 
-SELECT seed_am('filter', 'predict',
+SELECT seed_am(
+    'filter-predict-01',
+    'filter', 'predict',
     E'What does this log?\n\nlet a = [1, 2, 3, 4];\nconsole.log(a.filter((n) => n > 2));',
     '[3, 4]', ARRAY['[1, 2]', '[3]', 'true'],
     'Each item is tested and the ones that pass are collected into a new list. The result is a list even when only one item passes, which is what tells `filter` apart from `find`.');
 
-SELECT seed_am('filter', 'diagnose',
-    E'This should keep only the names longer than two letters, and keeps all three.\n\nlet names = ["Tati", "Al", "Sam"];\nlet long = names.filter((n) => n.length);\nconsole.log(long.length);\n\nWhich line is the cause?',
+SELECT seed_am(
+    'filter-diagnose-01',
+    'filter', 'diagnose',
+    E'This should keep only the names longer than two letters, and keeps all three. Which line is the cause?\n\nlet names = ["Tati", "Al", "Sam"];\nlet long = names.filter((n) => n.length);\nconsole.log(long.length);',
     'let long = names.filter((n) => n.length);',
     ARRAY['let names = ["Tati", "Al", "Sam"];', 'console.log(long.length);', 'nothing — it works'],
     'The test hands back a NUMBER, and 4, 2 and 3 are all truthy, so every name passed. `filter` asks whether the answer is truthy, not whether it is large — the test needs a comparison: `n.length > 2`.');
 
 /* ── 4 · find-some-every ────────────────────────────────────────────────── */
 
-SELECT seed_am('find-some-every', 'recall',
+SELECT seed_am(
+    'find-some-every-recall-01',
+    'find-some-every', 'recall',
     E'Which one hands back a single item rather than a list or a yes-or-no?',
     '.find()', ARRAY['.some()', '.every()', '.filter()'],
     '`find` gives the first item that passes, or `undefined` if none do. `filter` gives a list even when one item matches, and `some` and `every` only ever give true or false.');
 
-SELECT seed_am('find-some-every', 'predict',
+SELECT seed_am(
+    'find-some-every-predict-01',
+    'find-some-every', 'predict',
     E'What does this log?\n\nlet a = [1, 2, 3];\nconsole.log(a.find((n) => n > 5));\nconsole.log(a.some((n) => n > 5));',
     'undefined then false', ARRAY['false then false', 'undefined then undefined', 'an error'],
     'Nothing passed the test. `find` has no item to give, so it gives `undefined`; `some` is asking a yes-or-no question and the answer is no.');
 
-SELECT seed_am('find-some-every', 'explain',
+SELECT seed_am(
+    'find-some-every-explain-01',
+    'find-some-every', 'explain',
     E'Why does every() hand back true for an empty list?',
     'There is no item that fails the test, and not failing is all every checks for',
     ARRAY['Because an empty list counts as holding one invisible item',
@@ -160,18 +226,24 @@ SELECT seed_am('find-some-every', 'explain',
 
 /* ── 5 · reduce ─────────────────────────────────────────────────────────── */
 
-SELECT seed_am('reduce', 'predict',
+SELECT seed_am(
+    'reduce-predict-01',
+    'reduce', 'predict',
     E'What does this log?\n\nlet a = [1, 2, 3];\nconsole.log(a.reduce((total, n) => total + n, 0));',
     '6', ARRAY['[1, 2, 3]', '3', '0'],
     'The 0 is where the total starts. Each item is added to the running total, and the last total is what comes out — one value from a whole list.');
 
-SELECT seed_am('reduce', 'diagnose',
-    E'This should add up to 6 and prints 123.\n\nlet a = [1, 2, 3];\nlet total = a.reduce((sum, n) => sum + n, "");\nconsole.log(total);\n\nWhich line is the cause?',
+SELECT seed_am(
+    'reduce-diagnose-01',
+    'reduce', 'diagnose',
+    E'This should add up to 6 and prints 123. Which line is the cause?\n\nlet a = [1, 2, 3];\nlet total = a.reduce((sum, n) => sum + n, "");\nconsole.log(total);',
     'let total = a.reduce((sum, n) => sum + n, "");',
     ARRAY['let a = [1, 2, 3];', 'console.log(total);', 'nothing — it works'],
     'The starting value is TEXT, so the first `+` joined instead of adding — and once the total is text, every `+` after it joins too. Starting from 0 gives 6.');
 
-SELECT seed_am('reduce', 'explain',
+SELECT seed_am(
+    'reduce-explain-01',
+    'reduce', 'explain',
     E'Why does reduce need a starting value to work on a list that might be empty?',
     'With no items to take a first value from and nothing given, there is no answer it could return',
     ARRAY['Because the starting value tells reduce how many items to expect',
@@ -181,26 +253,34 @@ SELECT seed_am('reduce', 'explain',
 
 /* ── 6 · sort ───────────────────────────────────────────────────────────── */
 
-SELECT seed_am('sort', 'predict',
+SELECT seed_am(
+    'sort-predict-01',
+    'sort', 'predict',
     E'What does this log?\n\nlet a = [10, 9, 1];\na.sort();\nconsole.log(a);',
     '[1, 10, 9]', ARRAY['[1, 9, 10]', '[10, 9, 1]', '[9, 10, 1]'],
     'With no comparator, `sort` turns each item into text and compares the text. "10" comes before "9" because the character "1" comes before "9" — which is almost never what was wanted with numbers.');
 
-SELECT seed_am('sort', 'diagnose',
-    E'This should put the scores in numerical order and does not.\n\nlet scores = [10, 9, 1];\nscores.sort();\nconsole.log(scores);\n\nWhich line is the cause?',
+SELECT seed_am(
+    'sort-diagnose-01',
+    'sort', 'diagnose',
+    E'This should put the scores in numerical order and does not. Which line is the cause?\n\nlet scores = [10, 9, 1];\nscores.sort();\nconsole.log(scores);',
     'scores.sort();',
     ARRAY['let scores = [10, 9, 1];', 'console.log(scores);', 'nothing — it works'],
     'Calling `sort` with nothing inside the brackets is what asks for the text comparison. The list and the printing are both fine; what is missing is a comparator saying how two numbers should be ordered.');
 
-SELECT seed_am('sort', 'repair',
-    E'let scores = [10, 9, 1];\nscores.sort();\nconsole.log(scores);\n\nThis prints [1, 10, 9] and should print [1, 9, 10]. Which change fixes it?',
+SELECT seed_am(
+    'sort-repair-01',
+    'sort', 'repair',
+    E'This prints [1, 10, 9] and should print [1, 9, 10]. Which change fixes it?\n\nlet scores = [10, 9, 1];\nscores.sort();\nconsole.log(scores);',
     'Pass a comparator: scores.sort((a, b) => a - b)',
     ARRAY['Call scores.sort() a second time',
           'Flatten the list first with scores.flat()',
           'Declare scores with const instead of let'],
     'A comparator tells `sort` how to order two items: negative to put the first one earlier, positive to put it later. `a - b` is exactly that for numbers. Sorting twice changes nothing — the text order is already settled.');
 
-SELECT seed_am('sort', 'explain',
+SELECT seed_am(
+    'sort-explain-01',
+    'sort', 'explain',
     E'Why does sorting a list change the original rather than giving back a sorted copy?',
     'sort rearranges the very list it was called on, and hands that same list back',
     ARRAY['Because a copy would lose the comparator',
@@ -210,12 +290,16 @@ SELECT seed_am('sort', 'explain',
 
 /* ── 7 · flat ───────────────────────────────────────────────────────────── */
 
-SELECT seed_am('flat', 'predict',
+SELECT seed_am(
+    'flat-predict-01',
+    'flat', 'predict',
     E'What does this log?\n\nlet a = [1, [2, [3]]];\nconsole.log(a.flat());',
     '[1, 2, [3]]', ARRAY['[1, 2, 3]', '[1, [2, [3]]]', '[1, 2]'],
     'One level came up and no more. The inner `[3]` was two levels down, so it is still a list — `a.flat(2)` would pull that one up too.');
 
-SELECT seed_am('flat', 'explain',
+SELECT seed_am(
+    'flat-explain-01',
+    'flat', 'explain',
     E'Why does flat() often leave some nesting behind?',
     'It lifts one level unless you tell it how many to lift',
     ARRAY['Because it stops at the first item that is not a list',
@@ -225,11 +309,13 @@ SELECT seed_am('flat', 'explain',
 
 /* ── 8 · method-chaining ────────────────────────────────────────────────── */
 
-SELECT seed_am('method-chaining', 'predict',
+SELECT seed_am(
+    'method-chaining-predict-01',
+    'method-chaining', 'predict',
     E'What does this log?\n\nlet a = [1, 2, 3, 4];\nconsole.log(a.filter((n) => n > 1).map((n) => n * 10));',
     '[20, 30, 40]', ARRAY['[10, 20, 30, 40]', '[20, 30]', '[2, 3, 4]'],
     '`filter` ran first and handed on `[2, 3, 4]`, and `map` worked from that rather than from the original. Each method in a chain starts where the one before it finished.');
 
-DROP FUNCTION seed_am(TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
+DROP FUNCTION seed_am(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
 
 COMMIT;

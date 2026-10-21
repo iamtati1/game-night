@@ -85,6 +85,10 @@ WHERE c.slug IN (
     'let-vs-const',
     'logical-operators',
     'null-vs-undefined',
+    -- Added with the concept itself: a lesson with no introduction is a lesson
+    -- no learner can ever be offered, which is the exact failure this seed
+    -- exists to prevent.
+    'operator-precedence',
     'primitive-types',
     'reading-variables',
     'reassignment',

@@ -24,6 +24,21 @@ export function roundTimeLimitMs(totalOutputs: number): number {
 
 export const FLUSH_ROUNDS_PER_SESSION = 5;
 
+/**
+ * The fewest puzzles a Flush game is dealt with.
+ *
+ * A learner early in the path may have fewer than five puzzles on ideas they
+ * have met -- one finished lesson opens two or three. Refusing them outright
+ * kept Flush shut for most of the first topic. A shorter game is dealt instead,
+ * from real puzzles only, and says its true length (totalRounds is the rounds
+ * dealt, not this constant).
+ *
+ * Three, not one: a single puzzle is a quiz question, and the round-to-round
+ * difficulty ramp needs a few rounds to exist at all. XP stays per round, so a
+ * short game earns proportionally less rather than a full game's worth.
+ */
+export const FLUSH_MIN_ROUNDS_PER_SESSION = 3;
+
 /** First correct placement is worth this; each subsequent one is worth more. */
 const BASE_PER_PLACEMENT = 10;
 

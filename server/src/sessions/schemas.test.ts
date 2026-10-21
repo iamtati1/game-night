@@ -93,8 +93,13 @@ describe("the focus topic a client may ask for", () => {
  * field being added later for convenience and nobody noticing what it unlocked.
  */
 describe("what a client may say when starting a run", () => {
-    it("accepts only `fresh` and `focusTopic`", () => {
-        expect(Object.keys(startSessionSchema.shape).sort()).toEqual(["focusTopic", "fresh"]);
+    it("accepts only `fresh`, `focusTopic` and `relaxed`", () => {
+        // `relaxed` was added deliberately and reviewed against this rule: it
+        // removes the clock and the speed bonus that belongs to it, and nothing
+        // else. It cannot choose what is dealt, what counts as correct, how
+        // much XP is earned, or which rungs a run clears -- see
+        // game/relaxedRun.test.ts and game/relaxedScoring.test.ts.
+        expect(Object.keys(startSessionSchema.shape).sort()).toEqual(["focusTopic", "fresh", "relaxed"]);
     });
 
     it("has no concept field, under any spelling", () => {

@@ -4,7 +4,9 @@ import { ApiError } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.js";
 import { JoltLogo } from "../components/JoltLogo.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 export function LoginPage() {
+    usePageTitle("Log in");
     const { login } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState("");

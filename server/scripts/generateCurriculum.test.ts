@@ -171,6 +171,30 @@ describe("the projection is convergent, not merely additive", () => {
         expect(COMMITTED).toContain("ON CONFLICT (concept_id, demand_id) DO NOTHING;");
     });
 
+    it("never removes a pair a challenge still points at", () => {
+        /*
+         * The deadlock this prevents. challenges -> concept_demands is ON
+         * DELETE RESTRICT, so an unguarded delete of a pair that still has a
+         * challenge does not warn -- it aborts 014 and every seed after it,
+         * including the content migration that would re-home the challenge and
+         * make the delete legal. The curriculum change then cannot be applied
+         * at all, on any database that has already been seeded once.
+         *
+         * With the guard the projection converges over two runs: the first
+         * leaves the pair alone and lets the migration run, the second removes
+         * it. A rung is still never dropped out from under playable content.
+         */
+        const block = COMMITTED.slice(COMMITTED.indexOf("DELETE FROM concept_demands cd"));
+        const guard = block.slice(0, block.indexOf("AND (c.slug, d.slug) NOT IN ("));
+
+        expect(guard, "the prune is unguarded -- it will abort seeding").toContain(
+            "NOT EXISTS ("
+        );
+        expect(guard).toContain("FROM challenges ch");
+        expect(guard).toContain("ch.concept_id = cd.concept_id");
+        expect(guard).toContain("ch.demand_id  = cd.demand_id");
+    });
+
     it("removes only pairs the curriculum no longer declares", () => {
         // Targeted, matched on slugs, and run after the inserts so a pair that
         // moved is added before anything is judged stale.

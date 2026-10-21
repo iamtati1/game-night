@@ -1,8 +1,10 @@
 import { act, cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { plainIdea } from "../games/lessons.js";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BugHuntIncident, BugHuntSessionSummary } from "../api/types.js";
-import { ALERT_MS, BugHuntPage, CHECK_STEP_MS, RECOVERY_MS } from "./BugHuntPage.js";
+import { ALERT_MS, BugHuntPage, CHECK_STEP_MS, INCIDENTS_PER_HUNT, RECOVERY_MS, linesIdentifyOptions } from "./BugHuntPage.js";
+import { BUG_HUNT_INCIDENTS_PER_SESSION } from "../../../server/src/bugHunt/scoring.js";
 import { alertLine, severityLabel } from "../games/bugHuntVoice.js";
 import { BugHuntResultsPage } from "./BugHuntResultsPage.js";
 
@@ -140,6 +142,10 @@ interface Api {
     hint: unknown;
     streak?: number;
     currentFails?: boolean;
+    /** GET /api/bug-hunt/readiness. Absent: the route 404s, as before. */
+    readiness?: unknown;
+    /** /api/me/sessions/resumable rows. */
+    resumable?: unknown[];
 }
 
 function stubApi(over: Partial<Api> = {}) {
@@ -160,7 +166,8 @@ function stubApi(over: Partial<Api> = {}) {
 
         state.calls.push({ path, body });
 
-        if (path === "/api/me/sessions/resumable") return json(200, { sessions: [] });
+        if (path === "/api/me/sessions/resumable") return json(200, { sessions: state.resumable ?? [] });
+        if (path === "/api/bug-hunt/readiness" && state.readiness) return json(200, state.readiness);
 
         if (path.startsWith("/api/users/me")) return json(200, { sessions: [], total: 0, totals: {} });
 
@@ -225,8 +232,8 @@ const renderResults = () =>
     );
 
 const startHunt = async () => {
-    await waitFor(() => expect(screen.queryByRole("button", { name: /start hunt/i })).not.toBeNull());
-    fireEvent.click(screen.getByRole("button", { name: /start hunt/i }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /start bug hunt/i })).not.toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: /start bug hunt/i }));
 
     // The alert lands before anything is fetched -- that ordering is what keeps
     // the incident's clock from running while the player reads the alert.
@@ -265,10 +272,24 @@ describe("the briefing", () => {
 
         await waitFor(() => expect(screen.queryByText(/system alert/i)).not.toBeNull());
 
-        // The briefing said "five" long after the run became ten hunts. Pinned to
-        // ten so the copy and the deal cannot drift apart again unnoticed.
-        expect(screen.queryByText(/ten incidents detected/i)).not.toBeNull();
-        expect(screen.queryByRole("button", { name: /start hunt/i })).not.toBeNull();
+        // The briefing said "five", then "ten", while the server dealt six: a
+        // number pinned in the test drifted with the copy. Now the copy reads a
+        // constant, and the constant is pinned to the server's own.
+        expect(INCIDENTS_PER_HUNT).toBe(BUG_HUNT_INCIDENTS_PER_SESSION);
+        expect(screen.queryByText(`Up to ${BUG_HUNT_INCIDENTS_PER_SESSION} incidents detected across production.`)).not.toBeNull();
+        expect(screen.queryByText(/ten incidents/i)).toBeNull();
+        expect(screen.queryByRole("button", { name: /start bug hunt/i })).not.toBeNull();
+    });
+
+    it("says what a trace really costs: a little score and integrity, never an attempt", async () => {
+        stubApi();
+        renderGame();
+
+        await waitFor(() => expect(screen.queryByText(/system alert/i)).not.toBeNull());
+
+        const rule = screen.getByText(/pull a trace/i).textContent ?? "";
+        expect(rule).toBe("Stuck? Pull a trace: it costs a little score and 1% integrity, never an attempt.");
+        expect(rule).not.toMatch(/costs points, not your attempt/);
     });
 
     it("shows a loading state before it knows anything", () => {
@@ -288,9 +309,9 @@ describe("the alert beat", () => {
         renderGame();
 
         await waitFor(() =>
-            expect(screen.queryByRole("button", { name: /start hunt/i })).not.toBeNull()
+            expect(screen.queryByRole("button", { name: /start bug hunt/i })).not.toBeNull()
         );
-        fireEvent.click(screen.getByRole("button", { name: /start hunt/i }));
+        fireEvent.click(screen.getByRole("button", { name: /start bug hunt/i }));
 
         await waitFor(() => expect(screen.queryByText(/incident 1 incoming/i)).not.toBeNull());
 
@@ -313,9 +334,9 @@ describe("the alert beat", () => {
         renderGame();
 
         await waitFor(() =>
-            expect(screen.queryByRole("button", { name: /start hunt/i })).not.toBeNull()
+            expect(screen.queryByRole("button", { name: /start bug hunt/i })).not.toBeNull()
         );
-        fireEvent.click(screen.getByRole("button", { name: /start hunt/i }));
+        fireEvent.click(screen.getByRole("button", { name: /start bug hunt/i }));
 
         await waitFor(() => expect(screen.queryByText(/^System$/)).not.toBeNull());
         expect(screen.queryByText(alertLine(1, false))).not.toBeNull();
@@ -541,6 +562,67 @@ describe("find_line", () => {
         await waitFor(() =>
             expect(screen.queryByText(/locate the fault/i)).not.toBeNull()
         );
+    });
+
+    // The beginner incidents: a one-line program whose wrong answer is a
+    // sentence filed on the same line. Clicking line 1 used to resolve to the
+    // later option -- the wrong one -- so the right answer could not be picked.
+    const ONE_LINE: BugHuntIncident = {
+        ...FIND_LINE,
+        code: 'consol.log("Hello");',
+        options: [
+            { id: "31", text: 'consol.log("Hello");', lineNumber: 1 },
+            { id: "32", text: "The quotation marks around Hello", lineNumber: 1 }
+        ]
+    };
+
+    it("knows when lines cannot name the options one-to-one", () => {
+        expect(linesIdentifyOptions(FIND_LINE)).toBe(true);
+        expect(linesIdentifyOptions(ONE_LINE)).toBe(false);
+        expect(linesIdentifyOptions(CHOOSE_PATCH)).toBe(false);
+    });
+
+    it("lists every option when two share a line, so each can be chosen", async () => {
+        stubApi({ incident: ONE_LINE });
+        renderGame();
+        await startHunt();
+
+        await waitFor(() => expect(screen.queryByText(/locate the fault/i)).not.toBeNull());
+
+        const radios = screen.getAllByRole("radio");
+        expect(radios).toHaveLength(2);
+        expect(screen.getByText("The quotation marks around Hello")).toBeTruthy();
+        expect(screen.queryByText(/deploy a patch/i)).toBeNull();
+
+        fireEvent.click(radios[0]!);
+        expect((radios[0] as HTMLInputElement).checked).toBe(true);
+        expect((radios[1] as HTMLInputElement).checked).toBe(false);
+    });
+});
+
+describe("every option names its answer to assistive technology", () => {
+    it("names each line by its number and its code, and values it the same way", async () => {
+        stubApi();
+        renderGame();
+        await startHunt();
+
+        const line = await screen.findByRole("radio", { name: "Line 3: return user.name;" });
+        expect(line.getAttribute("aria-label")).toBe("Line 3: return user.name;");
+        expect((line as HTMLInputElement).value).toBe("Line 3: return user.name;");
+        expect(screen.getByRole("radio", { name: "Line 2: const user = users.find(u => u.id === id);" })).toBeTruthy();
+    });
+
+    it("names each listed option by its own visible text, explicitly", async () => {
+        stubApi({ incident: CHOOSE_PATCH });
+        renderGame();
+        await startHunt();
+
+        const patch = await screen.findByRole("radio", { name: 'quantity: current + "1"' });
+        const labelId = patch.getAttribute("aria-labelledby")!;
+        expect(document.getElementById(labelId)?.textContent).toBe('quantity: current + "1"');
+        expect((patch as HTMLInputElement).value).toBe('quantity: current + "1"');
+        // Nothing is named by the browser's default radio value.
+        expect(screen.queryByRole("radio", { name: "on" })).toBeNull();
     });
 });
 
@@ -829,18 +911,89 @@ describe("the diagnostic run", () => {
 });
 
 describe("failure states", () => {
-    it("reports a lost connection instead of hanging", async () => {
+    const clickStart = async () => {
+        await waitFor(() => expect(screen.queryByRole("button", { name: /start bug hunt/i })).not.toBeNull());
+        fireEvent.click(screen.getByRole("button", { name: /start bug hunt/i }));
+    };
+
+    it("reports a server error instead of hanging -- without blaming the connection", async () => {
         stubApi({ currentFails: true });
         vi.stubGlobal("fetch", () =>
             Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: "Boom" }) } as Response)
         );
         renderGame();
+        await clickStart();
 
-        await waitFor(() => expect(screen.queryByRole("button", { name: /start hunt/i })).not.toBeNull());
-        fireEvent.click(screen.getByRole("button", { name: /start hunt/i }));
+        await waitFor(() => expect(screen.queryByText(/something went wrong/i)).not.toBeNull());
+        expect(screen.queryByRole("alert")).not.toBeNull();
+        expect(screen.queryByText(/connection lost/i)).toBeNull();
+        expect(screen.queryByRole("button", { name: /try again/i })).not.toBeNull();
+    });
+
+    it("says the connection was lost only when the server could not be reached", async () => {
+        stubApi();
+        vi.stubGlobal("fetch", () => Promise.reject(new TypeError("Failed to fetch")));
+        renderGame();
+        await clickStart();
 
         await waitFor(() => expect(screen.queryByText(/connection lost/i)).not.toBeNull());
-        expect(screen.queryByRole("alert")).not.toBeNull();
+        expect(screen.queryByRole("button", { name: /reconnect/i })).not.toBeNull();
+    });
+
+    it("calls a gateway with nothing behind it (502, no body) a lost connection, not 'status 502'", async () => {
+        // Browser QA: with the API down, the Vite proxy answers 502 with no JSON,
+        // and the page showed "Something went wrong" / "Request failed with
+        // status 502".
+        stubApi();
+        vi.stubGlobal("fetch", () =>
+            Promise.resolve({ ok: false, status: 502, json: () => Promise.reject(new Error("not json")) } as Response)
+        );
+        renderGame();
+        await clickStart();
+
+        await waitFor(() => expect(screen.queryByText(/connection lost/i)).not.toBeNull());
+        expect(screen.queryByRole("button", { name: /reconnect/i })).not.toBeNull();
+        expect(screen.queryByText(/status 502/i)).toBeNull();
+    });
+
+    it("treats 'not enough to hunt yet' as a next step, not as a failure", async () => {
+        // The server's 503 here is a readiness answer. It used to render under
+        // "Connection lost" with a Reconnect button that reloaded into the same
+        // answer.
+        const message =
+            "Bug Hunt uses the ideas you have already practised, and you have not practised enough of them yet.";
+        const api = stubApi();
+        const base = globalThis.fetch;
+        vi.stubGlobal("fetch", (input: string, init?: RequestInit) =>
+            String(input) === "/api/bug-hunt/sessions" && init?.method === "POST"
+                ? Promise.resolve({
+                      ok: false,
+                      status: 503,
+                      json: () =>
+                          Promise.resolve({
+                              error: "Not enough to hunt yet",
+                              details: [{ field: "incidents", message }],
+                              eligible: 3,
+                              needed: 6,
+                              practice: { slug: "console-output", name: "Running Code and Reading Output" }
+                          })
+                  } as Response)
+                : base(input, init)
+        );
+        renderGame();
+        await clickStart();
+        await skipBeat(ALERT_MS);
+
+        await waitFor(() => expect(screen.queryByText(/not enough for a hunt yet/i)).not.toBeNull());
+        expect(screen.queryByText(message)).not.toBeNull();
+        expect(screen.queryByText(/connection lost/i)).toBeNull();
+        expect(screen.queryByRole("alert")).toBeNull();
+        // Debugging the learner can do now comes first; the Journey is the other way in.
+        expect(
+            screen.getByRole("link", { name: /find a bug in running code and reading output/i }).getAttribute("href")
+        ).toBe("/concept/console-output");
+        expect(screen.getByRole("link", { name: /see your journey/i }).getAttribute("href")).toBe("/journey");
+        expect(api.calls.length).toBeGreaterThan(0);
     });
 });
 
@@ -928,7 +1081,10 @@ describe("the mission report", () => {
 
         await waitFor(() => expect(screen.queryByRole("button", { name: /hunt again/i })).not.toBeNull());
 
-        expect(screen.queryByRole("link", { name: /back to jolt/i })).not.toBeNull();
+        // The way back is into the course, not to the game grid: the report
+        // hands over to the path's next step (gameResults.test.tsx covers each
+        // destination). This stub has no path, so the way back is the journey.
+        await waitFor(() => expect(screen.queryByRole("link", { name: /your journey/i })).not.toBeNull());
         expect(screen.queryByText(/different incidents/i)).not.toBeNull();
     });
 
@@ -958,3 +1114,113 @@ describe("the mission report", () => {
         expect(screen.queryByRole("alert")).not.toBeNull();
     });
 });
+
+describe("running out of time on an incident", () => {
+    // UX audit: a timeout showed a failed panel with an empty explanation for
+    // 4.2 seconds and then moved on by itself, so it was the one loss a learner
+    // could not stop and read. The fix is not fetched here -- the server only
+    // reveals it for an incident it has closed, and closing this one also deals
+    // the next -- so the panel says where the fix is, and waits.
+    const TIMED = { ...FIND_LINE, timeLimitMs: 3000, remainingMs: 3000 };
+    const LEARNING = {
+        ...TIMED,
+        concept: {
+            slug: "console-output",
+            name: "Running Code and Reading Output",
+            meaning: "console.log prints the value it is given.",
+            objective: "say what a line prints",
+            demand: "diagnose"
+        }
+    };
+
+    const nextFetches = (api: ReturnType<typeof stubApi>) =>
+        api.calls.filter((c) => c.path === "/api/bug-hunt/sessions/current").length;
+
+    it("says time ran out, where the fix is, and waits for Continue", async () => {
+        const api = stubApi({ incident: TIMED });
+        renderGame();
+        await startHunt();
+
+        await skipBeat(3200);
+
+        expect(screen.queryByText("Incident unresolved: out of time")).not.toBeNull();
+        expect(screen.queryByText(/this one counts as not fixed/i)).not.toBeNull();
+        expect(screen.queryByText(/in your mission report at the end of the hunt/i)).not.toBeNull();
+
+        // Long past the old 4.2 seconds: still here, and nothing dealt.
+        await skipBeat(9000);
+        expect(screen.queryByText(/this one counts as not fixed/i)).not.toBeNull();
+        expect(screen.queryByText(/incoming/i)).toBeNull();
+        expect(nextFetches(api)).toBe(0);
+
+        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+        // The next alert beat, then the next incident: the same as before.
+        await waitFor(() => expect(screen.queryByText(/incoming/i)).not.toBeNull());
+        await skipBeat(ALERT_MS);
+        await waitFor(() => expect(nextFetches(api)).toBe(1));
+    });
+
+    it("on a learning incident, says out of time rather than 'here is what was happening'", async () => {
+        stubApi({ incident: LEARNING });
+        renderGame();
+        await startHunt();
+
+        await skipBeat(3200);
+
+        expect(screen.queryByText("Out of time")).not.toBeNull();
+        expect(screen.queryByText(/here's what was happening/i)).toBeNull();
+        // The concept's rule is still shown: the lesson's plain-language
+        // idea where one is written, the curriculum meaning otherwise.
+        expect(screen.queryByText(plainIdea(LEARNING.concept!.slug, LEARNING.concept!.meaning))).not.toBeNull();
+    });
+});
+
+describe("arriving when a hunt cannot be dealt yet", () => {
+    const NOT_READY = {
+        ready: false,
+        eligible: 0,
+        needed: 3,
+        full: 6,
+        reason: "not-met",
+        reachable: 0,
+        practice: { slug: "console-output", name: "Running Code and Reading Output" },
+        message: "Bug Hunt needs at least 3 bugs about ideas you have learned, and none are open yet."
+    };
+
+    it("says why on arrival, with the lesson where a bug can be fixed now", async () => {
+        const api = stubApi({ readiness: NOT_READY });
+        renderGame();
+
+        expect(await screen.findByText(/not enough for a hunt yet/i)).toBeTruthy();
+        expect(screen.getByText(/none are open yet/i)).toBeTruthy();
+        expect(screen.queryByRole("button", { name: /start bug hunt/i })).toBeNull();
+        expect(
+            screen.getByRole("link", { name: /find a bug in running code and reading output/i }).getAttribute("href")
+        ).toBe("/concept/console-output");
+        // Nothing was started to find that out.
+        expect(api.calls.some((c) => c.path === "/api/bug-hunt/sessions")).toBe(false);
+    });
+
+    it("offers the briefing when a hunt can be dealt", async () => {
+        stubApi({ readiness: { ...NOT_READY, ready: true, message: null } });
+        renderGame();
+
+        expect(await screen.findByRole("button", { name: /start bug hunt/i })).toBeTruthy();
+    });
+
+    it("does not ask, and does not block, when a hunt is already under way", async () => {
+        const api = stubApi({
+            readiness: NOT_READY,
+            resumable: [
+                { game: { slug: "bug-hunt", name: "Bug Hunt" }, status: "in_progress", unitsDone: 1, unitsTotal: 3, score: 100 }
+            ]
+        });
+        renderGame();
+
+        expect(await screen.findByRole("button", { name: /start bug hunt/i })).toBeTruthy();
+        expect(screen.queryByText(/not enough for a hunt yet/i)).toBeNull();
+        expect(api.calls.some((c) => c.path === "/api/bug-hunt/readiness")).toBe(false);
+    });
+});
+

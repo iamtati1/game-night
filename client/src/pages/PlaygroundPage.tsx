@@ -5,6 +5,8 @@ import { CodeEditor, ConsoleOutput } from "../components/CodeStage.js";
 import { withCode } from "../components/CodeText.js";
 import { Ship } from "../world/Ship.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
 /**
  * EXPERIMENT. Type JavaScript, run it, change it, run it again.
  *
@@ -35,6 +37,7 @@ score = score + 5;
 score;`;
 
 export function PlaygroundPage() {
+    usePageTitle("Experiment");
     const [source, setSource] = useState(STARTER);
     const [result, setResult] = useState<RunResult | null>(null);
     const [running, setRunning] = useState(false);
@@ -66,7 +69,7 @@ export function PlaygroundPage() {
             <h1 className="lesson-title">Try JavaScript</h1>
             <p className="lesson-why">
                 Change the code, run it, and see what happens. Nothing here is graded and
-                nothing is recorded — it is yours to break.
+                nothing is recorded: it is yours to break.
             </p>
 
             <div className="mission-stage">
@@ -129,7 +132,7 @@ export function PlaygroundPage() {
             </button>
 
             <p className="playground-back">
-                <Link to="/journey">Back to the map</Link>
+                <Link to="/journey">{ACTION.seeJourney}</Link>
             </p>
 
             <div className="mission-craft" aria-hidden="true">

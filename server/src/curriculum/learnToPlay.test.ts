@@ -42,8 +42,11 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
  * concept that follows it; seed 029 moved it and seed 030 gave primitive-types
  * practice of its own. The concept under test is unchanged -- only which
  * question is its one tagged exercise.
+ *
+ * Then `console.log(7 / 2)`, which is arithmetic; seed 086 rewrote that row in
+ * place to a question about kinds of value.
  */
-const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(7 / 2);';
+const PRACTICE_PROMPT = 'What does this log?\n\nconsole.log("true");\nconsole.log(true);';
 
 const CONCEPT = "primitive-types";
 

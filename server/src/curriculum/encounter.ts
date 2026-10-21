@@ -80,7 +80,7 @@
  * it. That is an authoring rule, enforced by content tests, not by this query.
  */
 import { pool } from "../db.js";
-import { CHALLENGED } from "./lessons.js";
+import { CHALLENGED, findJourneyPath } from "./lessons.js";
 
 /**
  * Exported so the tests can run them against the PGlite fixture rather than a
@@ -180,7 +180,52 @@ export const ENCOUNTER_RUNGS_SQL = `
            ON i.challenge_id = ch.id
           AND i.is_active
     WHERE c.slug = $2
-    ORDER BY d.display_order, ch.id, q.id, i.id`;
+    /*
+       EASIEST FIRST, WITHIN THE RUNG.
+       
+       The encounter hands the learner options[0], so this ORDER BY decides what
+       a beginner actually meets. Ordering by ch.id meant "whichever challenge
+       was seeded first": arithmetic-operators/predict holds six candidates and
+       always served id 87, console.log(2 + 3 * 4), which needs operator
+       precedence that the concept's lesson never teaches. The easier ones --
+       7 - 10, 10 / 4 -- sat unused behind it.
+
+       questions.difficulty is the pacing tier from migration 017: 1 is "one
+       idea, read and answer" and 4 is "combines concepts", so ascending is
+       easiest first. It was tuned across the bank and this path never read it.
+
+       A RUNG THAT HOLDS AN INCIDENT IS LEFT EXACTLY AS IT WAS. Measured over
+       the migrated curriculum: 249 rungs carry candidates and 19 of them hold
+       both a question and a Bug Hunt incident. Incidents have no difficulty
+       column, so any attempt to rank the two kinds together moves one in front
+       of the other wholesale -- NULLS LAST alone promoted questions and broke
+       reassignment/diagnose, and keying on (q.id IS NOT NULL) promoted
+       incidents and silently changed which KIND of exercise 11 repair rungs
+       served. Whether a repair rung should open on the incident is a real
+       product question; it is not this change's to answer.
+
+       So the CASE is constant within a rung: a rung holding an incident keeps
+       its old ch.id order untouched, and every other rung -- the other 230 --
+       is ordered easiest question first. COALESCE puts an untiered question at
+       99, behind every tiered one. d.display_order still groups by rung, and
+       ch.id, q.id, i.id survives as the tie-break, so equal-difficulty
+       candidates keep the order they had.
+    */
+    ORDER BY d.display_order,
+             CASE
+                 WHEN EXISTS (
+                     SELECT 1
+                     FROM bug_hunt_incidents i2
+                     JOIN challenges ch2 ON ch2.id = i2.challenge_id
+                     WHERE ch2.concept_id = cd.concept_id
+                       AND ch2.demand_id  = cd.demand_id
+                       AND ch2.role = 'practise'
+                       AND ch2.is_active
+                       AND i2.is_active
+                 ) THEN 0
+                 ELSE COALESCE(q.difficulty, 99)
+             END,
+             ch.id, q.id, i.id`;
 
 /** One playable exercise sitting at a rung. */
 export interface EncounterOption {
@@ -518,6 +563,12 @@ export interface Exercise {
     /** What is wrong, for a diagnosis. Null for a question. */
     brief: string | null;
     options: { id: string; text: string }[];
+    /**
+     * A diagnosis's authored hints, weakest first, for the learner to reveal one
+     * at a time. Empty for a question. Unscored here, as everything in the
+     * encounter is: a hint changes nothing about what a correct answer records.
+     */
+    hints: string[];
 }
 
 /**
@@ -574,12 +625,15 @@ export const EXERCISE_SQL = `
  * above it. Rendering it as one keeps `diagnose` inside the concept the learner
  * is on, instead of handing them off to another game mid-ladder.
  *
- * NOT A REPLACEMENT FOR BUG HUNT. The game still owns timing, hints, two
- * attempts and scoring. This is the untimed, unscored form of the same content,
- * exactly as the encounter's question rung is the untimed form of Code Blitz.
+ * NOT A REPLACEMENT FOR BUG HUNT. The game still owns timing, two attempts,
+ * hint costs and scoring. This is the untimed, unscored form of the same
+ * content, exactly as the encounter's question rung is the untimed form of
+ * Code Blitz -- and the beginner's way into debugging, before a six-incident
+ * run can be filled. It carries the incident's own authored hints, free here,
+ * because a beginner meeting their first bug should be able to ask for help.
  */
 export const INCIDENT_EXERCISE_SQL = `
-    SELECT i.id AS incident_id, i.bug_report, i.code,
+    SELECT i.id AS incident_id, i.bug_report, i.code, i.hints,
            o.id AS option_id, o.option_text
     FROM bug_hunt_incidents i
     JOIN bug_hunt_options o ON o.incident_id = i.id AND o.is_active
@@ -609,13 +663,15 @@ export async function findExercise(
             options: questions.rows.map((r) => ({
                 id: String(r.option_id),
                 text: r.option_text
-            }))
+            })),
+            hints: []
         };
     }
 
     const incidents = await pool.query<{
         bug_report: string;
         code: string;
+        hints: string[] | null;
         option_id: string;
         option_text: string;
     }>(INCIDENT_EXERCISE_SQL, [challengeId]);
@@ -635,7 +691,8 @@ export async function findExercise(
         options: incidents.rows.map((r) => ({
             id: String(r.option_id),
             text: r.option_text
-        }))
+        })),
+        hints: first.hints ?? []
     };
 }
 
@@ -862,55 +919,44 @@ export async function mayPlayChallenge(userId: string, challengeId: string): Pro
 /**
  * The one thing standing between this learner and a locked concept.
  *
- * Exists so a shut door can name what opens it. Returns the earliest unfinished
- * concept, or the outstanding checkpoint if every earlier concept is done --
- * which is the same order CONCEPT_STATE_SQL applies, asked for a name instead of
- * a verdict.
+ * Exists so a shut door can name what opens it: the learner's current step on
+ * the ordered path, when that step comes before this concept.
+ *
+ * READ FROM THE PATH ITSELF, not re-derived. This used to ask two separate
+ * questions -- the earliest unfinished concept before this one, and only if
+ * there was none, an outstanding checkpoint -- and so named the wrong thing
+ * when a checkpoint sat between them: with Values finished and its checkpoint
+ * not passed, the second Variables concept was "blocked by" the first, which
+ * was itself locked behind the checkpoint. The learner followed the link to a
+ * second locked page before reaching the step that actually opens anything.
+ *
+ * findJourneyPath already walks concepts and checkpoints in one order and marks
+ * the first unfinished one `current` -- the same walk that decides what is
+ * locked -- so that step is, by construction, what stands in the way. Nothing
+ * about what unlocks what changes here; only which name is reported.
+ *
+ * Null when nothing before this concept is outstanding, including when the
+ * concept is itself the current step.
  */
 export async function findBlocker(
     userId: string,
     conceptSlug: string
 ): Promise<{ kind: "concept" | "checkpoint"; slug: string; name: string } | null> {
-    const earlier = await pool.query<{ slug: string; name: string }>(
-        `WITH here AS (
-             SELECT t.display_order AS t_ord, c.display_order AS c_ord
-             FROM concepts c JOIN topics t ON t.id = c.topic_id WHERE c.slug = $2
-         )
-         SELECT c.slug, c.name
-         FROM concepts c JOIN topics t ON t.id = c.topic_id
-         WHERE (t.display_order, c.display_order)
-               < ((SELECT t_ord FROM here), (SELECT c_ord FROM here))
-           AND NOT EXISTS (
-               SELECT 1 FROM concept_demonstrations d
-               WHERE d.user_id = $1 AND d.concept_id = c.id
-           )
-         ORDER BY t.display_order, c.display_order
-         LIMIT 1`,
-        [userId, conceptSlug]
-    );
+    for (const topic of await findJourneyPath(userId)) {
+        for (const concept of topic.concepts) {
+            // Reached the concept being asked about: nothing before it is open.
+            if (concept.slug === conceptSlug) return null;
+            if (concept.state === "current") {
+                return { kind: "concept", slug: concept.slug, name: concept.name };
+            }
+        }
 
-    if (earlier.rows[0]) {
-        return { kind: "concept", ...earlier.rows[0] };
+        if (topic.challenge?.state === "current") {
+            return { kind: "checkpoint", slug: topic.slug, name: topic.name };
+        }
     }
 
-    const checkpoint = await pool.query<{ slug: string; name: string }>(
-        `WITH here AS (
-             SELECT t.display_order AS t_ord FROM concepts c
-             JOIN topics t ON t.id = c.topic_id WHERE c.slug = $2
-         )
-         SELECT t.slug, t.name FROM topics t
-         WHERE t.display_order < (SELECT t_ord FROM here)
-           AND t.slug = ANY($3::TEXT[])
-           AND NOT EXISTS (
-               SELECT 1 FROM topic_challenge_completions tc
-               WHERE tc.user_id = $1 AND tc.topic_id = t.id
-           )
-         ORDER BY t.display_order
-         LIMIT 1`,
-        [userId, conceptSlug, [...CHALLENGED]]
-    );
-
-    return checkpoint.rows[0] ? { kind: "checkpoint", ...checkpoint.rows[0] } : null;
+    return null;
 }
 
 /* -------------------------------------------------- evidence for a concept */

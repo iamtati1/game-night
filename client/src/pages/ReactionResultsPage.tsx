@@ -3,10 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import type { ReactionSessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
+import { NextStepActions } from "../components/NextStepActions.js";
 import { REACTION } from "../games/catalog.js";
 import { useRunContext } from "../games/useRunContext.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
 export function ReactionResultsPage() {
+    usePageTitle("Reaction results");
     const { id } = useParams<{ id: string }>();
     const [session, setSession] = useState<ReactionSessionSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -36,7 +40,7 @@ export function ReactionResultsPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/play">
-                    Back to Jolt
+                    {ACTION.backToGames}
                 </Link>
             </section>
         );
@@ -75,9 +79,20 @@ export function ReactionResultsPage() {
                 improvement={improvement}
             />
 
+            {/* The rating is part of the outcome, so it comes before the decision. */}
             {session.tier && (
                 <p className={`rx-verdict tier-${session.tier.key}`}>{session.tier.label}</p>
             )}
+
+            {/* Back to the course first; playing again beside it. Right under the
+                outcome, so a phone reaches it without scrolling past the details. */}
+            <NextStepActions
+                replay={(cls) => (
+                    <Link className={cls} to="/reaction">
+                        Play again
+                    </Link>
+                )}
+            />
 
             <dl className="run-figures">
                 {session.averageReactionMs !== null && (
@@ -115,31 +130,26 @@ export function ReactionResultsPage() {
                         className={
                             r.status === "reacted"
                                 ? `landed tier-${r.tier?.key ?? "sharp"}`
-                                : r.status === "false_start"
+                                : r.status === "false_start" || r.status === "timed_out"
                                   ? "early"
                                   : "unplayed"
                         }
                     >
                         <span className="rx-strip-n">{r.roundNumber}</span>
                         <span className="rx-strip-v">
+                            {/* A round that ran out is a miss, not a round that
+                                never happened: QA found both shown as "-". */}
                             {r.status === "reacted"
                                 ? r.reactionMs
                                 : r.status === "false_start"
                                   ? "early"
-                                  : "—"}
+                                  : r.status === "timed_out"
+                                    ? "slow"
+                                    : "-"}
                         </span>
                     </li>
                 ))}
             </ol>
-
-            <div className="cta-row">
-                <Link className="button primary" to="/reaction">
-                    Play again
-                </Link>
-                <Link className="button ghost" to="/play">
-                    Pick another Jolt
-                </Link>
-            </div>
         </section>
     );
 }

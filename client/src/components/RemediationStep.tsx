@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { LessonStep } from "../games/lessons.js";
 import { withCode } from "./CodeText.js";
+import { HighlightedCode } from "./HighlightedCode.js";
 
 /**
  * One authored repair question, judged here rather than on the server.
@@ -35,7 +36,7 @@ export function RemediationStep({
 
             {step.code && (
                 <pre className="lesson-code">
-                    <code>{step.code}</code>
+                    <code><HighlightedCode code={step.code} /></code>
                 </pre>
             )}
 

@@ -3,10 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import type { BugHuntSessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
+import { NextStepActions } from "../components/NextStepActions.js";
 import { BUG_HUNT } from "../games/catalog.js";
 import { debriefLine } from "../games/bugHuntVoice.js";
 import { useRunContext } from "../games/useRunContext.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
 /** Bug categories as a player would say them, not as the column stores them. */
 const CATEGORY_LABELS: Record<string, string> = {
     "array-access": "Array access",
@@ -56,12 +59,13 @@ function fastestFix(incidents: BugHuntSessionSummary["incidents"]): number | nul
 }
 
 function seconds(ms: number | null): string {
-    if (ms === null) return "—";
+    if (ms === null) return "-";
 
     return `${(ms / 1000).toFixed(1)}s`;
 }
 
 export function BugHuntResultsPage() {
+    usePageTitle("Bug Hunt results");
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [session, setSession] = useState<BugHuntSessionSummary | null>(null);
@@ -108,7 +112,7 @@ export function BugHuntResultsPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/play">
-                    Back to Jolt
+                    {ACTION.backToGames}
                 </Link>
             </section>
         );
@@ -142,6 +146,17 @@ export function BugHuntResultsPage() {
                     improvement={improvement}
                 />
             </header>
+
+            {/* Back to the course first; a fresh hunt beside it. Right under the
+                outcome, so a phone reaches it without scrolling past the details. */}
+            <NextStepActions
+                className="bh-results-actions"
+                replay={(cls) => (
+                    <button className={cls} disabled={starting} onClick={() => void huntAgain()}>
+                        {starting ? "Dispatching…" : "Hunt again"}
+                    </button>
+                )}
+            />
 
             <dl className="bh-results-stats">
                 <div>
@@ -216,12 +231,12 @@ export function BugHuntResultsPage() {
                                 {entry.status === "resolved" ? "Resolved" : "Lost"}
                             </span>
                             <span className="bh-log-points">
-                                {entry.pointsAwarded > 0 ? `+${entry.pointsAwarded}` : "—"}
+                                {entry.pointsAwarded > 0 ? `+${entry.pointsAwarded}` : "-"}
                             </span>
                         </div>
 
                         <p className="bh-log-meta">
-                            {label(entry.bugCategory)}
+                            {entry.concept ?? label(entry.bugCategory)}
                             {entry.hintsUsed > 0 &&
                                 ` · ${entry.hintsUsed} trace${entry.hintsUsed === 1 ? "" : "s"}`}
                             {entry.resolutionMs !== null && ` · ${seconds(entry.resolutionMs)}`}
@@ -242,15 +257,6 @@ export function BugHuntResultsPage() {
                 ))}
             </ol>
 
-            <div className="bh-results-actions">
-                <button className="button primary big" disabled={starting} onClick={() => void huntAgain()}>
-                    {starting ? "Dispatching…" : "Hunt again"}
-                </button>
-                <Link className="button ghost" to="/play">
-                    Back to Jolt
-                </Link>
-            </div>
-
             {/* The system's last word. Honest about how it went -- a flattering
                 line after a bad run reads as the game not paying attention. */}
             <p className="bh-signoff">
@@ -259,7 +265,7 @@ export function BugHuntResultsPage() {
             </p>
 
             <p className="bh-replay-note muted">
-                A new hunt pulls different incidents — the ones you just saw go to the back of the
+                A new hunt pulls different incidents: the ones you just saw go to the back of the
                 queue.
             </p>
         </section>

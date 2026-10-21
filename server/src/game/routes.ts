@@ -14,7 +14,8 @@ import {
     findResumableSession,
     resumePausedSession
 } from "../sessions/queries.js";
-import { requestedFocusTopic, wantsFreshSession } from "../sessions/schemas.js";
+import { requestedFocusTopic, wantsFreshSession, wantsRelaxedRun } from "../sessions/schemas.js";
+import { isRelaxed, markRelaxed } from "../sessions/relaxedRuns.js";
 import { findCurrentConcept, findJourneyPath } from "../curriculum/lessons.js";
 import { findNextIntroduction } from "../curriculum/queries.js";
 import { isActiveSessionConflict, resolveSessionRace } from "./conflicts.js";
@@ -64,9 +65,15 @@ interface ServedQuestion {
     deadlineAt: string | null;
     /** Null when this beat has no clock. */
     msRemaining: number | null;
+    /** True for a run the learner chose to play without a clock. */
+    relaxed: boolean;
 }
 
-function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[]) {
+function summarize(
+    session: db.GameSessionRow,
+    questions: db.SessionQuestionRow[],
+    relaxed = false
+) {
     // This run's own shape, computed with the same rules the cross-run figures
     // use, so a result screen and a trend can never disagree about what a streak
     // is or which answers count as timed.
@@ -92,6 +99,8 @@ function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[
         correctCount: questions.filter((q) => q.is_correct === true).length,
         incorrectCount: questions.filter((q) => q.is_correct === false).length,
         timedOutCount: questions.filter((q) => q.status === "timed_out").length,
+        // Played without a clock, so its points carry no speed bonus.
+        relaxed,
         // Everything below reads from snapshots, so a later edit to the source
         // question cannot rewrite what this player saw.
         questions: questions.map((q) => ({
@@ -109,7 +118,14 @@ function summarize(session: db.GameSessionRow, questions: db.SessionQuestionRow[
                     : null,
             pointsAwarded:
                 q.is_correct === true && q.served_at && q.answered_at
-                    ? pointsForAnswer(true, q.answered_at.getTime() - q.served_at.getTime())
+                    ? pointsForAnswer(
+                          true,
+                          q.answered_at.getTime() - q.served_at.getTime(),
+                          "predict-output",
+                          Number.MAX_SAFE_INTEGER,
+                          "developing",
+                          relaxed
+                      )
                     : 0
         }))
     };
@@ -141,15 +157,16 @@ async function respondResumed(
     session: db.GameSessionRow,
     now: Date,
     /** Needed only to mark whether the served beat is the learner's concept. */
-    userId: string
+    userId: string,
+    relaxed = false
 ): Promise<void> {
-    const question = await nextPlayableQuestion(session.id, now);
+    const question = await nextPlayableQuestion(session.id, now, relaxed);
 
     if (!question) {
-        const finished = await finishSession(session.id);
+        const finished = await finishSession(session.id, relaxed);
         res.status(200).json({
             resumed: true,
-            session: summarize(finished, await db.listSessionQuestions(finished.id))
+            session: summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
         });
         return;
     }
@@ -157,12 +174,12 @@ async function respondResumed(
     res.status(200).json({
         resumed: true,
         sessionId: session.id,
-        scoreSoFar: await db.scoreSoFar(session.id),
-        question: await serveQuestion(question, userId, session.id)
+        scoreSoFar: await db.scoreSoFar(session.id, relaxed),
+        question: await serveQuestion(question, userId, session.id, relaxed)
     });
 }
 
-async function finishSession(sessionId: string): Promise<db.GameSessionRow> {
+async function finishSession(sessionId: string, relaxed = false): Promise<db.GameSessionRow> {
     const questions = await db.listSessionQuestions(sessionId);
     const scored = questions.map((q) => ({
         isCorrect: q.is_correct,
@@ -170,7 +187,7 @@ async function finishSession(sessionId: string): Promise<db.GameSessionRow> {
         answeredAt: q.answered_at
     }));
 
-    return db.completeSession(sessionId, scoreForSession(scored), xpForSession(scored));
+    return db.completeSession(sessionId, scoreForSession(scored, relaxed), xpForSession(scored));
 }
 
 /**
@@ -196,7 +213,8 @@ async function roundStance(sessionId: string) {
 
 async function nextPlayableQuestion(
     sessionId: string,
-    now: Date
+    now: Date,
+    relaxed = false
 ): Promise<db.SessionQuestionRow | null> {
     for (;;) {
         const question = await db.findNextPendingQuestion(sessionId);
@@ -217,7 +235,8 @@ async function nextPlayableQuestion(
                 now,
                 question.challenge_type,
                 question.display_order,
-                stance
+                stance,
+                relaxed
             )
         ) {
             const correct = await db.findCorrectOptionText(question.question_id);
@@ -257,7 +276,8 @@ async function currentConceptMark(
 async function serveQuestion(
     question: db.SessionQuestionRow,
     userId: string,
-    sessionId: string
+    sessionId: string,
+    relaxed = false
 ): Promise<ServedQuestion> {
     const servedAt = question.served_at ?? (await db.markServed(question.id));
     const options = await db.listActiveOptions(question.question_id);
@@ -274,7 +294,7 @@ async function serveQuestion(
 
     /* Null on an untimed beat -- the client shows no clock at all rather than
        a clock the learner is told to ignore. */
-    const limit = timeLimitFor(question.challenge_type, question.display_order, stance);
+    const limit = timeLimitFor(question.challenge_type, question.display_order, stance, relaxed);
     const deadline = limit === null ? null : servedAt.getTime() + limit;
 
     return {
@@ -296,7 +316,8 @@ async function serveQuestion(
         })),
         servedAt: servedAt.toISOString(),
         deadlineAt: deadline === null ? null : new Date(deadline).toISOString(),
-        msRemaining: deadline === null ? null : Math.max(0, deadline - Date.now())
+        msRemaining: deadline === null ? null : Math.max(0, deadline - Date.now()),
+        relaxed
     };
 }
 
@@ -369,7 +390,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
         const full = await db.findSessionForUser(existing.id, userId);
 
         if (full && full.status === "in_progress") {
-            await respondResumed(res, full, now, userId);
+            await respondResumed(res, full, now, userId, isRelaxed(req, full.id));
             return;
         }
     }
@@ -502,19 +523,25 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
                     return;
                 }
 
-                await respondResumed(res, full, now, userId);
+                await respondResumed(res, full, now, userId, isRelaxed(req, full.id));
                 return;
             }
         }
     }
 
-    const question = await nextPlayableQuestion(session.id, now);
+    // The pace is chosen once, for a new run. A resumed run keeps the pace it
+    // was dealt with (above): switching mid-run would change how answers
+    // already given are scored.
+    const relaxed = wantsRelaxedRun(req.body);
+    if (relaxed) markRelaxed(req, session.id);
+
+    const question = await nextPlayableQuestion(session.id, now, relaxed);
 
     res.status(201).json({
         resumed: false,
         sessionId: session.id,
         scoreSoFar: 0,
-        question: question ? await serveQuestion(question, userId, session.id) : null
+        question: question ? await serveQuestion(question, userId, session.id, relaxed) : null
     });
 });
 
@@ -539,13 +566,14 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
         return;
     }
 
-    const question = await nextPlayableQuestion(session.id, now);
+    const relaxed = isRelaxed(req, session.id);
+    const question = await nextPlayableQuestion(session.id, now, relaxed);
 
     if (!question) {
-        const finished = await finishSession(session.id);
+        const finished = await finishSession(session.id, relaxed);
         res.status(200).json({
             complete: true,
-            session: summarize(finished, await db.listSessionQuestions(finished.id))
+            session: summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
         });
         return;
     }
@@ -553,8 +581,8 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
     res.status(200).json({
         complete: false,
         sessionId: session.id,
-        scoreSoFar: await db.scoreSoFar(session.id),
-        question: await serveQuestion(question, userId, session.id)
+        scoreSoFar: await db.scoreSoFar(session.id, relaxed),
+        question: await serveQuestion(question, userId, session.id, relaxed)
     });
 });
 
@@ -617,6 +645,8 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
     /* The same stance the beat was SERVED under, so a learner cannot be timed
        out against a clock they were never shown. */
     const stance = await roundStance(session.id);
+    // A relaxed run has no deadline to enforce, here or in the sweep.
+    const relaxed = isRelaxed(req, session.id);
 
     if (
         isExpired(
@@ -624,18 +654,19 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
             now,
             question.challenge_type,
             question.display_order,
-            stance
+            stance,
+            relaxed
         )
     ) {
         await db.recordTimeout(question.id, correctOptionText);
 
-        const remaining = await nextPlayableQuestion(session.id, now);
-        const finished = remaining ? null : await finishSession(session.id);
+        const remaining = await nextPlayableQuestion(session.id, now, relaxed);
+        const finished = remaining ? null : await finishSession(session.id, relaxed);
 
         res.status(200).json({
             outcome: "timed_out",
             pointsAwarded: 0,
-            scoreSoFar: await db.scoreSoFar(session.id),
+            scoreSoFar: await db.scoreSoFar(session.id, relaxed),
             correctOption: correctOptionText,
             explanation,
             complete: !remaining,
@@ -646,7 +677,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
             // fetches it from GET /sessions/current when it is ready to show it.
             question: null,
             session: finished
-                ? summarize(finished, await db.listSessionQuestions(finished.id))
+                ? summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
                 : null
         });
         return;
@@ -718,22 +749,31 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
     );
 
     const elapsedMs = answeredAt.getTime() - question.served_at.getTime();
-    const pointsAwarded = pointsForAnswer(isCorrect, elapsedMs, question.challenge_type);
+    const pointsAwarded = pointsForAnswer(
+        isCorrect,
+        elapsedMs,
+        question.challenge_type,
+        Number.MAX_SAFE_INTEGER,
+        "developing",
+        relaxed
+    );
 
-    const remaining = await nextPlayableQuestion(session.id, now);
-    const finished = remaining ? null : await finishSession(session.id);
+    const remaining = await nextPlayableQuestion(session.id, now, relaxed);
+    const finished = remaining ? null : await finishSession(session.id, relaxed);
 
     res.status(200).json({
         outcome: isCorrect ? "correct" : "incorrect",
         pointsAwarded,
-        scoreSoFar: await db.scoreSoFar(session.id),
+        scoreSoFar: await db.scoreSoFar(session.id, relaxed),
         responseTimeMs: elapsedMs,
         correctOption: correctOptionText,
         explanation,
         complete: !remaining,
         // Not served here -- see the note in the timeout branch above.
         question: null,
-        session: finished ? summarize(finished, await db.listSessionQuestions(finished.id)) : null
+        session: finished
+            ? summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
+            : null
     });
 });
 
@@ -768,11 +808,26 @@ gameRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Response)
     const standing = path
         ?.flatMap((t) => t.concepts)
         .find((concept) => concept.slug === current!.slug);
+    // The topic that concept sits in, read from the same path. The results
+    // screen showed a "Your variables journey" panel for every learner because
+    // it had no topic to ask about; this is the one it should ask about.
+    const topic = path?.find((t) => t.concepts.some((concept) => concept.slug === current!.slug));
 
     res.status(200).json({
-        session: summarize(session, await db.listSessionQuestions(session.id)),
+        session: summarize(
+            session,
+            await db.listSessionQuestions(session.id),
+            isRelaxed(req, session.id)
+        ),
         curriculum: {
-            concept: current && standing ? { slug: current.slug, name: standing.name } : null,
+            concept:
+                current && standing
+                    ? {
+                          slug: current.slug,
+                          name: standing.name,
+                          topic: topic ? { slug: topic.slug, name: topic.name } : null
+                      }
+                    : null,
             rungs: standing ? standing.rungs : null,
             earned
         }

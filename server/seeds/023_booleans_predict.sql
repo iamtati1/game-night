@@ -45,14 +45,38 @@ AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION seed_practice(
-    p_prompt TEXT, p_concept TEXT, p_demand TEXT, p_correct TEXT, p_wrong TEXT[]
+    p_ref TEXT, p_prompt TEXT, p_concept TEXT, p_demand TEXT, p_correct TEXT, p_wrong TEXT[]
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE
     v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-booleans-predict' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    -- ADOPTION for rows seeded before names existed: give the existing row the
+    -- name rather than inserting beside it. Only rows with no name yet, so this
+    -- can never take a question that already belongs to another.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-booleans-predict' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     INSERT INTO challenges (concept_id, demand_id, role, difficulty)
     SELECT c.id, d.id, 'practise', curriculum_difficulty(p_concept, p_demand)
@@ -60,9 +84,9 @@ BEGIN
     WHERE c.slug = p_concept AND d.slug = p_demand
     RETURNING id INTO v_challenge;
 
-    INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source)
+    INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source, external_ref)
     VALUES (p_prompt, curriculum_difficulty(p_concept, p_demand), 'values',
-            'predict-output', v_challenge, 'jolt-booleans-predict')
+            'predict-output', v_challenge, 'jolt-booleans-predict', p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -80,15 +104,18 @@ $$;
 -- distractors are the two numbers, because reaching for one of them is the
 -- mistake this is checking for.
 SELECT seed_practice(
+    'bool-001',
     E'What does this log?\n\nconsole.log(10 > 4);',
     'booleans', 'predict', 'true', ARRAY['false', '10', '4']);
 
 SELECT seed_practice(
+    'bool-002',
     E'What does this log?\n\nconsole.log(3 > 8);',
     'booleans', 'predict', 'false', ARRAY['true', '3', '8']);
 
 -- Equal values are not greater. The near-miss a beginner makes most.
 SELECT seed_practice(
+    'bool-003',
     E'What does this log?\n\nconsole.log(6 > 6);',
     'booleans', 'predict', 'false',
     ARRAY['true', '6', 'nothing']);
@@ -96,6 +123,7 @@ SELECT seed_practice(
 -- A boolean written down directly, with no comparison anywhere. The point of
 -- the concept: true and false are VALUES, and they can simply be stated.
 SELECT seed_practice(
+    'bool-004',
     E'What does this log?\n\nconsole.log(false);',
     'booleans', 'predict', 'false',
     ARRAY['true', '"false"', 'nothing']);
@@ -103,11 +131,12 @@ SELECT seed_practice(
 -- The quoted-word trap, which is the recognition idea returning as prediction.
 -- A learner who read the recognition step will have this one.
 SELECT seed_practice(
+    'bool-005',
     E'What does this log?\n\nconsole.log("false");',
     'booleans', 'predict', 'false',
     ARRAY['true', 'a quoted word is not a boolean', 'nothing']);
 
-DROP FUNCTION seed_practice(TEXT, TEXT, TEXT, TEXT, TEXT[]);
+DROP FUNCTION seed_practice(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[]);
 DROP FUNCTION curriculum_difficulty(TEXT, TEXT);
 
 COMMIT;

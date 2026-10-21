@@ -3,11 +3,24 @@ import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import type { FlushSessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
+import { NextStepActions } from "../components/NextStepActions.js";
 import { useRunContext } from "../games/useRunContext.js";
 
-const BEST_POSSIBLE = 5 * 200; // five perfect four-output rounds
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
+/**
+ * The most this game's own puzzles could have scored: every round flushed.
+ * Mirrors the server's rule (10, 20, 30... per placement, doubled for a full
+ * sequence), applied to the rounds actually dealt -- a game can be short, and
+ * puzzles differ in length, so a fixed "five four-output rounds" overstated
+ * what a three-puzzle game could earn.
+ */
+function bestPossible(rounds: { totalOutputs: number }[]): number {
+    return rounds.reduce((sum, r) => sum + 10 * r.totalOutputs * (r.totalOutputs + 1), 0);
+}
 
 export function FlushResultsPage() {
+    usePageTitle("Flush results");
     const { id } = useParams<{ id: string }>();
     const [session, setSession] = useState<FlushSessionSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -37,7 +50,7 @@ export function FlushResultsPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/play">
-                    Back home
+                    {ACTION.backToGames}
                 </Link>
             </section>
         );
@@ -74,9 +87,19 @@ export function FlushResultsPage() {
                 left to the FLUSHED figure below rather than said twice. */}
             <p className="lede">
                 {perfect
-                    ? "Every round flushed — the maximum multiplier on all five."
-                    : `A perfect run is worth ${BEST_POSSIBLE}.`}
+                    ? `Every round flushed: the maximum multiplier on all ${session.totalRounds}.`
+                    : `A perfect run of these puzzles is worth ${bestPossible(session.rounds)}.`}
             </p>
+
+            {/* Back to the course first; playing again beside it. Right under the
+                outcome, so a phone reaches it without scrolling past the details. */}
+            <NextStepActions
+                replay={(cls) => (
+                    <Link className={cls} to="/flush">
+                        Play again
+                    </Link>
+                )}
+            />
 
             {/* No average time and no accuracy. A Flush round ends the instant a
                 placement is wrong, so a bad run finishes faster than a good one --
@@ -117,15 +140,6 @@ export function FlushResultsPage() {
                     </li>
                 ))}
             </ol>
-
-            <div className="cta-row">
-                <Link className="button primary" to="/flush">
-                    Play again
-                </Link>
-                <Link className="button ghost" to="/play">
-                    Pick another Jolt
-                </Link>
-            </div>
         </section>
     );
 }

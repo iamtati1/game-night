@@ -5,12 +5,13 @@ import { toFieldErrors } from "../auth/schemas.js";
 import { BUG_HUNT } from "../games/constants.js";
 import { seededShuffle } from "../games/optionOrder.js";
 import { findActiveSession, findResumableSession, resumePausedSession } from "../sessions/queries.js";
-import { wantsFreshSession } from "../sessions/schemas.js";
+import { wantsFreshSession, wantsRelaxedRun } from "../sessions/schemas.js";
 import * as db from "./queries.js";
 import { diagnosisSchema } from "./schemas.js";
 import {
     BOSS_DISPLAY_ORDER,
     BUG_HUNT_INCIDENTS_PER_SESSION,
+    BUG_HUNT_MIN_INCIDENTS_PER_SESSION,
     MAX_ATTEMPTS,
     averageResolutionMs,
     bestStreak,
@@ -97,7 +98,9 @@ async function serveIncident(round: db.BugHuntRoundRow, now = new Date()) {
     return {
         roundId: round.id,
         incidentNumber: round.display_order,
-        totalIncidents: BUG_HUNT_INCIDENTS_PER_SESSION,
+        // The incidents this run was dealt, which is fewer than six for a
+        // learner with few bugs open -- never a number the run will not reach.
+        totalIncidents: await db.countRoundsInSessionOf(round.id),
         /** Incident ten is the boss. Positional, so it is known before it is played. */
         isBoss: round.display_order === BOSS_DISPLAY_ORDER,
         title: incident.title,
@@ -170,6 +173,7 @@ function summarize(session: db.BugHuntSessionRow, rounds: db.BugHuntResultRow[])
             title: r.title,
             theme: r.theme,
             bugCategory: r.bug_category,
+            concept: r.concept_name,
             difficulty: r.difficulty,
             status: r.status,
             attempts: r.attempts,
@@ -193,9 +197,14 @@ function summarize(session: db.BugHuntSessionRow, rounds: db.BugHuntResultRow[])
         })),
         // What the player is actually good at, counted from the incidents they
         // met rather than asserted. Only categories they saw appear.
+        //
+        // Named by the lesson concept the incident practises when it has one.
+        // bug_category is a taxonomy of bugs, not of lessons: a beginner's
+        // misspelt console.log is filed under "scope-closures", and the readout
+        // told them they were strong at scope and closures.
         byCategory: Object.entries(
             rounds.reduce<Record<string, { seen: number; resolved: number }>>((acc, r) => {
-                const entry = (acc[r.bug_category] ??= { seen: 0, resolved: 0 });
+                const entry = (acc[r.concept_name ?? r.bug_category] ??= { seen: 0, resolved: 0 });
                 entry.seen += 1;
                 if (r.status === "resolved") entry.resolved += 1;
                 return acc;
@@ -266,6 +275,110 @@ async function respondWithLiveIncident(
 
 // ------------------------------------------------------------------- endpoints
 
+/**
+ * Whether this learner can be dealt a Bug Hunt run, and what to tell them if not.
+ *
+ * ONE ANSWER, TWO READERS: the start route refuses on it, and GET /readiness
+ * reports it so the Games page can say the same thing before anything is
+ * started. Nothing here deals, records or changes anything.
+ */
+export interface BugHuntReadiness {
+    ready: boolean;
+    eligible: number;
+    needed: number;
+    full: number;
+    /** Only when not ready. */
+    reason: "not-met" | "difficulty" | "too-few" | null;
+    reachable: number | null;
+    practice: { slug: string; name: string } | null;
+    message: string | null;
+}
+
+export async function bugHuntReadiness(userId: string): Promise<BugHuntReadiness> {
+    // Counted with the same curriculum eligibility the dealer applies, so this
+    // check and the candidate query can never disagree about the pool size.
+    const eligible = await db.countDealableIncidents(userId);
+
+    if (eligible >= BUG_HUNT_MIN_INCIDENTS_PER_SESSION) {
+        return {
+            ready: true,
+            eligible,
+            needed: BUG_HUNT_MIN_INCIDENTS_PER_SESSION,
+            full: BUG_HUNT_INCIDENTS_PER_SESSION,
+            reason: null,
+            reachable: null,
+            practice: null,
+            message: null
+        };
+    }
+
+    // WRITTEN FOR THE LEARNER, and it points somewhere.
+    //
+    // This used to say "Play some Code Blitz first", which blocked all
+    // debugging until enough unrelated practice had piled up. The curriculum
+    // already has beginner debugging -- every early concept has a "find the
+    // problem" rung, scaffolded by its lesson -- so the refusal names the
+    // learner's current concept when it has one, and says what opens a run.
+    const current = await findCurrentConcept(userId).catch(() => null);
+    const practice = current ? await db.findDebugPractice(current.id).catch(() => null) : null;
+    const reachable = await db.countReachableIncidents(userId);
+
+    // THREE DIFFERENT REASONS, and each has its own remedy. Conflating them
+    // told a learner who had met the ideas that they had not.
+    //
+    //   not-met     no bug here is on an idea met in a game yet
+    //   difficulty  the ideas are met, but these bugs are a rung above
+    //               anything played on them -- the frontier
+    //   too-few     everything reachable is dealable, just not enough of it
+    //
+    // "Met" is what the dealer reads (curriculum/eligibility.ts): Code
+    // Blitz questions, Bug Hunt rounds, Learn Beats, and lesson steps
+    // passed or lessons finished.
+    const reason = reachable === 0 ? "not-met" : reachable > eligible ? "difficulty" : "too-few";
+    const harder = reachable - eligible;
+    const need = BUG_HUNT_MIN_INCIDENTS_PER_SESSION;
+
+    const why =
+        reason === "not-met"
+            ? `Bug Hunt needs at least ${need} bugs about ideas you have learned, and none are open yet. `
+            : reason === "difficulty"
+              ? `Bug Hunt needs at least ${need} bugs. You have learned the ideas behind ${reachable}, but ` +
+                `${harder === 1 ? "1 of them is" : `${harder} of them are`} a step harder than anything ` +
+                `you have practiced on those ideas, so ${eligible === 0 ? "none are" : `only ${eligible} ${eligible === 1 ? "is" : "are"}`} open yet. `
+              : `Bug Hunt needs at least ${need} bugs about ideas you have learned. ` +
+                `So far ${eligible === 1 ? "1 is" : `${eligible} are`} open. `;
+
+    const remedy =
+        reason === "difficulty"
+            ? "Practicing those ideas in Code Blitz opens them here."
+            : "Bugs open as you work through lessons on your Journey, or meet ideas in Code Blitz.";
+
+    const message =
+        why +
+        (practice
+            ? `You can find a bug right now in ${practice.name}: the last step of that lesson ` +
+              "is a broken program to fix. "
+            : "") +
+        remedy;
+
+    return {
+        ready: false,
+        eligible,
+        needed: need,
+        full: BUG_HUNT_INCIDENTS_PER_SESSION,
+        reason,
+        reachable,
+        practice,
+        message
+    };
+}
+
+// GET /api/bug-hunt/readiness -- what the start route would say, without starting.
+// Read-only: no session, no round, no evidence.
+bugHuntRouter.get("/readiness", requireAuth, async (req: Request, res: Response) => {
+    res.status(200).json(await bugHuntReadiness(req.user!.id));
+});
+
 // POST /api/bug-hunt/sessions -- resume this player's run, or deal a new one.
 bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
@@ -301,37 +414,21 @@ bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response)
         }
     }
 
-    // A run needs ten distinct incidents. Refusing up front beats dealing a
-    // three-incident session that silently scores out of a different total.
-    //
-    // Counted with the same curriculum eligibility the dealer applies, so this
-    // check and the candidate query can never disagree about the pool size.
-    const eligible = await db.countDealableIncidents(userId);
+    // A full run is six incidents; a learner with fewer open is dealt a SHORTER
+    // run from what there is, and every total the client sees is the dealt
+    // count, so nothing scores out of a number the run never reaches. Only
+    // below the minimum is the learner refused.
+    const readiness = await bugHuntReadiness(userId);
 
-    if (eligible < BUG_HUNT_INCIDENTS_PER_SESSION) {
-        // WRITTEN FOR THE LEARNER, not for whoever seeded the database.
-        //
-        // This used to say "Only 3 playable incidents are seeded; 10 are
-        // needed", which is true, useless to a player, and reads like the game
-        // is broken. It usually is not: the incidents a learner can reach are
-        // gated on what they have practised, so a beginner who has not yet done
-        // any Code Blitz genuinely has nothing here to debug yet.
-        //
-        // Saying so, and saying what to do about it, turns a dead button into
-        // a signpost. The count stays in the body for whoever is debugging the
-        // seed, just not in the sentence the player reads.
+    if (!readiness.ready) {
         res.status(503).json({
             error: "Not enough to hunt yet",
-            details: [
-                {
-                    field: "incidents",
-                    message:
-                        "Bug Hunt uses the ideas you have already practised, and you have not " +
-                        "practised enough of them yet. Play some Code Blitz first — the bugs " +
-                        "here are mistakes in the code you have been reading."
-                }
-            ],
-            eligible
+            details: [{ field: "incidents", message: readiness.message }],
+            reason: readiness.reason,
+            eligible: readiness.eligible,
+            reachable: readiness.reachable,
+            needed: readiness.needed,
+            practice: readiness.practice
         });
         return;
     }
@@ -344,7 +441,7 @@ bugHuntRouter.post("/sessions", requireAuth, async (req: Request, res: Response)
      */
     const current = await findCurrentConcept(userId).catch(() => null);
 
-    const session = await db.createSessionWithRounds(userId, current?.id ?? null);
+    const session = await db.createSessionWithRounds(userId, current?.id ?? null, wantsRelaxedRun(req.body));
 
     await respondWithLiveIncident(res, session.id, false, 201);
 });

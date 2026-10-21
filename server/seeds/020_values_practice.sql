@@ -68,7 +68,7 @@ $$;
 -- printed rather than its value, that nothing happens at all. A wrong answer
 -- the learner would never pick teaches nothing and wastes a slot.
 CREATE OR REPLACE FUNCTION seed_practice(
-    p_prompt    TEXT,
+    p_ref TEXT, p_prompt    TEXT,
     p_concept   TEXT,
     p_demand    TEXT,
     p_correct   TEXT,
@@ -83,7 +83,31 @@ DECLARE
     v_wrong     TEXT;
     v_order     INT := 1;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-values-practice' AND external_ref = p_ref;
+
+    -- ADOPTION for rows seeded before names existed: name the existing row
+    -- rather than inserting beside it. Only rows with no name yet, so this can
+    -- never take a question that already belongs to another.
+    IF v_question IS NULL THEN
+        SELECT id INTO v_question
+        FROM questions
+        WHERE prompt = p_prompt AND source = 'jolt-values-practice' AND external_ref IS NULL
+        ORDER BY id  -- the oldest copy: the one learners have answered
+        LIMIT 1;
+
+        IF v_question IS NOT NULL THEN
+            UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        END IF;
+    END IF;
 
     IF v_question IS NULL THEN
         INSERT INTO challenges (concept_id, demand_id, role, difficulty)
@@ -92,14 +116,15 @@ BEGIN
         WHERE c.slug = p_concept AND d.slug = p_demand
         RETURNING id INTO v_challenge;
 
-        INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source)
+        INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source, external_ref)
         VALUES (
             p_prompt,
             curriculum_difficulty(p_concept, p_demand),
             'values',
             'predict-output',
             v_challenge,
-            'jolt-values-practice'
+            'jolt-values-practice',
+            p_ref
         )
         RETURNING id INTO v_question;
 
@@ -120,36 +145,42 @@ $$;
 -- "run a snippet and say what it prints". Nothing here asks anything else.
 
 SELECT seed_practice(
+    'values-001',
     E'What does this log?\n\nconsole.log("Hello");',
     'console-output', 'predict', 'Hello',
     ARRAY['"Hello"', 'console.log("Hello")', 'nothing']
 );
 
 SELECT seed_practice(
+    'values-002',
     E'What does this log?\n\nconsole.log(5);',
     'console-output', 'predict', '5',
     ARRAY['"5"', 'console.log(5)', 'nothing']
 );
 
 SELECT seed_practice(
+    'values-003',
     E'What does this log?\n\nconsole.log("JavaScript");',
     'console-output', 'predict', 'JavaScript',
     ARRAY['"JavaScript"', 'javascript', 'nothing']
 );
 
 SELECT seed_practice(
+    'values-004',
     E'What does this log?\n\nconsole.log("5");',
     'console-output', 'predict', '5',
     ARRAY['"5"', 'five', 'nothing']
 );
 
 SELECT seed_practice(
+    'values-005',
     E'What does this log?\n\nconsole.log(42);',
     'console-output', 'predict', '42',
     ARRAY['"42"', 'console.log(42)', 'nothing']
 );
 
 SELECT seed_practice(
+    'values-006',
     E'What does this log?\n\nconsole.log("hello world");',
     'console-output', 'predict', 'hello world',
     ARRAY['"hello world"', 'hello', 'helloworld']
@@ -162,24 +193,28 @@ SELECT seed_practice(
 -- value BEFORE it is printed, not whether the learner can add.
 
 SELECT seed_practice(
+    'values-007',
     E'What does this log?\n\nconsole.log(5 + 5);',
     'expressions-produce-values', 'predict', '10',
     ARRAY['5 + 5', '55', '"10"']
 );
 
 SELECT seed_practice(
+    'values-008',
     E'What does this log?\n\nconsole.log(2 * 3);',
     'expressions-produce-values', 'predict', '6',
     ARRAY['2 * 3', '23', '"6"']
 );
 
 SELECT seed_practice(
+    'values-009',
     E'What does this log?\n\nconsole.log(10 - 4);',
     'expressions-produce-values', 'predict', '6',
     ARRAY['10 - 4', '104', '"6"']
 );
 
 SELECT seed_practice(
+    'values-010',
     E'What does this log?\n\nconsole.log(7 + 3);',
     'expressions-produce-values', 'predict', '10',
     ARRAY['7 + 3', '73', '"10"']
@@ -188,19 +223,23 @@ SELECT seed_practice(
 -- String concatenation, which is the same idea in the other direction: two
 -- values collapse to one. Kept to plain words, with no numbers in sight, so it
 -- cannot be mistaken for a coercion question.
+-- Content as 029 rewrote it, so a re-run and a database seeded earlier agree.
 SELECT seed_practice(
-    E'What does this log?\n\nconsole.log("Java" + "Script");',
-    'expressions-produce-values', 'predict', 'JavaScript',
-    ARRAY['"Java" + "Script"', 'Java Script', 'Java+Script']
+    'values-011',
+    E'What does this log?\n\nconsole.log(4 + 5 - 3);',
+    'expressions-produce-values', 'predict', '6',
+    ARRAY['12', '2', '453']
 );
 
+-- Content as 029 rewrote it, so a re-run and a database seeded earlier agree.
 SELECT seed_practice(
-    E'What does this log?\n\nconsole.log("Hello" + " " + "there");',
-    'expressions-produce-values', 'predict', 'Hello there',
-    ARRAY['Hellothere', '"Hello there"', 'Hello+there']
+    'values-012',
+    E'What does this log?\n\nconsole.log(2 * 2 * 2);',
+    'expressions-produce-values', 'predict', '8',
+    ARRAY['6', '222', '4']
 );
 
-DROP FUNCTION seed_practice(TEXT, TEXT, TEXT, TEXT, TEXT[]);
+DROP FUNCTION seed_practice(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[]);
 DROP FUNCTION curriculum_difficulty(TEXT, TEXT);
 
 COMMIT;

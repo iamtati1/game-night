@@ -103,16 +103,67 @@ describe("3 · a pair the curriculum dropped is removed", () => {
     });
 });
 
-describe("4 · a removed pair with content attached fails loudly", () => {
-    it("relies on the schema's RESTRICT rather than guarding around it", () => {
-        // The seed must not try to be clever here. Removing a demand that has
-        // playable content should stop the seed, so that it becomes a decision
-        // rather than a silent deletion. Anything that suppressed the error --
-        // a cascade, a WHERE NOT EXISTS over challenges -- would defeat the FK.
+describe("4 · a removed pair with content attached is left alone and announced", () => {
+    /*
+     * THIS BEHAVIOUR WAS REVERSED, AND THE REASON IS EVIDENCE.
+     *
+     * It previously read "fails loudly", and asserted that the seed never
+     * mentioned `challenges` at all -- the idea being that RESTRICT should stop
+     * the seed, so dropping a rung with playable content became a decision
+     * rather than a silent change. The intent was right. The mechanism could
+     * not deliver it.
+     *
+     * A refused delete does not pause for a decision. It aborts 014 and every
+     * seed after it -- and the content migration that re-homes the challenge,
+     * which is what MAKES the delete legal, is one of those later seeds. It has
+     * to be: it moves content onto a concept that 014 itself creates, so it
+     * cannot be numbered before 014. The result was a deadlock with no exit
+     * from inside the seed run, hit for real while splitting operator-precedence
+     * out of arithmetic-operators on a database that had been seeded once:
+     *
+     *     seeding 014_curriculum.sql ... FAILED
+     *     update or delete on table "concept_demands" violates RESTRICT setting
+     *     of foreign key constraint "challenges_concept_demand_fk"
+     *     Key (concept_id, demand_id)=(2, 8) is referenced from table "challenges".
+     *
+     * Every database with content was stuck there permanently. A fresh one was
+     * fine, which is why no test saw it.
+     *
+     * So the seed now declines to ask for a delete it knows will be refused,
+     * and says which pair it left standing. What the FK protects is unchanged:
+     * a rung is still never removed while content stands on it, and that is
+     * still enforced by the schema rather than by this file. What is given up
+     * is the abort -- and the abort was never actionable.
+     */
+    it("skips a pair a challenge still references, rather than aborting the run", () => {
+        const prune = STATEMENTS.slice(STATEMENTS.indexOf("DELETE FROM concept_demands cd"));
+        const guard = prune.slice(0, prune.indexOf("AND (c.slug, d.slug) NOT IN ("));
+
+        expect(guard, "an unguarded prune deadlocks every seeded database").toMatch(
+            /NOT EXISTS[\s\S]{0,120}challenges/i
+        );
+    });
+
+    it("never deletes a referenced pair by widening the delete instead", () => {
+        // The guard must narrow what is deleted, never arrange for the delete
+        // to succeed anyway. A cascade would remove the challenge with the rung
+        // and take its learner evidence with it.
         expect(STATEMENTS).not.toMatch(/ON CONFLICT[\s\S]{0,80}challenges/i);
-        expect(STATEMENTS).not.toMatch(/NOT EXISTS[\s\S]{0,120}challenges/i);
-        expect(STATEMENTS, "the seed must never touch challenges").not.toMatch(
-            /\bchallenges\b/
+        expect(STATEMENTS, "a cascade would delete content, not protect it").not.toMatch(
+            /ON DELETE CASCADE/i
+        );
+        expect(STATEMENTS).not.toMatch(/DELETE FROM challenges/i);
+        expect(STATEMENTS).not.toMatch(/UPDATE challenges/i);
+    });
+
+    it("still makes it a decision, by naming what it left behind", () => {
+        // The half of the original intent that was reachable. Silence here
+        // would mean a rung the curriculum has dropped lingering indefinitely
+        // with nobody told why.
+        expect(STATEMENTS).toContain("RAISE NOTICE");
+        expect(STATEMENTS).toMatch(/no longer declares[\s\S]{0,120}left in place/);
+        expect(STATEMENTS, "the notice must name the pairs, not just warn").toContain(
+            "c.slug || '/' || d.slug"
         );
     });
 });

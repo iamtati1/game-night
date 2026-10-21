@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { FLUSH } from "../games/constants.js";
 import { FLUSH_ROUNDS_PER_SESSION, scoreForSession } from "./scoring.js";
+import { curriculumCtes, curriculumSelects } from "../curriculum/selection.js";
 
 /**
  * How many of the player's previous Flush runs are checked for snippets to avoid.
@@ -59,12 +60,63 @@ export const ELIGIBLE_SNIPPET_PREDICATE = `
     )
 `;
 
-export async function countEligibleSnippets(): Promise<number> {
+/**
+ * Whether a snippet may be dealt to THIS learner: playable, and reachable by
+ * the same curriculum gate Code Blitz and Bug Hunt deal through.
+ *
+ * Flush used to deal on playability alone, so every learner -- including one
+ * on their first concept -- drew from the whole bank, which was all Async.
+ * curriculumSelects() withholds a tagged snippet until its concept has been
+ * met and its prerequisites are in place, so the beginner snippets (083) arrive
+ * with their concepts and the event-loop ones wait for the event loop.
+ *
+ * Shared by the count and the dealer so the two can never disagree about how
+ * many snippets a session can be built from. Needs curriculumCtes() declared.
+ */
+export function dealableSnippet(alias: string): string {
+    return `${ELIGIBLE_SNIPPET_PREDICATE.replaceAll("s.", `${alias}.`)}
+        AND ${curriculumSelects(alias)}`;
+}
+
+export async function countEligibleSnippets(userId: string): Promise<number> {
     const result = await pool.query<{ count: string }>(
-        `SELECT COUNT(*) AS count FROM flush_snippets s WHERE ${ELIGIBLE_SNIPPET_PREDICATE}`
+        `WITH ${curriculumCtes("$1")}
+         SELECT COUNT(*) AS count FROM flush_snippets s WHERE ${dealableSnippet("s")}`,
+        [userId]
     );
 
     return Number(result.rows[0]!.count);
+}
+
+/** How many rounds the session holding this round was dealt. */
+export async function countRoundsInSessionOf(roundId: string): Promise<number> {
+    const result = await pool.query<{ count: string }>(
+        `SELECT COUNT(*) AS count FROM flush_rounds
+         WHERE game_session_id = (SELECT game_session_id FROM flush_rounds WHERE id = $1)`,
+        [roundId]
+    );
+
+    return Number(result.rows[0]!.count);
+}
+
+/**
+ * The concept a snippet is practice for, named for the learner: what this
+ * puzzle teaches. Null for an untagged snippet, which practises nothing on the
+ * journey and is shown without a label.
+ */
+export async function snippetConcept(
+    snippetId: string
+): Promise<{ name: string; meaning: string } | null> {
+    const result = await pool.query<{ name: string; meaning: string }>(
+        `SELECT c.name, c.meaning
+         FROM flush_snippets s
+         JOIN challenges ch ON ch.id = s.challenge_id
+         JOIN concepts c    ON c.id  = ch.concept_id
+         WHERE s.id = $1`,
+        [snippetId]
+    );
+
+    return result.rows[0] ?? null;
 }
 
 export async function findFlushSessionForUser(
@@ -84,7 +136,8 @@ export async function findFlushSessionForUser(
 }
 
 /**
- * Creates a Flush session and its five rounds atomically.
+ * Creates a Flush session and up to five rounds atomically -- fewer when the
+ * learner has fewer dealable puzzles; the route refuses below the minimum.
  *
  * Rounds are dealt in ascending difficulty, so a session ramps -- the thing that
  * distinguishes Flush's pacing from Code Blitz's flat random ten. Within a
@@ -133,7 +186,8 @@ export async function createSessionWithRounds(userId: string): Promise<FlushSess
         // Difficulty still drives the in-session ramp; recency only decides which
         // snippets are candidates.
         await client.query(
-            `WITH recent AS (
+            `WITH ${curriculumCtes("$3")},
+             recent AS (
                  SELECT fr.snippet_id
                  FROM flush_rounds fr
                  WHERE fr.game_session_id IN (
@@ -163,7 +217,7 @@ export async function createSessionWithRounds(userId: string): Promise<FlushSess
                          WHERE o.snippet_id = s.id AND o.is_active AND NOT o.is_distractor
                         ) AS total_outputs
                  FROM flush_snippets s
-                 WHERE ${ELIGIBLE_SNIPPET_PREDICATE}
+                 WHERE ${dealableSnippet("s")}
                  ORDER BY (s.id IN (SELECT snippet_id FROM recent)) ASC, RANDOM()
                  LIMIT $2
              ) AS picked`,
@@ -459,3 +513,4 @@ export async function shiftRoundClock(client: PoolClient, sessionId: string): Pr
         [sessionId]
     );
 }
+

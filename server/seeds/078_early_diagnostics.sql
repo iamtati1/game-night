@@ -66,14 +66,38 @@ $$;
 -- challenge difficulty is derived rather than written as 1, and the topic is a
 -- parameter because this slice spans Values, Variables and Operators.
 CREATE OR REPLACE FUNCTION seed_early_diagnostic(
-    p_concept TEXT, p_demand TEXT, p_topic TEXT, p_prompt TEXT,
+    p_ref TEXT, p_concept TEXT, p_demand TEXT, p_topic TEXT, p_prompt TEXT,
     p_correct TEXT, p_wrong TEXT[], p_why TEXT
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-early-diagnostics' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    -- ADOPTION for rows seeded before names existed: give the existing row the
+    -- name rather than inserting beside it. Only rows with no name yet, so this
+    -- can never take a question that already belongs to another.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-early-diagnostics' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     INSERT INTO challenges (concept_id, demand_id, role, difficulty)
     SELECT c.id, d.id, 'practise', curriculum_difficulty(p_concept, p_demand)
@@ -88,9 +112,9 @@ BEGIN
     -- predict-output, not match-concept: both demands put a snippet in front of
     -- the learner, which is the distinction seed_values and seed_op draw.
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation, external_ref)
     VALUES (p_prompt, 1, p_topic, 'predict-output', v_challenge,
-            'jolt-early-diagnostics', p_why)
+            'jolt-early-diagnostics', p_why, p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -108,7 +132,8 @@ $$;
 --
 -- The recognise rung (q311) asks which FORM displays something. This gives a
 -- running program whose output is wrong and asks which of its own lines did it.
-SELECT seed_early_diagnostic('console-output', 'diagnose', 'values',
+SELECT seed_early_diagnostic(
+    'early-001','console-output', 'diagnose', 'values',
     E'This is meant to print 1, then 2, then 3. It prints 1, then 3. Which line is the cause?\n\nconsole.log(1);\nconsole.log;\nconsole.log(3);',
     E'console.log;',
     ARRAY[E'console.log(1);',
@@ -120,7 +145,8 @@ SELECT seed_early_diagnostic('console-output', 'diagnose', 'values',
 --
 -- The explain rung (q314) says why 5 + 5 shows 10. This is the same rule met
 -- from the other side: quoted, it never collapses at all.
-SELECT seed_early_diagnostic('expressions-produce-values', 'diagnose', 'values',
+SELECT seed_early_diagnostic(
+    'early-002','expressions-produce-values', 'diagnose', 'values',
     E'Both lines are meant to print 10. The first does, and the second prints 5 + 5. Which line is the cause?\n\nconsole.log(2 + 8);\nconsole.log("5 + 5");',
     E'console.log("5 + 5");',
     ARRAY[E'console.log(2 + 8);',
@@ -132,7 +158,8 @@ SELECT seed_early_diagnostic('expressions-produce-values', 'diagnose', 'values',
 --
 -- Not the snapshot lesson -- this is the missing store. The predict rung
 -- (q277, q278) always has an `=`; here the result has nowhere to go.
-SELECT seed_early_diagnostic('assignment', 'diagnose', 'variables',
+SELECT seed_early_diagnostic(
+    'early-003','assignment', 'diagnose', 'variables',
     E'count is meant to end at 3 and ends at 1. Which line is the cause?\n\nlet count = 1;\ncount + 2;\nconsole.log(count);',
     E'count + 2;',
     ARRAY[E'let count = 1;',
@@ -144,7 +171,8 @@ SELECT seed_early_diagnostic('assignment', 'diagnose', 'variables',
 --
 -- The predict rung (q273) walks `let b = a;` forwards. This asks why b did
 -- not follow a afterwards: a name is read for its value, not linked to it.
-SELECT seed_early_diagnostic('reading-variables', 'diagnose', 'variables',
+SELECT seed_early_diagnostic(
+    'early-004','reading-variables', 'diagnose', 'variables',
     E'b is meant to follow a, and prints 5 after a has changed to 9. Which line is the cause?\n\nlet a = 5;\nlet b = a;\na = 9;\nconsole.log(b);',
     E'let b = a;',
     ARRAY[E'a = 9;',
@@ -156,7 +184,8 @@ SELECT seed_early_diagnostic('reading-variables', 'diagnose', 'variables',
 --
 -- The predict rung (q274-q276) reassigns and then prints. This prints and
 -- then reassigns, so the rule `from that line onward` is what is being tested.
-SELECT seed_early_diagnostic('reassignment', 'diagnose', 'variables',
+SELECT seed_early_diagnostic(
+    'early-005','reassignment', 'diagnose', 'variables',
     E'fuel is meant to print 80 and prints 100. Which line is the cause?\n\nlet fuel = 100;\nconsole.log(fuel);\nfuel = 80;',
     E'console.log(fuel);',
     ARRAY[E'fuel = 80;',
@@ -170,7 +199,8 @@ SELECT seed_early_diagnostic('reassignment', 'diagnose', 'variables',
 -- a const is reassigned and answer `It stops with an error`. This asks which
 -- line is to blame, and the answer is the declaration rather than the line
 -- that threw.
-SELECT seed_early_diagnostic('let-vs-const', 'diagnose', 'variables',
+SELECT seed_early_diagnostic(
+    'early-006','let-vs-const', 'diagnose', 'variables',
     E'This stops with an error on the third line. Which line is the cause?\n\nconst score = 0;\nconsole.log(score);\nscore = 10;',
     E'const score = 0;',
     ARRAY[E'score = 10;',
@@ -182,7 +212,8 @@ SELECT seed_early_diagnostic('let-vs-const', 'diagnose', 'variables',
 --
 -- The cause is the value, not the comparison -- the same shape as q322, and
 -- the reason the repair below fixes the value rather than the operator.
-SELECT seed_early_diagnostic('equality', 'diagnose', 'operators',
+SELECT seed_early_diagnostic(
+    'early-007','equality', 'diagnose', 'operators',
     E'A code typed in by hand is checked against the real one. This is meant to print true and prints false. Which line is the cause?\n\nlet entered = "7";\nlet secret = 7;\nconsole.log(entered === secret);',
     E'let entered = "7";',
     ARRAY[E'let secret = 7;',
@@ -195,7 +226,8 @@ SELECT seed_early_diagnostic('equality', 'diagnose', 'operators',
 -- The fourth line is what rules out two of the distractors. Quoting `secret`
 -- would make the comparison true and the sum print 71; `==` would make it
 -- true by giving up on types, which is the trap this concept exists to name.
-SELECT seed_early_diagnostic('equality', 'repair', 'operators',
+SELECT seed_early_diagnostic(
+    'early-008','equality', 'repair', 'operators',
     E'The first line should print true and prints false. The second must keep printing 8. Which change does that?\n\nlet entered = "7";\nlet secret = 7;\nconsole.log(entered === secret);\nconsole.log(secret + 1);',
     E'Store the number: let entered = 7;',
     ARRAY[E'Add quotes to secret: let secret = "7";',
@@ -205,7 +237,7 @@ SELECT seed_early_diagnostic('equality', 'repair', 'operators',
 
 -- Dropped, matching seeds 013, 015, 019 and 033: a seed declares the helpers
 -- it needs and takes them away again.
-DROP FUNCTION seed_early_diagnostic(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
+DROP FUNCTION seed_early_diagnostic(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
 DROP FUNCTION curriculum_difficulty(TEXT, TEXT);
 
 COMMIT;

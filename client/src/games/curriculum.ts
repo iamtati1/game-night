@@ -204,7 +204,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Values and Types",
         tier: "beginner",
         prerequisites: [],
-        marcyAnchor: "Unit 2 · Lesson 1 — Types, Values, Operators",
+        marcyAnchor: "Unit 2 · Lesson 1: Types, Values, Operators",
         rationale:
             "The root of the graph. Every later idea is about moving values around, so a player who cannot name what kind of thing they are holding cannot reason about anything that happens to it.",
         principle:
@@ -216,7 +216,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Variables",
         tier: "beginner",
         prerequisites: ["values"],
-        marcyAnchor: "Unit 2 · Lesson 2 — Variables & Control Flow",
+        marcyAnchor: "Unit 2 · Lesson 2: Variables & Control Flow",
         rationale:
             "A variable is a value with a name attached, so it is meaningless before values. Comes before operators only by convention -- the two are near-simultaneous in practice.",
         principle:
@@ -228,7 +228,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Operators",
         tier: "beginner",
         prerequisites: ["values"],
-        marcyAnchor: "Unit 2 · Lesson 1 — Types, Values, Operators",
+        marcyAnchor: "Unit 2 · Lesson 1: Types, Values, Operators",
         rationale:
             "Split out of the old `conditionals` topic, which was conflating two things: `5 > 3` is an operator question, `if (x) {}` is a control-flow question. Comparison and logic have to be solid before a branch that depends on them means anything.",
         principle:
@@ -240,7 +240,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Control Flow",
         tier: "beginner",
         prerequisites: ["operators"],
-        marcyAnchor: "Unit 2 · Lesson 2 — Variables & Control Flow",
+        marcyAnchor: "Unit 2 · Lesson 2: Variables & Control Flow",
         rationale:
             "A branch is an operator result acted upon. Teaching `if` before truthiness produces players who can read the syntax and cannot predict which way it goes.",
         principle:
@@ -252,7 +252,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Strings",
         tier: "beginner",
         prerequisites: ["values"],
-        marcyAnchor: "Unit 2 · Lesson 1 — Values",
+        marcyAnchor: "Unit 2 · Lesson 1: Values",
         rationale:
             "Sits off to the side of the main spine: it needs only values, and nothing downstream depends on it. That makes it useful early breadth without blocking anything.",
         principle:
@@ -264,7 +264,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Loops",
         tier: "beginner",
         prerequisites: ["control-flow", "variables"],
-        marcyAnchor: "Unit 2 · Lesson 2 — Control Flow",
+        marcyAnchor: "Unit 2 · Lesson 2: Control Flow",
         rationale:
             "A loop is a condition plus a changing variable. Both prerequisites are load-bearing: the condition decides whether it runs again, the variable is what changes.",
         unlocks: "Trace a counter through every iteration."
@@ -274,7 +274,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Functions",
         tier: "beginner",
         prerequisites: ["control-flow"],
-        marcyAnchor: "Unit 2 · Lesson 3 — Introduction to Functions",
+        marcyAnchor: "Unit 2 · Lesson 3: Introduction to Functions",
         rationale:
             "The hinge of the whole curriculum. Almost everything intermediate and advanced passes through it -- callbacks, array methods, closures, promises and classes are all functions wearing different hats.",
         unlocks: "Reason about a function from its signature and its return."
@@ -284,7 +284,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Scope and Closures",
         tier: "intermediate",
         prerequisites: ["functions"],
-        marcyAnchor: "Unit 2 · Lesson 4 — Scope",
+        marcyAnchor: "Unit 2 · Lesson 4: Scope",
         rationale:
             "Marcy teaches this fourth, immediately after functions and BEFORE arrays and objects. That ordering is the single most important correction to Jolt's earlier draft, which filed scope with the advanced material. Closures, `this` and the event loop all rest on it, so deferring it leaves three advanced topics standing on nothing.",
         unlocks: "Say where a value lives and how long it survives."
@@ -294,7 +294,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Arrays",
         tier: "intermediate",
         prerequisites: ["loops", "variables"],
-        marcyAnchor: "Unit 2 · Lesson 5 — Arrays",
+        marcyAnchor: "Unit 2 · Lesson 5: Arrays",
         rationale:
             "Needs loops because iteration is how a beginner first works through a list, and variables because the reference-versus-copy distinction is a variable-level idea before it is an array-level one.",
         unlocks: "Tell a copy from an alias, and predict what mutation breaks."
@@ -304,7 +304,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Array Methods",
         tier: "intermediate",
         prerequisites: ["arrays", "functions"],
-        marcyAnchor: "Unit 2 · Lesson 5 — Arrays",
+        marcyAnchor: "Unit 2 · Lesson 5: Arrays",
         rationale:
             "Two hard prerequisites and both are real. `map` is the point where a learner passes a function to another function for the first time, so a shaky grasp of either side shows up here as confusion about the callback.",
         unlocks: "Choose a method from the shape of the answer needed."
@@ -314,7 +314,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Objects",
         tier: "intermediate",
         prerequisites: ["arrays"],
-        marcyAnchor: "Unit 2 · Lesson 6 — Objects",
+        marcyAnchor: "Unit 2 · Lesson 6: Objects",
         rationale:
             "After arrays because reference semantics are easier to see in a list than in a nested record, and because real data is arrays of objects rather than either alone.",
         unlocks: "Navigate and reshape nested data without breaking the original."
@@ -324,7 +324,7 @@ export const TOPICS: readonly Topic[] = [
         label: "Errors and Debugging",
         tier: "intermediate",
         prerequisites: ["functions", "control-flow"],
-        marcyAnchor: "Module 3 · Asynchronous JavaScript — error handling",
+        marcyAnchor: "Module 3 · Asynchronous JavaScript: error handling",
         rationale:
             "Pulled earlier than Marcy places it. Marcy meets error handling inside async, but Jolt has a whole game about debugging, so the vocabulary of failure -- error types, stack traces, forming a hypothesis -- needs to exist before Bug Hunt can teach with it rather than merely test with it.",
         unlocks: "Read a failure and form a hypothesis about its cause."
@@ -381,7 +381,8 @@ export const CONCEPT_IDS = [
     "variables-name-values", "declaration", "initialization", "assignment",
     "reading-variables", "reassignment", "let-vs-const", "variable-state",
     // operators
-    "arithmetic-operators", "assignment-operators", "comparison-operators", "equality",
+    "arithmetic-operators", "assignment-operators", "operator-precedence",
+    "comparison-operators", "equality",
     "logical-operators", "truthy-falsy",
     // control-flow
     "if-else", "compound-conditions", "else-if-chains", "nested-conditions",
@@ -482,7 +483,20 @@ export const CONCEPTS: readonly Concept[] = [
         meaning: "arithmetic operators combine two numbers into a new one",
         why: "Moved into Values because it is needed THERE. `expressions-produce-values` cannot show that an expression collapses to a value without an expression to collapse, and every one of its questions used arithmetic while arithmetic was still two topics away. Precedence and integer-vs-float surprises still sit underneath every accumulator and index calculation later.",
         prerequisites: ["console-output"], weight: "core",
-        demands: ["predict", "explain"]
+        /*
+         * NO EXPLAIN RUNG, BECAUSE IT HAD NO EXPLAIN QUESTION OF ITS OWN.
+         *
+         * The one it had -- "why does 2 + 3 * 4 display 14?" -- is a precedence
+         * question, and it left with the four multi-operator predict questions
+         * for operator-precedence, which teaches the rule all five turn on. A
+         * concept that teaches one operation at a time has nothing to say about
+         * which operator runs first, so asking a learner to explain it here was
+         * the same defect in a different demand.
+         *
+         * Declaring a rung with no candidate buys a hole in the ladder, which
+         * operatorsTopic.test.ts fails on. Dropping it is the honest shape.
+         */
+        demands: ["predict"]
     },
     {
         id: "expressions-produce-values", topic: "values", label: "Expressions Produce Values",
@@ -607,6 +621,21 @@ export const CONCEPTS: readonly Concept[] = [
         why: "The shorthand every counter and running total is written with. Without it `total = total + n` stays a piece of magic, and the accumulator pattern in loops is unreadable rather than merely new.",
         prerequisites: ["reassignment", "arithmetic-operators"], weight: "core",
         demands: ["predict", "produce"]
+    },
+    {
+        id: "operator-precedence", topic: "operators", label: "Working Out the Order",
+        objective: "work out which operator runs first in a multi-operator expression",
+        meaning: "operators have an order, and brackets override it",
+        why: "Arithmetic taught one operation at a time, which is the right place to start and leaves a gap the moment a line holds two. `2 + 3 * 4` is not read left to right and a learner who assumes it is will be wrong about every expression that mixes operators -- including the conditions `logical-operators` is about, which is why this comes before it rather than after.",
+        prerequisites: ["arithmetic-operators"], weight: "core",
+        /*
+         * PREDICT reads an expression; EXPLAIN says why it came out that way.
+         * Both rungs arrive with questions that already existed and already
+         * carried correct explanations -- they were anchored to a concept that
+         * never taught the rule. Nothing here is newly authored content; it is
+         * the same five questions, finally under the lesson that answers them.
+         */
+        demands: ["predict", "explain"]
     },
     {
         id: "type-coercion", topic: "operators", label: "Predicting Type Coercion",

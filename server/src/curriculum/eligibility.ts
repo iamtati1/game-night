@@ -77,15 +77,23 @@ export function assertContentAlias(alias: string, fn: string): void {
  * state needs to carry something this query cannot derive -- decay, a manual
  * placement, an instructor override. Not before.
  *
- * Three sources of evidence, one derivation. Two are derived from gameplay and
+ * Several sources of evidence, one derivation. Two are derived from gameplay and
  * cost nothing to keep: content -> challenges -> concept. The third is the one
  * fact gameplay cannot produce -- completing a Learn Beat, which is not a dealt
  * unit and has no round row to read. See migration 024 for why that needed a
- * table and why it is three columns wide.
+ * table and why it is three columns wide. The lesson arms follow.
  *
- * Flush, Reaction and Memory contribute nothing yet, the first because
- * flush_snippets carries no challenge_id and the other two because they have no
- * content rows at all.
+ * LESSONS COUNT TOO, through the evidence the lesson flow already writes, each
+ * row keyed to one concept: activity_completions (a lesson rung passed, via its
+ * challenge) and concept_demonstrations (the lesson completed). Before they
+ * were read here, a learner could finish a concept's lesson and Flush and Bug
+ * Hunt would still say they had never met it. Reading them adds no fact and no
+ * table; it stops this derivation disagreeing with CLEARED_RUNGS_CTE, which
+ * already reads activity_completions.
+ *
+ * Reaction and Memory contribute nothing: they have no content rows at all.
+ * Opening or starting a game writes none of these rows, so it cannot make a
+ * concept met -- only a faced unit or a finished lesson step does.
  *
  * ENCOUNTERED, NOT PASSED. A timed-out question and a failed hunt both count.
  * The learner met the concept; whether they got it right is the competence
@@ -141,6 +149,28 @@ export function metConceptsCte(userParam: string): string {
         FROM introduction_completions ic
         JOIN challenges ch ON ch.id = ic.challenge_id
         WHERE ic.user_id = ${userParam}
+
+        UNION
+
+        -- A rung of the concept's lesson passed: a lesson question or bug
+        -- answered correctly (judged server-side by judgeAnswer), a mission
+        -- movement, or a credited Flush round. The same evidence the
+        -- cleared-rung derivation in encounter.ts reads, so a concept whose
+        -- lesson has cleared a rung can no longer read as never met here.
+        -- Keyed on the challenge, so it names exactly one concept.
+        SELECT ch.concept_id
+        FROM activity_completions ac
+        JOIN challenges ch ON ch.id = ac.challenge_id
+        WHERE ac.user_id = ${userParam}
+
+        UNION
+
+        -- The concept's lesson completed. The demonstrate route records this
+        -- only once every playable rung of that one concept is cleared, so it
+        -- is stronger evidence than any arm above, for exactly one concept.
+        SELECT cd.concept_id
+        FROM concept_demonstrations cd
+        WHERE cd.user_id = ${userParam}
     )`;
 }
 

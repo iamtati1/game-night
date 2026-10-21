@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { Planet } from "../world/Planet.js";
 import { Ship, type ShipState } from "../world/Ship.js";
 import { Icon } from "../world/Icon.js";
 import { WorldLandmark } from "../world/Objects.js";
 import { worldFor } from "../world/atlas.js";
-import { LEG, routeSegment, stationAt } from "../world/atlas.js";
-import type { JourneyPathResponse } from "../api/types.js";
+import { LEG, NARROW_LEG, routeSegment, stationAt } from "../world/atlas.js";
+import type { JourneyPathResponse, JourneyTopic } from "../api/types.js";
+import { isNewlyOpen, nextAction, sectionProgress, unlockRequirement } from "../games/progression.js";
+import { ACTION, STATE } from "../vocabulary.js";
+import { LearningProgress } from "../components/LearningProgress.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 /**
  * THE MAP.
  *
@@ -38,19 +42,44 @@ import type { JourneyPathResponse } from "../api/types.js";
 const SHIP_LABEL: Record<ShipState, string> = {
     parked: "docked here",
     learning: "exploring here",
-    challenge: "ready for the launch check",
+    challenge: "ready for the checkpoint",
     departing: "clear to move on"
 };
 
 export function JourneyPage() {
+    usePageTitle("Your journey");
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    // List or map. In the URL rather than in state, so the choice survives a
+    // reload and /journey?view=map opens the map directly.
+    //
+    // THE LIST IS THE DEFAULT. It names every step with its state in words --
+    // complete, your current step, locked and why -- and fits a phone in a
+    // few screens. The map is the same route drawn as worlds: worth having,
+    // but on a phone it was 5,800px tall and a beginner had to read planets to
+    // learn what was done. ?view=progress still opens the list, so older
+    // links keep working.
+    const [params, setParams] = useSearchParams();
+    const view = params.get("view") === "map" ? "map" : "progress";
+    const showView = (v: "map" | "progress") =>
+        setParams(v === "progress" ? {} : { view: v }, { replace: true });
 
     // The travelled road's length in user units, measured from the DOM. The
     // dash animation needs a real number and only the browser knows it; the
     // ref-and-measure is the one thing on this page CSS genuinely cannot do.
     const doneRef = useRef<SVGPathElement | null>(null);
     const [roadLength, setRoadLength] = useState(0);
+
+    // The leg follows the screen: see NARROW_LEG. The same 52rem breakpoint the
+    // stylesheet uses to put each caption under its world.
+    const narrow = useNarrow();
+    const leg = narrow ? NARROW_LEG : LEG;
+
+    // The open world's steps scroll inside their callout, which is held to one
+    // leg so it cannot reach the next world. The current step is scrolled into
+    // view so the one thing to do is never below the fold of the list.
+    const stopsRef = useRef<HTMLOListElement | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -83,7 +112,15 @@ export function JourneyPage() {
         if (el && typeof el.getTotalLength === "function") {
             setRoadLength(el.getTotalLength());
         }
-    }, [path]);
+        // Re-measured when the map comes back into view, or the leg changes:
+        // the road is only in the DOM while it is shown.
+
+        const list = stopsRef.current;
+        const current = list?.querySelector<HTMLElement>(".is-current");
+        if (list && current) {
+            list.scrollTop = Math.max(0, current.offsetTop - list.clientHeight / 2);
+        }
+    }, [path, view, leg]);
 
     if (error) {
         return (
@@ -114,7 +151,7 @@ export function JourneyPage() {
         return lastDone === -1 ? 0 : lastDone;
     })();
 
-    const height = stationAt(Math.max(0, topics.length - 1)).y + LEG * 0.55;
+    const height = stationAt(Math.max(0, topics.length - 1), leg).y + leg * 0.55;
 
     /**
      * What the craft is doing, read off the curriculum rather than stored.
@@ -138,47 +175,81 @@ export function JourneyPage() {
     // The single next step, whether concept or checkpoint. Computed from the
     // same path the map renders, so the button and the lit world can never
     // point at different things.
-    const currentChallenge = topics.find((t) => t.challenge?.state === "current");
-    const next = currentChallenge
-        ? {
-              name: `${currentChallenge.name} checkpoint`,
-              href: `/challenge/${currentChallenge.slug}`,
-              label: "Take the checkpoint"
-          }
-        : path.current
-          ? { name: path.current.name, href: `/concept/${path.current.slug}`, label: "Continue" }
-          : null;
+    const step = nextAction(path);
+    const next = step
+        ? { name: step.name, href: step.href, label: step.kind === "checkpoint" ? ACTION.takeCheckpoint : ACTION.continueLearning }
+        : null;
+
+    // Steps or Map. On the steps view it sits under the next step, so the
+    // next action is the first thing below the heading; on the map, where the
+    // header carries the button, it stays in the header.
+    const views = (
+        <div className="journey-views" role="group" aria-label="How to show your journey">
+            <button
+                type="button"
+                className="journey-view"
+                aria-pressed={view === "progress"}
+                onClick={() => showView("progress")}
+            >
+                Steps
+            </button>
+            <button
+                type="button"
+                className="journey-view"
+                aria-pressed={view === "map"}
+                onClick={() => showView("map")}
+            >
+                Map
+            </button>
+        </div>
+    );
 
     return (
         <section className="journey">
             <header className="journey-head">
-                <p className="journey-eyebrow">Your course</p>
-                <h1 className="journey-title">The JavaScript system</h1>
+                <p className="journey-eyebrow">Your journey</p>
+                <h1 className="journey-title">Learning JavaScript, step by step</h1>
 
                 {/* What the learner can DO, not how many questions they
                     answered. Two facts, and both are things you would say out
-                    loud about yourself. */}
-                <p className="journey-legend">
-                    <span className="journey-chip">
-                        <Icon name="spark" size={16} />
-                        <b>{path.points.total}</b> points
-                    </span>
-                    <span className="journey-chip">
-                        <Icon name="check" size={16} />
-                        <b>{path.points.concepts}</b>{" "}
-                        {path.points.concepts === 1 ? "thing you can do" : "things you can do"}
-                    </span>
-                </p>
-
-                {next ? (
-                    <Link className="button primary big" to={next.href}>
-                        {next.label} — {next.name}
-                    </Link>
-                ) : (
-                    <p className="muted">Every world on the route is behind you.</p>
+                    loud about yourself. Not shown before the first concept is
+                    done, where it would be a row of zeros -- as on Home. */}
+                {path.points.concepts > 0 && (
+                    <p className="journey-legend">
+                        <span className="journey-chip">
+                            <Icon name="spark" size={16} />
+                            <b>{path.points.total}</b> points
+                        </span>
+                        <span className="journey-chip">
+                            <Icon name="check" size={16} />
+                            <b>{path.points.concepts}</b>{" "}
+                            {path.points.concepts === 1 ? "thing you can do" : "things you can do"}
+                        </span>
+                    </p>
                 )}
+
+                {/* The path view carries its own next step, with what it
+                    moves forward; one primary action per screen. */}
+                {view === "map" &&
+                    (next ? (
+                        <Link className="button primary big" to={next.href}>
+                            {next.label}: {next.name}
+                        </Link>
+                    ) : (
+                        <p className="muted">Every world on the route is behind you.</p>
+                    ))}
+
+                {view === "map" && views}
             </header>
 
+            {view === "progress" && (
+                <>
+                    <LearningProgress path={path} next={next} afterNext={views} />
+                    {!next && <p className="muted center">Every world on the route is behind you.</p>}
+                </>
+            )}
+
+            {view === "map" && (
             <div className="journey-map" style={{ height }}>
                 <svg
                     className="journey-route"
@@ -201,14 +272,14 @@ export function JourneyPage() {
                         horizontally to fill the container. */}
                     <path
                         className="journey-road-todo"
-                        d={routeSegment(hereIndex, topics.length - 1)}
+                        d={routeSegment(hereIndex, topics.length - 1, leg)}
                         vectorEffect="non-scaling-stroke"
                     />
 
                     <path
                         ref={doneRef}
                         className="journey-road-done"
-                        d={routeSegment(0, hereIndex)}
+                        d={routeSegment(0, hereIndex, leg)}
                         vectorEffect="non-scaling-stroke"
                     />
 
@@ -218,7 +289,7 @@ export function JourneyPage() {
                     {roadLength > 0 && (
                         <path
                             className="journey-road-pulse"
-                            d={routeSegment(0, hereIndex)}
+                            d={routeSegment(0, hereIndex, leg)}
                             vectorEffect="non-scaling-stroke"
                             style={
                                 {
@@ -231,7 +302,7 @@ export function JourneyPage() {
                 </svg>
 
                 {topics.map((topic, i) => {
-                    const at = stationAt(i);
+                    const at = stationAt(i, leg);
                     const state =
                         topic.state === "complete"
                             ? "visited"
@@ -258,7 +329,7 @@ export function JourneyPage() {
                                     size={40}
                                     rotate={24}
                                     state={shipState}
-                                    label={`Your craft — ${SHIP_LABEL[shipState]}`}
+                                    label={`Your craft: ${SHIP_LABEL[shipState]}`}
                                 />
                             )}
 
@@ -266,11 +337,11 @@ export function JourneyPage() {
                                 slug={topic.slug}
                                 state={state}
                                 size={here ? 104 : 74}
-                                label={`${topic.name} — ${
+                                label={`${topic.name}: ${
                                     state === "visited"
                                         ? "behind you"
                                         : here
-                                          ? "you are here"
+                                          ? STATE.here.toLowerCase()
                                           : "ahead"
                                 }`}
                             />
@@ -288,12 +359,23 @@ export function JourneyPage() {
                                 would be an empty room. */}
                             {here && (
                                 <Link className="journey-enter" to={`/world/${topic.slug}`}>
-                                    Go down
+                                    Open topic
                                 </Link>
                             )}
 
                             <div className="journey-caption">
-                                <p className="journey-name">{topic.name}</p>
+                                <p className="journey-name">
+                                    {topic.name}
+                                    {/* Stated in words and kept on the page.
+                                        A colour change or a one-shot animation
+                                        is gone by the time a first-time player
+                                        looks up, and says nothing to anyone
+                                        reading with a screen reader. It clears
+                                        itself once they finish a concept here. */}
+                                    {isNewlyOpen(topic) && (
+                                        <span className="journey-new">Newly open</span>
+                                    )}
+                                </p>
 
                                 {state === "visited" && (
                                     <span className="journey-meta">
@@ -301,9 +383,34 @@ export function JourneyPage() {
                                     </span>
                                 )}
 
+                                {/* OPEN IS A STATE TOO, and until now the only
+                                    one the map never named. A locked world said
+                                    why it was locked and a charted one said it
+                                    was charted; the world you can actually walk
+                                    into said nothing at all once the "newly
+                                    open" marker had cleared, which left the
+                                    learner to infer from an absence. Counted
+                                    from the same path everything else here is
+                                    drawn from. */}
+                                {/* THE SECTION'S PROGRESS, always, for the
+                                    world you are in -- including the moment it
+                                    opens, which is exactly when a beginner
+                                    needs to see what the section asks of them.
+                                    Demonstrated concepts and the checkpoint,
+                                    from the same path the unlock text reads. */}
+                                {here && <SectionProgressRead topic={topic} />}
+
+                                {/* WHAT, NOT JUST WHETHER. A padlock says "not
+                                    yet" and leaves the learner to work out the
+                                    rest by playing and watching. The requirement
+                                    is derived from the same path the map is
+                                    drawn from -- see games/progression.ts -- so
+                                    it cannot disagree with the gate it
+                                    describes. */}
                                 {state === "ahead" && (
                                     <span className="journey-meta">
-                                        <Icon name="lock" size={13} /> unexplored
+                                        <Icon name="lock" size={13} />{" "}
+                                        {unlockRequirement(topics, topic.slug) ?? "unexplored"}
                                     </span>
                                 )}
                             </div>
@@ -313,7 +420,9 @@ export function JourneyPage() {
                                 exists to get rid of. */}
                             {here && (
                                 <ol
+                                    ref={stopsRef}
                                     className={`journey-stops ${at.x > 50 ? "opens-left" : "opens-right"}`}
+                                    style={{ maxHeight: `calc(${leg}px - 1.5rem)` }}
                                 >
                                     {topic.concepts.map((concept) => (
                                         <li
@@ -333,9 +442,19 @@ export function JourneyPage() {
                                             {concept.state === "current" ? (
                                                 <Link to={`/concept/${concept.slug}`}>
                                                     {concept.name}
+                                                    <span className="visually-hidden">
+                                                        {" "}(your current step)
+                                                    </span>
                                                 </Link>
                                             ) : (
-                                                <span>{concept.name}</span>
+                                                <span>
+                                                    {concept.name}
+                                                    <span className="visually-hidden">
+                                                        {concept.state === "demonstrated"
+                                                            ? " (complete)"
+                                                            : " (locked: finish the steps above first)"}
+                                                    </span>
+                                                </span>
                                             )}
 
                                             {/* WHAT THE GAME ALREADY DID.
@@ -384,9 +503,19 @@ export function JourneyPage() {
                                             {topic.challenge.state === "current" ? (
                                                 <Link to={`/challenge/${topic.slug}`}>
                                                     {topic.name} checkpoint
+                                                    <span className="visually-hidden">
+                                                        {" "}(your current step)
+                                                    </span>
                                                 </Link>
                                             ) : (
-                                                <span>{topic.name} checkpoint</span>
+                                                <span>
+                                                    {topic.name} checkpoint
+                                                    <span className="visually-hidden">
+                                                        {topic.challenge.state === "demonstrated"
+                                                            ? " (complete)"
+                                                            : " (locked: finish the concepts above first)"}
+                                                    </span>
+                                                </span>
                                             )}
                                         </li>
                                     )}
@@ -396,6 +525,53 @@ export function JourneyPage() {
                     );
                 })}
             </div>
+            )}
         </section>
     );
+}
+
+/** One section's progress: a bar and the sentence that says the same thing. */
+function SectionProgressRead({ topic }: { topic: JourneyTopic }) {
+    const progress = sectionProgress(topic);
+    const percent = progress.steps === 0 ? 0 : Math.round((progress.stepsDone / progress.steps) * 100);
+
+    return (
+        <span className="journey-progress">
+            <span
+                className="journey-progress-bar"
+                role="progressbar"
+                aria-label={`${topic.name} progress`}
+                aria-valuemin={0}
+                aria-valuemax={progress.steps}
+                aria-valuenow={progress.stepsDone}
+                aria-valuetext={progress.label}
+            >
+                <span className="journey-progress-fill" style={{ width: `${percent}%` }} />
+            </span>
+            <span className="journey-meta">{progress.label}</span>
+        </span>
+    );
+}
+
+/**
+ * Whether the screen is at or below the stylesheet's 52rem breakpoint.
+ *
+ * jsdom has no matchMedia, so tests render the wide geometry -- the one the
+ * map's route assertions are written against.
+ */
+function useNarrow(): boolean {
+    const query = "(max-width: 52rem)";
+    const [narrow, setNarrow] = useState(
+        () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches
+    );
+
+    useEffect(() => {
+        if (typeof window.matchMedia !== "function") return;
+        const media = window.matchMedia(query);
+        const update = () => setNarrow(media.matches);
+        media.addEventListener("change", update);
+        return () => media.removeEventListener("change", update);
+    }, []);
+
+    return narrow;
 }

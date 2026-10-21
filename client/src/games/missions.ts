@@ -94,7 +94,7 @@ export const VARIABLES_MISSION: Mission = {
         {
             concept: "reading-variables",
             demand: "apply",
-            brief: "The board is blank. Make it read exactly `Fuel: 100` — using the name, not the number.",
+            brief: "The board is blank. Make it read exactly `Fuel: 100`, using the name, not the number.",
             starter: 'let fuel = 100;\nconsole.log(___);',
             after: "The message asked `fuel` what it held. It did not contain 100 itself.",
             check: (run) => {
@@ -109,7 +109,7 @@ export const VARIABLES_MISSION: Mission = {
                 // said BEFORE the output is praised, so the learner does not
                 // read "correct" and stop.
                 if (printed === "Fuel: 100" && !usedAName) {
-                    return "That is the right output — but `100` is typed straight into the message. Use the name `fuel` instead of the number.";
+                    return "That is the right output, but `100` is typed straight into the message. Use the name `fuel` instead of the number.";
                 }
 
                 if (!usedAName) return "Use the name `fuel` inside `console.log`.";
@@ -125,7 +125,7 @@ export const VARIABLES_MISSION: Mission = {
         {
             concept: "reassignment",
             demand: "apply",
-            brief: "Burn some fuel. Make the board read `Fuel: 50` — change the value, not the message.",
+            brief: "Burn some fuel. Make the board read `Fuel: 50`. Change the value, not the message.",
             starter: 'let fuel = 100;\nconsole.log("Fuel: " + fuel);',
             after: "One number changed and the message followed. That is what naming a value buys you.",
             check: (run, source) => {

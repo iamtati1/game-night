@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { play } from "../games/sound.js";
+import { withCode } from "../components/CodeText.js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { activeGameFrom } from "../api/types.js";
@@ -9,18 +11,27 @@ import type {
     ServedQuestion,
     StartSessionResponse,
     Introduction,
-    IntroductionResponse
+    IntroductionResponse,
+    JourneyPathResponse
 } from "../api/types.js";
+import { LearningBridge } from "../components/LearningBridge.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
+import { PaceChoice } from "../components/PaceChoice.js";
+import { usePace } from "../games/usePace.js";
+import { startGame } from "../vocabulary.js";
 import { PausedRun } from "../components/PausedRun.js";
 import { GetReady } from "../components/GetReady.js";
 import { learnBeatFor, learnBeatForConcept, type LearnBeat } from "../games/learnBeats.js";
+import { lessonFor, plainIdea } from "../games/lessons.js";
 import { CODE_BLITZ, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { splitPrompt } from "../games/prompt.js";
+import { HighlightedCode } from "../components/HighlightedCode.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
 const QUESTION_TIME_LIMIT_MS = 18_000;
 /**
  * A lapse still auto-advances, and only a lapse.
@@ -253,6 +264,7 @@ function Assembly({
 }
 
 export function GamePage() {
+    usePageTitle("Code Blitz");
     const navigate = useNavigate();
     // ?focus=variables asks the dealer for an introduction slot and a
     // reinforcement slot on that unit. Absent, Code Blitz deals exactly as
@@ -268,6 +280,19 @@ export function GamePage() {
      * makes its practice content eligible to be dealt.
      */
     const [introduction, setIntroduction] = useState<Introduction | null>(null);
+    /**
+     * The concept the curriculum says this learner is on, for the bridge at the
+     * entrance. Read from the same /api/curriculum/path the map and Home read,
+     * so the three cannot disagree about what the learner is learning.
+     *
+     * Separate from `introduction`, which is only non-null while a Learn Beat
+     * is actually due. The bridge has to work on the fifth round of a concept
+     * as well as the first.
+     */
+    const [currentConcept, setCurrentConcept] = useState<{
+        name: string;
+        objective: string;
+    } | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [paused, setPaused] = useState(false);
     /** Counting in after Resume. The session is only resumed once the count
@@ -300,6 +325,7 @@ export function GamePage() {
      */
     const [countingIn, setCountingIn] = useState(false);
     const [beginning, setBeginning] = useState(false);
+    const [timed, setTimed] = usePace();
     /**
      * Consecutive correct answers in this run.
      *
@@ -315,6 +341,22 @@ export function GamePage() {
     const [pendingAdvance, setPendingAdvance] = useState<
         { complete: boolean; sessionId: string | null } | null
     >(null);
+    /**
+     * Focus lands on Next once feedback is up. Browser QA: it stayed on the
+     * page body, so a keyboard learner had nothing focused to act on (the
+     * global Enter handler worked, but nothing said so). Safe with that
+     * handler: it calls preventDefault on Enter and Space, which cancels the
+     * button's own click, so one press still advances exactly once.
+     */
+    const nextRef = useRef<HTMLButtonElement | null>(null);
+
+
+    // Leaving mid-run pauses it, so the clock stops and the run waits for
+    // Resume -- see usePauseOnLeave.
+    usePauseOnLeave(CODE_BLITZ, entered && sessionId !== null && question !== null && !paused && !resuming && !pendingAdvance?.complete);
+    useEffect(() => {
+        if (pendingAdvance) nextRef.current?.focus();
+    }, [pendingAdvance]);
     /** The worked example to show before the run, when one applies. */
     const [learning, setLearning] = useState(false);
     /** Option ids placed into the gap, in the order the player placed them.
@@ -346,15 +388,7 @@ export function GamePage() {
      */
     const learnBeat: LearnBeat | null =
         learnBeatForConcept(introduction?.conceptSlug ?? null) ??
-        (introduction
-            ? {
-                  topic: introduction.topicSlug,
-                  title: introduction.conceptName,
-                  code: "",
-                  output: "",
-                  rule: introduction.meaning
-              }
-            : learnBeatFor(focusTopic));
+        (introduction ? beatFromLesson(introduction) : learnBeatFor(focusTopic));
 
     // Guards against the countdown firing while an answer is already in flight
     // or feedback is on screen.
@@ -444,6 +478,9 @@ export function GamePage() {
             setSessionId(data.sessionId ?? null);
             setQuestion(data.question ?? null);
             setRunningScore(data.scoreSoFar ?? 0);
+            // Without this, resuming a run that was paused before a reload
+            // showed the intro instead of the question.
+            setEntered(true);
             setPausedInfo(null);
             setPaused(false);
             setResuming(false);
@@ -509,6 +546,11 @@ export function GamePage() {
                 }
 
                 if (current.question) {
+                    // The run's id as well as its question. Browser QA: after a
+                    // reload mid-run this was never set, and submit() returns
+                    // early without one -- so no answer, by key or click, did
+                    // anything, and an untimed question could never be left.
+                    setSessionId(current.sessionId ?? null);
                     setQuestion(current.question);
                     setRunningScore(current.scoreSoFar ?? 0);
                     setEntered(true);
@@ -538,6 +580,23 @@ export function GamePage() {
                 setIntroduction(next.introduction);
             } catch {
                 // Play on without an introduction.
+            }
+
+            // The bridge's other end. Failure is silent for the same reason:
+            // not knowing what to say about the concept must never stop
+            // someone playing.
+            try {
+                const path = await api.get<JourneyPathResponse>("/api/curriculum/path");
+
+                if (!active) return;
+
+                setCurrentConcept(
+                    path.current
+                        ? { name: path.current.name, objective: path.current.objective }
+                        : null
+                );
+            } catch {
+                // The entrance renders without it.
             }
         })();
 
@@ -579,10 +638,12 @@ export function GamePage() {
         setBeginning(true);
 
         try {
-            const data = await api.post<StartSessionResponse>(
-                "/api/sessions",
-                focusTopic ? { focusTopic } : undefined
-            );
+            // The pace is chosen here, once, for a new run. Resume (handleResume)
+            // sends nothing: a resumed run keeps the pace it was dealt with.
+            const data = await api.post<StartSessionResponse>("/api/sessions", {
+                ...(focusTopic ? { focusTopic } : {}),
+                relaxed: !timed
+            });
 
             if (data.session) {
                 finish(data.session.id);
@@ -629,7 +690,7 @@ export function GamePage() {
             // failure the conflict and error gates above this one do.
             setCountingIn(false);
         }
-    }, [finish]);
+    }, [finish, timed]);
 
     /**
      * Fetches the next question and starts its clock.
@@ -671,6 +732,7 @@ export function GamePage() {
             setFeedback(null);
 
             if (pending.complete) {
+                play("complete", pending.sessionId ?? undefined);
                 finish(pending.sessionId ?? "");
                 return;
             }
@@ -708,6 +770,7 @@ export function GamePage() {
                 pointsAwarded: result.pointsAwarded,
                 selectedOptionId: null
             });
+            play(result.outcome === "correct" ? "correct" : "incorrect", question.sessionQuestionId);
             setPendingAdvance({
                 complete: result.complete,
                 sessionId: result.session?.id ?? sessionId
@@ -742,6 +805,8 @@ export function GamePage() {
                 pointsAwarded: result.pointsAwarded,
                 selectedOptionId: optionId
             });
+            // With the words already on screen; the sound only adds to them.
+            play(result.outcome === "correct" ? "correct" : "incorrect", question.sessionQuestionId);
 
             // Stop here. `settling.current` stays true until the player advances,
             // which is what keeps the expiry handler from firing underneath the
@@ -758,12 +823,63 @@ export function GamePage() {
         }
     }
 
-    // When the clock runs out, ask the server for the current question. It
-    // adjudicates the expired one as timed_out and hands back the next.
+    /*
+     * WHEN THE CLOCK RUNS OUT, ASK FOR THE ANSWER, NOT THE NEXT QUESTION.
+     *
+     * UX audit: a timeout showed "Time's up" with no answer and no reason for
+     * 1.4 seconds, then moved on -- so the questions a learner ran out of time
+     * on were the only ones that taught nothing.
+     *
+     * The answer route already handles this. Sent with NO selected option, it
+     * either adjudicates the question as timed out -- recording nothing the
+     * learner chose, and returning the correct answer and the explanation
+     * without serving the next question -- or, if the server's own deadline has
+     * not quite passed, refuses with a 400 and records nothing at all. So this
+     * asks, waits briefly on a 400, and asks again. The learner then reads the
+     * answer and presses Next, exactly as after a wrong answer, and the next
+     * question's clock starts then rather than during the dwell.
+     *
+     * If that cannot be done, the old path below still runs: it learns of the
+     * lapse from GET /api/sessions/current, which carries no answer, so none is
+     * shown.
+     */
     const onExpire = useCallback(async () => {
         if (settling.current) return;
 
         settling.current = true;
+
+        if (sessionId && question) {
+            for (let tries = 0; tries < 4; tries++) {
+                try {
+                    const result = await api.post<AnswerResponse>(`/api/sessions/${sessionId}/answers`, {
+                        sessionQuestionId: question.sessionQuestionId
+                    });
+
+                    if (result.outcome !== "timed_out") break;
+
+                    setRunningScore(result.scoreSoFar);
+                    setBeat((n) => n + 1);
+                    setStreak(0);
+                    play("incorrect", `timeout:${question.sessionQuestionId}`);
+                    setFeedback({
+                        outcome: "timed_out",
+                        correctOption: result.correctOption,
+                        explanation: result.explanation,
+                        pointsAwarded: 0,
+                        selectedOptionId: null
+                    });
+                    setPendingAdvance({
+                        complete: result.complete,
+                        sessionId: result.session?.id ?? sessionId
+                    });
+                    return;
+                } catch (err) {
+                    // Only "not expired yet" is worth waiting out.
+                    if (!(err instanceof ApiError && err.status === 400) || tries === 3) break;
+                    await new Promise<void>((resolve) => later(resolve, 500));
+                }
+            }
+        }
 
         try {
             const data = await api.get<CurrentQuestionResponse>("/api/sessions/current");
@@ -803,7 +919,7 @@ export function GamePage() {
             settling.current = false;
             setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
         }
-    }, [finish]);
+    }, [finish, sessionId, question, later]);
 
     // Number keys 1-4 answer the question -- it is called Blitz for a reason.
     useEffect(() => {
@@ -910,29 +1026,41 @@ export function GamePage() {
         if (learning && learnBeat) {
             return (
                 <section className="game blitz learn-beat">
+                    {/* The concept's name, unless the title already is it (a beat
+                        built from the lesson): saying it twice says nothing. */}
                     <p className="learn-eyebrow">
-                        First up · {introduction?.conceptName ?? learnBeat.topic}
+                        {(introduction?.conceptName ?? learnBeat.topic) === learnBeat.title
+                            ? "New idea"
+                            : `New idea · ${introduction?.conceptName ?? learnBeat.topic}`}
                     </p>
                     <h1 className="learn-title">{learnBeat.title}</h1>
 
+                    {/* UNDERSTAND, THEN SEE. The idea in one plain sentence
+                        first, so the example has something to show; then the
+                        example, its output, and what happened in it. */}
+                    <p className="learn-rule">{learnBeat.rule}</p>
+
                     {learnBeat.code && (
                         <>
-                            <pre className="learn-code">{learnBeat.code}</pre>
+                            <pre className="learn-code"><HighlightedCode code={learnBeat.code} /></pre>
 
-                            <p className="learn-output">
-                                <span className="learn-arrow">prints</span> {learnBeat.output}
-                            </p>
+                            {learnBeat.output && (
+                                <p className="learn-output">
+                                    <span className="learn-arrow">prints</span>{" "}
+                                    <span className="learn-output-value">{learnBeat.output}</span>
+                                </p>
+                            )}
+
+                            {learnBeat.note && <p className="learn-note">{learnBeat.note}</p>}
                         </>
                     )}
-
-                    <p className="learn-rule">{learnBeat.rule}</p>
 
                     <button
                         type="button"
                         className="button primary"
                         onClick={() => void acknowledge()}
                     >
-                        Got it — try one
+                        Got it. Try one
                     </button>
                 </section>
             );
@@ -943,23 +1071,18 @@ export function GamePage() {
         }
 
         return (
-            <GameIntro
+                <GameIntro
                 eyebrow="Code Blitz"
                 title="Read it. Call it."
-                lede={
-                    <>
-                        A snippet of JavaScript appears. Work out what it logs,
-                        <br />
-                        then pick the answer before the clock runs out.
-                        <br />
-                        Questions start on the fundamentals and get harder as you go.
-                    </>
-                }
-                shape="10 questions · 18s each · difficulty climbs"
+                counts="course"
+                focus={<LearningBridge concept={currentConcept} />}
+                lede="Read a short piece of JavaScript and pick what it prints. Questions get harder as you go."
+                shape={`10 questions · ${timed ? "18 seconds each" : "no timer"}`}
+                pace={<PaceChoice timed={timed} onChange={setTimed} clock="18 seconds a question" />}
                 busy={beginning}
                 onStart={() => (learnBeat ? setLearning(true) : setCountingIn(true))}
-                startLabel="Start blitz"
-            />
+                startLabel={startGame("Code Blitz")}
+                />
         );
     }
 
@@ -1026,8 +1149,11 @@ export function GamePage() {
              * server decides which beats these are -- the client only honours
              * a null deadline.
              */}
+            {/* A relaxed run says so once, on its intro: repeating "no timer" on
+                all ten questions was noise. An untimed opening beat inside a
+                timed run still says why the clock is missing. */}
             {question.deadlineAt === null ? (
-                <p className="untimed-note">No timer on this one — take your time.</p>
+                !question.relaxed && <p className="untimed-note">No timer on this one: take your time.</p>
             ) : (
                 <Countdown
                     deadlineAt={question.deadlineAt}
@@ -1061,7 +1187,7 @@ export function GamePage() {
                             {question.practisingNow && (
                                 <p className="ask-practising">
                                     <span className="ask-practising-dot" aria-hidden="true" />
-                                    What you are learning ·{" "}
+                                    Practicing{" "}
                                     <strong>{question.practisingNow.conceptName}</strong>
                                 </p>
                             )}
@@ -1070,7 +1196,7 @@ export function GamePage() {
                                 at reading size -- monospace was making prose look
                                 like output the player had to parse. */}
                             <h1 className="ask">{ask}</h1>
-                            {code && <pre className="prompt">{code}</pre>}
+                            {code && <pre className="prompt"><HighlightedCode code={code} /></pre>}
                         </>
                     );
                 })()}
@@ -1117,13 +1243,18 @@ export function GamePage() {
                     <p className="tag correct">Correct · +{feedback.pointsAwarded}</p>
                 )}
                 {feedback?.outcome === "incorrect" && (
-                    <p className="tag incorrect">Not quite — {feedback.correctOption}</p>
+                    <p className="tag incorrect">Not quite: {feedback.correctOption}</p>
                 )}
-                {/* No answer is named here on purpose: the timeout path learns of the
-                    lapse from GET /api/sessions/current, whose response does not carry
-                    the expired question's answer. Naming one would mean inventing it. */}
+                {/* The answer is named only when the server sent it. The fallback
+                    timeout path learns of the lapse from GET /api/sessions/current,
+                    whose response does not carry it, and naming one would mean
+                    inventing it. */}
                 {feedback?.outcome === "timed_out" && (
-                    <p className="tag timeout lapsed-tag">Time&rsquo;s up</p>
+                    <p className="tag timeout lapsed-tag">
+                        {feedback.correctOption
+                            ? `Time\u2019s up: the answer was ${feedback.correctOption}`
+                            : "Time’s up"}
+                    </p>
                 )}
                 {/* The reason, when the question carries one. This is the whole
                     point of the bank: a player who got it wrong should leave the
@@ -1131,17 +1262,19 @@ export function GamePage() {
                 {/* An assembly answer is a sequence, so "not quite -- X" does not
                     tell the player much. Showing both rows and marking where they
                     first diverge names the one token that cost them the answer. */}
-                {feedback && question.challengeType === "complete-code" && (
+                {/* Not on a timeout: nothing was submitted, so there is no
+                    "you built" to set beside the answer. */}
+                {feedback && feedback.outcome !== "timed_out" && question.challengeType === "complete-code" && (
                     <AssemblyVerdict
                         built={placed.map((id) => question.options.find((o) => o.id === id)?.text ?? "")}
                         correct={feedback.correctOption}
                     />
                 )}
                 {feedback?.explanation && (
-                    <p className="feedback-why">{feedback.explanation}</p>
+                    <p className="feedback-why">{withCode(feedback.explanation)}</p>
                 )}
                 {pendingAdvance && (
-                    <button type="button" className="button primary next-beat" onClick={advance}>
+                    <button type="button" ref={nextRef} className="button primary next-beat" onClick={advance}>
                         {pendingAdvance.complete ? "See results" : "Next"}
                         <span className="next-hint">Enter</span>
                     </button>
@@ -1149,4 +1282,36 @@ export function GamePage() {
             </div>
         </section>
     );
+}
+
+/**
+ * The Learn Beat for a concept with no hand-written beat: the first worked
+ * example from the concept's own lesson.
+ *
+ * The beat used to fall back to the concept's one-line meaning alone -- a name
+ * and a sentence, with no code -- so the "see it" step of understand, see, try
+ * was missing for every concept but the few with an authored beat. Every lesson
+ * already opens with a worked example and its real output, written for exactly
+ * this learner at exactly this point; the beat shows that. A concept without a
+ * lesson keeps the meaning on its own, as before.
+ */
+function beatFromLesson(introduction: {
+    conceptSlug: string;
+    conceptName: string;
+    topicSlug: string;
+    meaning: string;
+}): LearnBeat {
+    const lesson = lessonFor(introduction.conceptSlug);
+    const example = lesson?.teach.find((block) => block.code.trim() !== "");
+    return {
+        topic: introduction.topicSlug,
+        title: introduction.conceptName,
+        code: example?.code ?? "",
+        output: example?.output ?? "",
+        // The lesson's "notice" before the curriculum's one-line meaning: the
+        // notice is written for this learner at this point, while the meaning
+        // is a definition and can use words not taught yet ("its arguments").
+        rule: plainIdea(introduction.conceptSlug, introduction.meaning),
+        note: example?.note
+    };
 }

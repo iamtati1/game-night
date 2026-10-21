@@ -115,7 +115,11 @@ describe("the briefings say what the player is in for", () => {
         const SAYS_ITS_LENGTH: Record<string, RegExp> = {
             "Code Blitz": /10 questions/,
             Flush: /5 rounds/,
-            "Bug Hunt": /<dt>Incidents<\/dt>[\s\S]{0,40}<dd>10<\/dd>/,
+            // The count is a constant, pinned to the server's own value in
+            // BugHuntPage.test.tsx -- the literal "10" here was itself wrong
+            // (the server deals six), which is how the briefing drifted.
+            // "Up to": a learner with fewer bugs open is dealt a shorter run.
+            "Bug Hunt": /<dt>Incidents<\/dt>[\s\S]{0,40}<dd>Up to \{INCIDENTS_PER_HUNT\}<\/dd>/,
             Reaction: /5 rounds/,
             Memory: /5 rounds/
         };

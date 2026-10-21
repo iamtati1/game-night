@@ -37,29 +37,34 @@ BEGIN
     FROM challenges ch, concepts c, topics t
     WHERE q.challenge_id = ch.id AND ch.concept_id = c.id AND c.topic_id = t.id
       AND t.slug = 'variables'
-      AND q.prompt LIKE p_like;
+      AND q.prompt LIKE p_like
+      -- Fill, never overwrite. The fragments also match questions added or
+      -- rewritten after this file (029's replacements, 078's diagnostics), and
+      -- an unguarded re-run gave those the explanation of a different question.
+      AND q.explanation IS NULL;
 END;
 $$;
 
 -- variables-name-values · a name stands for a value
-SELECT explain('%let ship = "Aurora"%',
+SELECT explain('%let ship = "Aurora";
+console.log(ship)%',
     'The name `ship` stands for the value `"Aurora"`. Logging the name prints what it holds, not the letters s-h-i-p. The quotes were only how the text was written in the code, so they are not printed.');
 SELECT explain('%let port = "Mars"%',
     'The line `let home = port;` copies whatever `port` holds at that moment, which is `"Mars"`. Both names now stand for the same text, so logging either one prints `Mars`.');
 SELECT explain('%let bays = 4%',
-    'The `+` joins the text `"Bays: "` to the value `bays` holds. Because `bays` is a name rather than text, JavaScript uses the `4`.');
+    'The name `bays` stands for the value 4. Writing the name without quotes looks up what it holds.');
 
 -- declaration · bringing a name into existence
 SELECT explain('%let cargo = 12%',
     'Declaring `cargo2` from `cargo` gives it the value `cargo` holds at that moment: `12`. It copies the value, never the name.');
-SELECT explain('%let a = 3;%',
-    'Both names are read first, so `a * b` becomes `3 * 4`. The two numbers are multiplied, which is why the digits are never placed side by side.');
-SELECT explain('%let first = "Nova"%',
-    'Three pieces are joined in order: `"Nova"`, then a single space, then `"Drift"`. The space is its own piece of text, which is what keeps the two words apart.');
+SELECT explain('%let backup = ship;%',
+    'Declaring `backup` from `ship` gives it whatever `ship` holds at that moment. A second name can be brought into existence from a first.');
+SELECT explain('%let spare = 2;%',
+    'Two names were declared, each holding its own value. Logging one of them shows only that one.');
 
 -- initialization · a name with a value from the start
 SELECT explain('%let crew = 3%',
-    'Starting `crew` at `3` means the name holds that number straight away. Joining it to `"Crew: "` uses the value, so the output ends in the digit rather than the word crew.');
+    'The name was created and given 3 in the same line, so it already holds a value by the time it is logged.');
 
 -- assignment · the right side is worked out first
 SELECT explain('%let total = 5%',
@@ -87,15 +92,13 @@ SELECT explain('%let city = "Lagos"%',
     'The second line replaces the text the name holds. Nothing joins the two, so the old value is simply gone.');
 
 -- let-vs-const · what const actually refuses
-SELECT explain('%const crew = 5;
-console.log(crew)%',
-    'A `const` still holds a value and can still be read. What it refuses is being given a different value later on.');
+SELECT explain('%const total = 10;%',
+    'A `const` name cannot be given a different value, and that includes building the new value out of the old one. The second line fails, so nothing is printed.');
 SELECT explain('%const crew = 5;
 crew = 6%',
     'A `const` name cannot be given a new value. The attempt on the second line fails, so the program stops there and never reaches the log.');
-SELECT explain('%let crew = 5;
-crew = 6%',
-    'A `let` name can be given a new value, so the second line succeeds where a `const` would have stopped the program. The name then holds `6`.');
+SELECT explain('%let seats = 4;%',
+    'Only `seats` was changed, and it was declared with `let`, which allows that. Declaring `rows` as `const` nearby does not stop a different name from changing.');
 
 -- variable-state · values as they are NOW
 SELECT explain('%let fuel = 100;

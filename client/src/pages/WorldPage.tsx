@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ConceptSteps } from "../components/ConceptSteps.js";
 import { ApiError, api } from "../api/client.js";
 import { Planet } from "../world/Planet.js";
 import { Ship } from "../world/Ship.js";
 import { Icon } from "../world/Icon.js";
-import { ConceptObject } from "../world/ConceptObject.js";
-import { orbitFor, topicWarmth } from "../world/orbits.js";
-import { practiceFor } from "../games/practice.js";
+import { topicWarmth } from "../world/orbits.js";
 import type { JourneyPathResponse, JourneyTopic } from "../api/types.js";
+import { nextAction, unlockRequirement } from "../games/progression.js";
+import { ACTION, STATE } from "../vocabulary.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 /**
  * One world, close up.
  *
@@ -30,6 +32,7 @@ import type { JourneyPathResponse, JourneyTopic } from "../api/types.js";
  * time between the learner and the learning, and it buys nothing.
  */
 export function WorldPage() {
+    usePageTitle("Topic");
     const { topic: slug } = useParams<{ topic: string }>();
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export function WorldPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/journey">
-                    Back to the map
+                    {ACTION.seeJourney}
                 </Link>
             </section>
         );
@@ -76,7 +79,7 @@ export function WorldPage() {
             <section className="panel narrow">
                 <p className="muted">There is no world there yet.</p>
                 <Link className="button primary" to="/journey">
-                    Back to the map
+                    {ACTION.seeJourney}
                 </Link>
             </section>
         );
@@ -92,41 +95,53 @@ export function WorldPage() {
      * why or where to go instead. The curriculum already knows where they
      * actually are, so the world says it rather than leaving them to guess.
      */
-    const openHere = topic.concepts.some((c) => c.state === "current");
     /*
-     * `path.current` is null while a topic checkpoint is due -- the learner's
-     * next step is the checkpoint, not a concept. Playtesting hit exactly that
-     * state, so the fallback names the checkpoint rather than rendering nothing.
+     * READ FROM THE SERVER'S TOPIC STATE, NOT GUESSED FROM THE CONCEPTS.
+     *
+     * This used to be "is any concept here current?", which is false in two
+     * states that are not closed at all: a finished world, and a world whose
+     * concepts are done with its checkpoint due. Both told the learner "This
+     * world is not open yet". findJourneyPath already says which of complete,
+     * current and locked a topic is, so that is what decides the message.
      */
-    const pendingCheckpoint = path.topics.find((t) => t.challenge?.state === "current") ?? null;
+    const status = topic.state;
     const everyConceptDone = topic.concepts.every((c) => c.state === "demonstrated");
     const challengeReady = topic.challenge?.state === "current" && everyConceptDone;
+
+    /* What opens a locked world, from the same helper the map uses. */
+    const requirement = status === "locked" ? unlockRequirement(path.topics, topic.slug) : null;
+
+    /* Where the learner actually is, from the path, or nothing if the path has
+       no next step. Never a guess. `path.current` is null while a checkpoint
+       is due, which nextAction covers: the checkpoint is then the next step. */
+    const step = nextAction(path);
+    const whereNow = step ? (
+        <Link to={step.href}>{step.kind === "checkpoint" ? `the ${step.name}` : step.name}</Link>
+    ) : null;
 
     return (
         <section className="world" style={{ "--warmth": warmth } as React.CSSProperties}>
             <header className="world-head">
-                <p className="world-eyebrow">You are here</p>
+                <p className="world-eyebrow">{STATE.currentTopic}</p>
                 <h1 className="world-name">{topic.name}</h1>
                 {/* The topic's own sentence about itself, which the curriculum
                     already carries. No progress count: "3 of 7" is a progress
                     bar wearing a costume, and the objects say it better. */}
                 {topic.principle && <p className="world-principle">{topic.principle}</p>}
 
-                {!openHere && (
+                {/* A finished world says so, and where the learner is now. */}
+                {status === "complete" && (
+                    <p className="world-closed" role="status">
+                        You have finished {topic.name}.
+                        {whereNow && <> Next: {whereNow}.</>}
+                    </p>
+                )}
+
+                {status === "locked" && (
                     <p className="world-closed">
-                        This world is not open yet — you are still working on{" "}
-                        {path.current ? (
-                            <Link to={`/concept/${path.current.slug}`}>
-                                {path.current.name}
-                            </Link>
-                        ) : pendingCheckpoint ? (
-                            <Link to={`/challenge/${pendingCheckpoint.slug}`}>
-                                the {pendingCheckpoint.name} checkpoint
-                            </Link>
-                        ) : (
-                            <Link to="/journey">your journey</Link>
-                        )}
-                        .
+                        This world is not open yet.
+                        {requirement && <> {requirement}.</>} You are working on{" "}
+                        {whereNow ?? <Link to="/journey">your journey</Link>}.
                     </p>
                 )}
             </header>
@@ -137,104 +152,35 @@ export function WorldPage() {
                     <Ship size={38} rotate={24} state="learning" label="Your craft, here" />
                 </div>
 
-                {/* In curriculum order in the DOM, wherever they sit on screen.
-                    Tab through them and you walk the topic in the order it is
-                    taught. */}
-                <ol className="world-orbit">
-                    {topic.concepts.map((concept, i) => {
-                        const at = orbitFor(i, concept.state);
-                        const reachable = concept.state === "current";
+                {/* With the checkpoint due, the block below is the one
+                    primary action; the checkpoint's row keeps a quiet link. */}
+                <ConceptSteps topic={topic} primaryAction={!challengeReady} />
 
-                        /*
-                         * WHERE THE CURRICULUM SENDS THEM.
-                         *
-                         * A concept they have not met goes to its lesson. One
-                         * they have met, and which has practice authored, goes
-                         * to the practice -- because being shown a variable and
-                         * being able to write one are different things, and the
-                         * second is what was missing.
-                         *
-                         * Deterministic and readable: what has the learner
-                         * reached, what have they demonstrated, what is
-                         * authored. No scoring, no recommendation engine.
-                         */
-                        const practice = practiceFor(concept.slug);
-
-                        /*
-                         * ONE DOOR. Every concept opens its encounter, whatever
-                         * state it is in -- the encounter is what knows which
-                         * rung is next, what is already cleared, and whether
-                         * anything is left. Routing a demonstrated concept
-                         * somewhere else made the learner responsible for a
-                         * distinction that is the curriculum's to make.
-                         */
-                        const goesTo = `/concept/${concept.slug}`;
-
-                        // A finished concept with practice still to do is worth
-                        // returning to; one with nothing left is not.
-                        const revisitable = concept.state === "demonstrated" && practice !== null;
-
-                        const label =
-                            concept.state === "demonstrated"
-                                ? practice
-                                    ? `${concept.name} — practise writing it`
-                                    : `${concept.name} — you can ${concept.objective}`
-                                : reachable
-                                  ? `${concept.name} — go here next`
-                                  : `${concept.name} — not reached yet`;
-
-                        const body = (
-                            <>
-                                <ConceptObject state={concept.state} seed={i} size={58 * at.scale} />
-                                <span className="world-object-name">{concept.name}</span>
-                            </>
-                        );
-
-                        return (
-                            <li
-                                key={concept.slug}
-                                className={`world-object is-${concept.state}${
-                                    revisitable ? " is-revisitable" : ""
-                                }`}
-                                style={{
-                                    left: `${at.x}%`,
-                                    top: `${at.y}%`,
-                                    zIndex: Math.round(at.depth * 10) + 1,
-                                    animationDelay: `${i * 80}ms`
-                                }}
-                            >
-                                {reachable || revisitable ? (
-                                    <Link to={goesTo} aria-label={label}>
-                                        {body}
-                                    </Link>
-                                ) : (
-                                    // Not a disabled button. Nothing refuses the
-                                    // learner here; the thing is simply far away.
-                                    <span aria-label={label} role="img">
-                                        {body}
-                                    </span>
-                                )}
-                            </li>
-                        );
-                    })}
-                </ol>
+                {/* THE SEQUENCE, NOT THE FIELD.
+                    The orbit that used to live here placed each concept by a
+                    function of its index and its state. It read beautifully
+                    and answered none of "where am I, what do I do, why can I
+                    not do that" -- the states were encoded as treatments and
+                    named only in aria-labels. The planet and the craft stay,
+                    because arriving somewhere is Jolt's whole idea; what was
+                    scattered around them is now a list you can read. */}
             </div>
 
             {/* The checkpoint only exists once there is nothing left out there. */}
             {challengeReady && (
                 <div className="world-checkpoint">
                     <p className="world-checkpoint-line">
-                        Every outpost on {topic.name} is lit.
+                        Every concept in {topic.name} is done.
                     </p>
                     <Link className="button primary big" to={`/challenge/${topic.slug}`}>
-                        Take the launch check
+                        {ACTION.takeCheckpoint}
                     </Link>
                 </div>
             )}
 
             <p className="world-exit">
                 <Link to="/journey">
-                    <Icon name="map" size={17} /> Back to the map
+                    <Icon name="map" size={17} /> {ACTION.seeJourney}
                 </Link>
             </p>
         </section>

@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import type { HistoryResponse, HistorySession } from "../api/types.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
 const PAGE_SIZE = 10;
 
 function formatWhen(session: HistorySession): string {
@@ -64,6 +66,7 @@ function StatusTag({ status }: { status: HistorySession["status"] }) {
 }
 
 export function HistoryPage() {
+    usePageTitle("Game log");
     const [params, setParams] = useSearchParams();
     const offset = Math.max(0, Number(params.get("offset") ?? 0) || 0);
 
@@ -97,7 +100,7 @@ export function HistoryPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/play">
-                    Back home
+                    {ACTION.backToGames}
                 </Link>
             </section>
         );
@@ -139,10 +142,12 @@ export function HistoryPage() {
 
     return (
         <section className="runs">
-            <p className="run-eyebrow">Your runs</p>
-            <h1 className="history-title">
+            {/* The page's name as its heading, matching the nav's "Log"; the
+                count is a fact about it, not its name. */}
+            <p className="run-eyebrow">
                 {pagination.total} {pagination.total === 1 ? "run" : "runs"}
-            </h1>
+            </p>
+            <h1 className="history-title">Your game log</h1>
 
             <ol className="breakdown history">
                 {sessions.map((session) => (
@@ -164,12 +169,12 @@ export function HistoryPage() {
                             <div className="history-stats">
                                 <span>
                                     <strong>
-                                        {session.status === "completed" ? session.score : "—"}
+                                        {session.status === "completed" ? session.score : "-"}
                                     </strong>{" "}
                                     pts
                                 </span>
                                 <span className="muted">
-                                    {session.status === "completed" ? `${session.xpEarned} XP` : "— XP"}
+                                    {session.status === "completed" ? `${session.xpEarned} XP` : "-"}
                                 </span>
                                 <span className="muted">
                                     {session.progress.correct}/{session.progress.total} correct

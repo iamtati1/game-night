@@ -1,14 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api/client.js";
+import { play } from "../games/sound.js";
+import { Link, useParams } from "react-router-dom";
+import { ApiError, api } from "../api/client.js";
 import { challengeFor, lessonFor, type LessonStep } from "../games/lessons.js";
 import { missionFor } from "../games/missions.js";
 import { MissionScene } from "../components/MissionScene.js";
 import { sceneLessonFor } from "../games/scenes.js";
 import { SceneLesson } from "../components/SceneLesson.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
+import { CheckpointComplete } from "../components/CheckpointComplete.js";
 import { ConceptTeaching } from "../components/ConceptTeaching.js";
+import { HighlightedCode } from "../components/HighlightedCode.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION } from "../vocabulary.js";
 /**
  * One concept's lesson: teach, then ask, then answer back.
  *
@@ -33,8 +38,8 @@ import { ConceptTeaching } from "../components/ConceptTeaching.js";
  * challenge; `concept` means a lesson. Only where completion is reported differs.
  */
 export function LessonPage() {
+    usePageTitle("Checkpoint");
     const { concept, topic } = useParams<{ concept?: string; topic?: string }>();
-    const navigate = useNavigate();
     const lesson = useMemo(
         () => (topic ? challengeFor(topic) : lessonFor(concept ?? null)),
         [concept, topic]
@@ -56,6 +61,8 @@ export function LessonPage() {
     const [neededRetry, setNeededRetry] = useState(false);
     const [done, setDone] = useState(false);
     const [busy, setBusy] = useState(false);
+    /** The server's reason for not recording this, when it would not. */
+    const [refused, setRefused] = useState<string | null>(null);
 
     const step: LessonStep | null = useMemo(() => {
         if (!lesson) return null;
@@ -89,11 +96,18 @@ export function LessonPage() {
                         : `/api/curriculum/concepts/${"concept" in done ? done.concept : concept}/demonstrate`,
                     { neededRetry: retried }
                 );
-            } catch {
-                // The lesson still happened.
+                setDone(true);
+            } catch (err) {
+                // A CHECKPOINT IS THE UNLOCK, so a refused one cannot be shown
+                // as a completed one -- see the `refused` branch below. A
+                // refused concept demonstration is the same lie one level down.
+                setRefused(
+                    err instanceof ApiError
+                        ? err.message
+                        : "That could not be recorded just now."
+                );
             }
 
-            setDone(true);
             setBusy(false);
         },
         [lesson, concept]
@@ -123,12 +137,15 @@ export function LessonPage() {
                     : `/api/curriculum/concepts/${lesson.concept}/demonstrate`,
                 { neededRetry }
             );
-        } catch {
-            // The lesson still happened. Losing the record is worth a silent
-            // retry next time, not an error page over a finished lesson.
+            setDone(true);
+        } catch (err) {
+            // Not swallowed. Losing the record silently is what made a learner
+            // believe a module had completed while the server still had it open.
+            setRefused(
+                err instanceof ApiError ? err.message : "That could not be recorded just now."
+            );
         }
 
-        setDone(true);
         setBusy(false);
     }, [lesson, neededRetry]);
 
@@ -222,36 +239,42 @@ export function LessonPage() {
             <section className="panel narrow">
                 <p className="muted">There is no lesson written for that yet.</p>
                 <Link className="button primary" to="/journey">
-                    Back to your journey
+                    {ACTION.seeJourney}
+                </Link>
+            </section>
+        );
+    }
+
+    if (refused) {
+        /* THE SERVER REFUSED THE RECORD, SO NOTHING IS CELEBRATED. This used to
+           fall through to the completion screen regardless, which announced a
+           finished topic over a checkpoint the server had rejected -- and a
+           rejected checkpoint is precisely the case where the next module has
+           NOT opened. */
+        return (
+            <section className="panel narrow">
+                <p className="form-error" role="alert">
+                    {refused}
+                </p>
+                <Link className="button primary" to="/journey">
+                    {ACTION.seeJourney}
                 </Link>
             </section>
         );
     }
 
     if (done) {
-        // Challenges close a topic rather than a concept, so they keep the plain
-        // confirmation; ConceptComplete speaks in terms of one capability.
+        // Challenges close a topic rather than a concept, so they get their own
+        // arrival; ConceptComplete speaks in terms of one capability.
         if (lesson.concept) {
             return <ConceptComplete concept={lesson.concept} />;
         }
 
         return (
-            <section className="complete">
-                <p className="complete-mark" aria-hidden="true">
-                    ✓
-                </p>
-                <p className="complete-label">Topic complete</p>
-                <h1 className="complete-capability">{lesson.title}</h1>
-                <p className="complete-points">
-                    <span className="complete-plus">+75</span> points
-                </p>
-                <button
-                    className="button primary big"
-                    onClick={() => navigate("/journey")}
-                >
-                    See what is next
-                </button>
-            </section>
+            <CheckpointComplete
+                topic={lesson.challengeFor ?? topic ?? ""}
+                title={lesson.title}
+            />
         );
     }
 
@@ -272,7 +295,7 @@ export function LessonPage() {
                 <ConceptTeaching teach={lesson.teach} notice={lesson.notice} />
 
                 <button className="button primary big" onClick={() => setPhase("ask")}>
-                    Got it — try one
+                    Got it. Try one
                 </button>
             </section>
         );
@@ -295,7 +318,7 @@ export function LessonPage() {
 
             {step!.code && (
                 <pre className="lesson-code">
-                    <code>{step!.code}</code>
+                    <code><HighlightedCode code={step!.code} /></code>
                 </pre>
             )}
 
@@ -307,7 +330,10 @@ export function LessonPage() {
                                 answered && i === chosen ? (right ? " is-right" : " is-wrong") : ""
                             }${answered && choice.correct ? " is-answer" : ""}`}
                             disabled={answered}
-                            onClick={() => setChosen(i)}
+                            onClick={() => {
+                                setChosen(i);
+                                play(choice.correct ? "correct" : "incorrect");
+                            }}
                         >
                             <code>{choice.text}</code>
                         </button>

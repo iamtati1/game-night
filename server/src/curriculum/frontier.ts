@@ -44,6 +44,14 @@ import { assertContentAlias } from "./eligibility.js";
  * introduction_completions is absent from this derivation while it is present in
  * metConceptsCte.
  *
+ * A LESSON RUNG PASSED DOES advance it. activity_completions records a
+ * practise challenge finished in the lesson -- its question or bug answered
+ * correctly, or its mission movement done -- and that challenge has a
+ * difficulty like any other. Leaving it out told a learner who had just fixed
+ * a concept's bug in its lesson that the same bugs were "a step harder than
+ * anything you have practiced". Same role filter, same meaning: a practise
+ * rung faced at that difficulty.
+ *
  * Pending rounds are excluded for the same reason they are excluded there: a
  * unit that was dealt and never faced is not an encounter.
  */
@@ -71,6 +79,14 @@ export function metDifficultiesCte(userParam: string): string {
         JOIN challenges ch          ON ch.id  = bhi.challenge_id
         WHERE gs.user_id = ${userParam}
           AND bhr.status IN ('resolved', 'failed')
+          AND ch.role = 'practise'
+
+        UNION
+
+        SELECT ch.concept_id, ch.difficulty
+        FROM activity_completions ac
+        JOIN challenges ch ON ch.id = ac.challenge_id
+        WHERE ac.user_id = ${userParam}
           AND ch.role = 'practise'
     )`;
 }

@@ -4,11 +4,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Encounter, Exercise, Judgement } from "../api/encounter.js";
 
 vi.mock("../api/client.js", () => ({
-    ApiError: class ApiError extends Error {},
+    // Carries `body` like the real one: the screens that read a refusal read
+    // the server's payload out of it, so a stub without it would let a test
+    // pass over code that cannot work.
+    ApiError: class ApiError extends Error {
+        status: number;
+        details: unknown[];
+        body: unknown;
+
+        constructor(status: number, message: string, details: unknown[] = [], body: unknown = null) {
+            super(message);
+            this.status = status;
+            this.details = details;
+            this.body = body;
+        }
+    },
     api: { get: vi.fn(), post: vi.fn() }
 }));
 
-const { api } = await import("../api/client.js");
+const { ApiError, api } = await import("../api/client.js");
 const { EncounterPage } = await import("./EncounterPage.js");
 
 afterEach(() => {
@@ -35,6 +49,7 @@ function encounter(over: Partial<Encounter> = {}): Encounter {
         demonstrated: false,
         reachable: true,
         unmetPrerequisites: [],
+        blockedBy: null,
         allowedConcepts: ["assignment", "reassignment"],
         currentRung: "predict",
         next: { slug: "let-vs-const", name: "let vs const" },
@@ -116,7 +131,7 @@ describe("arriving at a concept", () => {
         const { container } = await open(encounter());
 
         await screen.findByText("Changing what a name holds");
-        expect(container.textContent).toMatch(/variables · you are here/i);
+        expect(container.textContent).toMatch(/variables · You’re here/i);
     });
 
     it("explains why a locked concept is locked, and links the way in", async () => {
@@ -133,6 +148,53 @@ describe("arriving at a concept", () => {
         );
 
         expect(link, "the prerequisite is reachable from the lock").toBeTruthy();
+    });
+
+    it("names the concept that has to be finished first, and links straight to it", async () => {
+        // UX audit: concepts open one at a time, in order, so a concept can be
+        // locked with every one of its own prerequisites done. The server
+        // names the real blocker; the screen used to show "builds on
+        // something else" over an empty list instead.
+        const { container } = await open(
+            encounter({
+                reachable: false,
+                unmetPrerequisites: [],
+                blockedBy: { kind: "concept", slug: "reading-variables", name: "Reading Variables" }
+            })
+        );
+
+        expect(container.textContent).toMatch(/not open yet: reading variables comes first/i);
+        expect(container.textContent).not.toMatch(/builds on something else/i);
+
+        const go = screen.getByRole("link", { name: "Go to Reading Variables" });
+        expect(go.getAttribute("href")).toBe("/concept/reading-variables");
+        expect(go.className).toMatch(/primary/);
+        expect(container.querySelectorAll("a.button.primary")).toHaveLength(1);
+    });
+
+    it("names the checkpoint when that is what comes first", async () => {
+        const { container } = await open(
+            encounter({
+                reachable: false,
+                unmetPrerequisites: [],
+                blockedBy: { kind: "checkpoint", slug: "values", name: "Values and Types" }
+            })
+        );
+
+        expect(container.textContent).toMatch(/the values and types checkpoint comes first/i);
+        expect(
+            screen.getByRole("link", { name: "Take the Values and Types checkpoint" }).getAttribute("href")
+        ).toBe("/challenge/values");
+    });
+
+    it("invents no prerequisite when the server names no blocker, and goes back to the journey", async () => {
+        const { container } = await open(
+            encounter({ reachable: false, unmetPrerequisites: [], blockedBy: null })
+        );
+
+        expect(container.textContent).toMatch(/the steps before it on your journey come first/i);
+        expect(container.querySelectorAll("a[href^='/concept/']")).toHaveLength(0);
+        expect(screen.getByRole("link", { name: "See your journey" }).getAttribute("href")).toBe("/journey");
     });
 
     it("never shows the curriculum's own vocabulary", async () => {
@@ -310,6 +372,16 @@ describe("answering a question", () => {
 
 describe("a rung with nothing built", () => {
     it("says so rather than pretending the ladder is shorter", async () => {
+        // The server refuses a concept with nothing playable on it -- see
+        // `evidenceFor`, which returns `unplayable` rather than `allowed`. The
+        // page asks and is turned down; it does not decide for itself.
+        vi.mocked(api.post).mockRejectedValue(
+            new ApiError(409, "Nothing is built for this concept yet", [], {
+                outstanding: [],
+                unplayable: true
+            }) as never
+        );
+
         const { container } = await open(
             encounter({
                 currentRung: null,
@@ -324,6 +396,11 @@ describe("a rung with nothing built", () => {
 
         expect(container.textContent).toMatch(/not built yet/i);
         expect(container.textContent).toMatch(/write it/i);
+
+        // And it is not reported as finished, which is what a hole in the
+        // ladder used to be indistinguishable from.
+        await screen.findByText(/nothing to practise here yet/i);
+        expect(screen.queryByText("change a value after naming it")).toBeNull();
     });
 });
 
@@ -385,6 +462,69 @@ describe("a diagnose rung", () => {
             container.textContent,
             "the dead end this replaced"
         ).not.toMatch(/not available here yet/i);
+    });
+});
+
+describe("a diagnose rung offers its hints", () => {
+    it("reveals the authored hints one at a time, and stops offering them once answered", async () => {
+        const incident: Exercise = {
+            challengeId: "78",
+            kind: "incident",
+            ask: "Which line is causing this?",
+            brief: "After the burn the fuel should read 80. It still reads 100.",
+            code: "let fuel = 100;\nlet spare = 100;\nspare = 80;\nconsole.log(fuel);",
+            options: [
+                { id: "5", text: "spare = 80;" },
+                { id: "6", text: "console.log(fuel);" }
+            ],
+            hints: ["Which name is given 80?", "The board logs `fuel`, but it was `spare` that changed."]
+        };
+
+        vi.mocked(api.get).mockImplementation(((path: string) =>
+            path.includes("/exercise")
+                ? Promise.resolve(incident)
+                : Promise.resolve(
+                      encounter({
+                          currentRung: "diagnose",
+                          rungs: [
+                              {
+                                  demandSlug: "diagnose",
+                                  demandOrder: 6,
+                                  cleared: false,
+                                  options: [{ challengeId: "78", difficulty: 1, content: { kind: "incident", id: "4" } }]
+                              }
+                          ]
+                      })
+                  )) as never);
+        vi.mocked(api.post).mockResolvedValue({ correct: true, explanation: WHY, correctOptionId: "5" } as never);
+
+        render(
+            <MemoryRouter initialEntries={["/concept/reassignment"]}>
+                <Routes>
+                    <Route path="/concept/:concept" element={<EncounterPage />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        await screen.findByText("Changing what a name holds");
+        const ready = screen.queryByRole("button", { name: /got it/i });
+        if (ready) await click(ready);
+
+        // None shown until asked for: the first look is the learner's own.
+        const first = await screen.findByRole("button", { name: /show a hint \(2 left\)/i });
+        expect(screen.queryByText("Which name is given 80?")).toBeNull();
+
+        await click(first);
+        expect(screen.getByText("Which name is given 80?")).toBeTruthy();
+        expect(screen.queryByText(/it was/)).toBeNull();
+
+        await click(screen.getByRole("button", { name: /show another hint \(1 left\)/i }));
+        expect(screen.getByText(/it was/)).toBeTruthy();
+        expect(screen.queryByRole("button", { name: /show (a|another) hint/i })).toBeNull();
+
+        await click(screen.getByRole("button", { name: "spare = 80;" }));
+        await screen.findByText("Yes");
+        expect(screen.queryByRole("button", { name: /show (a|another) hint/i })).toBeNull();
     });
 });
 
@@ -526,5 +666,129 @@ describe("repairing a wrong answer", () => {
         // Round the same loop twice does not help. The honest offer is a retry.
         expect(screen.queryByRole("button", { name: /try a simpler one/i })).toBeNull();
         expect(await screen.findByRole("button", { name: /try again/i })).toBeTruthy();
+    });
+});
+
+/**
+ * THE MODULE THAT WOULD NOT UNLOCK.
+ *
+ * A concept's rungs are cleared by EVIDENCE, and evidence is produced by Code
+ * Blitz and Bug Hunt as well as by this screen. So a learner can arrive at a
+ * concept whose ladder is already behind them -- and the screen used to print
+ * "You have done everything here." and a link back to the world, without ever
+ * recording the concept. It stayed `current` for good, its topic never
+ * completed, and the module after it never opened. The learner was told they
+ * had finished and watched nothing unlock, which is exactly what it looks like
+ * from the outside.
+ *
+ * Both halves are asserted: the record is made when the server accepts it, and
+ * the arrival is NOT shown when the server refuses.
+ */
+describe("a concept whose stops are all behind the learner", () => {
+    const FINISHED = encounter({
+        currentRung: null,
+        demonstrated: false,
+        rungs: [
+            { demandSlug: "predict", demandOrder: 3, cleared: true, options: [] },
+            { demandSlug: "diagnose", demandOrder: 6, cleared: true, options: [] }
+        ]
+    });
+
+    /** Enough of a path for the arrival to render against. */
+    const PATH = {
+        topics: [
+            {
+                slug: "variables",
+                name: "Variables",
+                principle: "",
+                order: 2,
+                state: "current",
+                concepts: [
+                    {
+                        slug: "reassignment",
+                        name: "Changing what a name holds",
+                        objective: "change a value after naming it",
+                        state: "demonstrated",
+                        neededRetry: false,
+                        rungs: { cleared: 2, playable: 2 }
+                    }
+                ],
+                challenge: null
+            }
+        ],
+        current: null,
+        points: { total: 25, concepts: 25, challenges: 0 }
+    };
+
+    async function arrive(post: () => Promise<unknown>) {
+        vi.mocked(api.get).mockImplementation(((path: string) =>
+            path.includes("/curriculum/path")
+                ? Promise.resolve(PATH)
+                : Promise.resolve(FINISHED)) as never);
+        vi.mocked(api.post).mockImplementation(post as never);
+
+        render(
+            <MemoryRouter initialEntries={["/concept/reassignment"]}>
+                <Routes>
+                    <Route path="/concept/:concept" element={<EncounterPage />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        await screen.findByText(FINISHED.name);
+
+        const ready = screen.queryByRole("button", { name: /got it/i });
+
+        if (ready) await click(ready);
+    }
+
+    it("records the concept rather than dead-ending on it", async () => {
+        await arrive(() => Promise.resolve({ demonstrated: true }));
+
+        await waitFor(() =>
+            expect(
+                vi.mocked(api.post).mock.calls.some(([path]) =>
+                    String(path).endsWith("/concepts/reassignment/demonstrate")
+                ),
+                "the finished ladder is reported to the server"
+            ).toBe(true)
+        );
+
+        // The arrival, not the cul-de-sac.
+        await screen.findByText("change a value after naming it");
+        expect(screen.queryByText(/you have done everything here/i)).toBeNull();
+    });
+
+    it("says so on the button before the learner commits to it", async () => {
+        vi.mocked(api.get).mockImplementation(((path: string) =>
+            path.includes("/curriculum/path")
+                ? Promise.resolve(PATH)
+                : Promise.resolve(FINISHED)) as never);
+
+        render(
+            <MemoryRouter initialEntries={["/concept/reassignment"]}>
+                <Routes>
+                    <Route path="/concept/:concept" element={<EncounterPage />} />
+                </Routes>
+            </MemoryRouter>
+        );
+
+        await screen.findByText(FINISHED.name);
+
+        const ready = screen.queryByRole("button", { name: /got it/i });
+
+        // Only asserted where the concept has authored teaching to sit behind.
+        if (ready) expect(ready.textContent).toMatch(/finish this concept/i);
+    });
+
+    it("shows no completion at all when the server refuses the record", async () => {
+        await arrive(() =>
+            Promise.reject(new ApiError(409, "Not everything here has been done yet"))
+        );
+
+        await screen.findByText(/not everything here has been done yet/i);
+
+        // The capability line is the arrival. It must not appear over a refusal.
+        expect(screen.queryByText("change a value after naming it")).toBeNull();
     });
 });

@@ -8,7 +8,9 @@ import { GameCard } from "../components/GameCard.js";
 import { JoltLogo } from "../components/JoltLogo.js";
 import { LIVE_GAMES } from "../games/catalog.js";
 import { PlayFocus } from "../components/PlayFocus.js";
+import { gameStatuses, type BugHuntReadiness, type FlushReadiness } from "../games/gameStatus.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 interface StatsResponse {
     totals: { gamesCompleted: number; totalXp: number; totalScore: number };
 }
@@ -29,6 +31,7 @@ interface StatsResponse {
  * here is cached across accounts and nothing is decided on the client.
  */
 export function LandingPage() {
+    usePageTitle("Games");
     const { user, loading } = useAuth();
     const [resumable, setResumable] = useState<ResumableSession[]>([]);
     const [stats, setStats] = useState<StatsResponse | null>(null);
@@ -36,6 +39,11 @@ export function LandingPage() {
        learner's position can never be shown to the next one. */
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
     const [encounter, setEncounter] = useState<Encounter | null>(null);
+    /* What the two gated games would say if started now -- read-only, from
+       the same function their start routes refuse on. Null until loaded, and
+       left null on failure: a card says nothing rather than guess. */
+    const [flushReady, setFlushReady] = useState<FlushReadiness | null>(null);
+    const [huntReady, setHuntReady] = useState<BugHuntReadiness | null>(null);
 
     // Both are real endpoints returning this player's real numbers. Signed out,
     // or on failure, the sections simply do not render.
@@ -45,10 +53,22 @@ export function LandingPage() {
             setStats(null);
             setPath(null);
             setEncounter(null);
+            setFlushReady(null);
+            setHuntReady(null);
             return;
         }
 
         let active = true;
+
+        void api
+            .get<FlushReadiness>("/api/flush/readiness")
+            .then((d) => active && setFlushReady(d))
+            .catch(() => undefined);
+
+        void api
+            .get<BugHuntReadiness>("/api/bug-hunt/readiness")
+            .then((d) => active && setHuntReady(d))
+            .catch(() => undefined);
 
         void api
             .get<ResumableResponse>("/api/me/sessions/resumable")
@@ -90,19 +110,23 @@ export function LandingPage() {
     }, [user]);
 
     const resumeFor = (slug: string) => resumable.find((r) => r.game.slug === slug) ?? null;
+    const statuses = user ? gameStatuses({ flush: flushReady, bugHunt: huntReady }) : null;
     const played = stats?.totals.gamesCompleted ?? 0;
 
     return (
         <div className="landing">
 
-            {/* Compact on purpose: the wordmark, four words, and then the games.
-                Anything taller pushes the only interactive thing below the fold. */}
+            {/* Compact on purpose: the page name, four words, and then the games.
+                Anything taller pushes the games below the fold. */}
             <header className="masthead">
-                <h1 className="hero-brand">
+                {/* The page's own name. The JOLT wordmark is in the site header
+                    already; repeating it here as the h1 left the page with no
+                    heading that said what it was. The spark stays as branding. */}
+                <h1 className="hero-brand" id="games-heading">
                     <span className="hero-spark" aria-hidden="true">
                         <JoltLogo markOnly />
                     </span>
-                    JOLT
+                    Games
                 </h1>
 
                 <p className="masthead-tagline">Play. Get better.</p>
@@ -122,13 +146,30 @@ export function LandingPage() {
                 )}
             </header>
 
-            {user && <PlayFocus path={path} encounter={encounter} />}
+            {/* WHAT THE GAMES ARE FOR, in one line, then the games themselves
+                -- first, so all five are found before anything else. Each card
+                says whether it can be played now and whether it counts. */}
+            {user && (
+                <p className="practice-lede muted">
+                    None of these is required. Each one says whether you can play it now, and whether it
+                    counts toward your journey.
+                </p>
+            )}
 
-            <ul className="game-grid" id="games">
+            <ul className="game-grid" id="games" aria-labelledby="games-heading">
                 {LIVE_GAMES.map((game) => (
-                    <GameCard key={game.slug} game={game} resumable={resumeFor(game.slug)} />
+                    <GameCard
+                        key={game.slug}
+                        game={game}
+                        resumable={resumeFor(game.slug)}
+                        status={statuses?.[game.slug] ?? null}
+                    />
                 ))}
             </ul>
+
+            {/* The course, after the games: on this page the games are what
+                was asked for, and Home already leads with the next lesson. */}
+            {user && <PlayFocus path={path} encounter={encounter} />}
         </div>
     );
 }

@@ -23,13 +23,37 @@
 BEGIN;
 
 CREATE OR REPLACE FUNCTION seed_pt(
-    p_prompt TEXT, p_demand TEXT, p_correct TEXT, p_wrong TEXT[], p_why TEXT
+    p_ref TEXT, p_prompt TEXT, p_demand TEXT, p_correct TEXT, p_wrong TEXT[], p_why TEXT
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-primitive-types' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    -- ADOPTION for rows seeded before names existed: give the existing row the
+    -- name rather than inserting beside it. Only rows with no name yet, so this
+    -- can never take a question that already belongs to another.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-primitive-types' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     INSERT INTO challenges (concept_id, demand_id, role, difficulty)
     SELECT c.id, d.id, 'practise', 1
@@ -38,10 +62,10 @@ BEGIN
     RETURNING id INTO v_challenge;
 
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation, external_ref)
     VALUES (p_prompt, 1, 'values',
             CASE WHEN p_demand = 'recognise' THEN 'match-concept' ELSE 'predict-output' END,
-            v_challenge, 'jolt-primitive-types', p_why)
+            v_challenge, 'jolt-primitive-types', p_why, p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -56,15 +80,17 @@ END;
 $$;
 
 SELECT seed_pt(
+    'primitive-001',
     E'Which of these is a number?', 'recognise',
     '7', ARRAY['"7"', '"seven"', '"7.5"'],
     'Quotes make a value text, whatever is inside them. `7` is the number; `"7"` is the character 7 written down, which is a different kind of thing.');
 
 SELECT seed_pt(
+    'primitive-002',
     E'What does this log?\n\nconsole.log(7 / 2);', 'predict',
     '3.5', ARRAY['3', '4', '3.0'],
     'JavaScript has only one number type and it holds decimals, so division does not round. Languages that separate whole numbers from decimals would give 3 here.');
 
-DROP FUNCTION seed_pt(TEXT, TEXT, TEXT, TEXT[], TEXT);
+DROP FUNCTION seed_pt(TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
 
 COMMIT;

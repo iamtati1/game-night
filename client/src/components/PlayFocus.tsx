@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { CODE_BLITZ, BUG_HUNT, GAMES } from "../games/catalog.js";
+import { ACTION, STATE } from "../vocabulary.js";
 import type { Encounter } from "../api/encounter.js";
 import type { JourneyPathResponse } from "../api/types.js";
+import { nextAction } from "../games/progression.js";
 
 /**
  * WHAT TO PLAY FOR WHAT YOU ARE LEARNING.
@@ -40,13 +41,17 @@ import type { JourneyPathResponse } from "../api/types.js";
  * They are also two different pools. A concept's `question` rungs are questions
  * tagged to its challenges and are played IN THE ENCOUNTER; Code Blitz deals
  * from the general pool by `questions.topic`. So the only concept-TARGETED
- * route is the concept itself, and that is what this leads with. The two games
- * are described by the curriculum relationship they genuinely have -- both are
- * already gated to what the learner has reached -- and nothing more.
+ * route is the concept itself, and it is the only one this band offers.
  */
 
-const nameOf = (slug: string) => GAMES.find((g) => g.slug === slug)?.name ?? slug;
-
+/*
+ * ONE PRIMARY ACTION, AND IT IS THE COURSE. UX audit: this band offered three
+ * routes of equal weight -- Keep going, Code Blitz and Bug Hunt -- above five
+ * equal game cards, so the course was one choice among eight. Bug Hunt in
+ * particular was recommended to beginners it usually cannot deal a full run
+ * to. The band now carries only the next step on the path; the games are all
+ * still directly below it, as optional practice.
+ */
 export function PlayFocus({
     path,
     encounter
@@ -55,12 +60,28 @@ export function PlayFocus({
     /** Null while it loads, or when the current concept could not be read. */
     encounter: Encounter | null;
 }) {
-    const current = path?.current ?? null;
+    /* The path's own next step. Nothing to say yet, or a learner who has
+       finished everything reachable: silence, rather than an empty band. */
+    const step = path ? nextAction(path) : null;
 
-    /* Nothing to say yet, or a learner who has finished everything reachable.
-       Silence is right here -- an empty band would be worse than no band. */
-    if (!current) return null;
+    if (!step) return null;
 
+    /* A due checkpoint IS the next step, and the band used to vanish then. */
+    if (step.kind === "checkpoint") {
+        return (
+            <section className="play-focus" aria-labelledby="play-focus-heading">
+                <p className="play-focus-label">Next in your course</p>
+                <h2 className="play-focus-concept" id="play-focus-heading">
+                    {step.name}
+                </h2>
+                <Link className="button primary big" to={step.href}>
+                    Take the checkpoint
+                </Link>
+            </section>
+        );
+    }
+
+    const current = path!.current!;
     const topicName = path?.topics.find((t) => t.slug === current.topic)?.name ?? null;
 
     /* What is actually left on this concept, counted the way the concept page
@@ -69,60 +90,41 @@ export function PlayFocus({
     const playable = (encounter?.rungs ?? []).filter((r) => r.options.length > 0);
     const left = playable.filter((r) => !r.cleared).length;
 
-    const routes = [
-        /* The concept-targeted route, and the only one that can be. */
-        playable.length > 0 && {
-            key: "concept",
-            name: "Keep going",
-            to: `/concept/${current.slug}`,
-            why:
-                left === 0
-                    ? "every stop on this one is behind you"
-                    : `the ${left === 1 ? "last stop" : `${left} stops`} left on this concept`
-        },
-        /* Curriculum-aware, but not aimable at one concept. Described as what
-           they are: both deal only from what the learner has reached. */
-        {
-            key: CODE_BLITZ,
-            name: nameOf(CODE_BLITZ),
-            to: `/${CODE_BLITZ}`,
-            why: "opens with what the curriculum says is next, then deals against the clock"
-        },
-        {
-            key: BUG_HUNT,
-            name: nameOf(BUG_HUNT),
-            to: `/${BUG_HUNT}`,
-            why: "broken code, drawn from the concepts you have reached"
-        }
-    ].filter((r): r is { key: string; name: string; to: string; why: string } => Boolean(r));
-
     return (
         <section className="play-focus" aria-labelledby="play-focus-heading">
-            <p className="play-focus-label">You are learning</p>
+            <p className="play-focus-label">{STATE.here}</p>
 
+            {/* Named, not linked: the button below is the one way in, so the
+                name is not a second link to the same place. */}
             <h2 className="play-focus-concept" id="play-focus-heading">
-                <Link to={`/concept/${current.slug}`}>{current.name}</Link>
+                {current.name}
             </h2>
 
             {topicName && <p className="play-focus-topic">{topicName}</p>}
 
-            <ul className="play-focus-routes">
-                {routes.map((route) => (
-                    <li key={route.key}>
-                        <Link className="play-focus-route" to={route.to}>
-                            <span className="play-focus-route-name">{route.name}</span>
-                            <span className="play-focus-route-why">{route.why}</span>
-                        </Link>
-                    </li>
-                ))}
-            </ul>
+            {playable.length > 0 && (
+                <>
+                    <Link className="button primary big" to={step.href}>
+                        {/* "Start", not "Continue", before anything is done --
+                            the same rule Home uses. */}
+                        {path && path.points.concepts === 0 && !path.topics.some((t) => t.state === "complete")
+                            ? ACTION.startLearning
+                            : ACTION.continueLearning}
+                    </Link>
+                    <p className="play-focus-route-why">
+                        {left === 0
+                            ? "every stop on this one is behind you"
+                            : `the ${left === 1 ? "last stop" : `${left} stops`} left on this concept`}
+                    </p>
+                </>
+            )}
 
             {/* The honest branch. A concept whose rungs are declared but not yet
                 filled has nothing to go and do there, and saying so beats a
-                "Keep going" that leads to an empty page. */}
+                button that leads to an empty page. */}
             {encounter && playable.length === 0 && (
                 <p className="play-focus-none">
-                    There is nothing to play on this one yet — it is taught in{" "}
+                    There is nothing to play on this one yet: it is taught in{" "}
                     <Link to={`/concept/${current.slug}`}>the concept itself</Link>.
                 </p>
             )}

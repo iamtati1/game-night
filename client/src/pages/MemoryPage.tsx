@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { play } from "../games/sound.js";
 import { useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { activeGameFrom } from "../api/types.js";
@@ -15,6 +16,10 @@ import { RoundProgress } from "../components/RoundProgress.js";
 import { SymbolGlyph } from "../components/SymbolGlyph.js";
 import { MEMORY, gameBySlug } from "../games/catalog.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { GameIntro } from "../components/GameIntro.js";
+import { startGame } from "../vocabulary.js";
+import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
 /** Beat before the sequence starts, so the player can settle and look. */
 const READY_MS = 900;
 
@@ -37,9 +42,6 @@ const MAX_STEP_MS = 640;
 /** The complete sequence is always held for at least this long, whatever is
  *  left of the budget. This is the window the player actually memorises in. */
 const MIN_HOLD_MS = 800;
-
-/** The feedback beat before the next round is offered. */
-const FEEDBACK_MS = 2600;
 
 /**
  * Splits a round's budget into a reveal cadence and a hold.
@@ -88,6 +90,7 @@ interface Feedback {
 }
 
 export function MemoryPage() {
+    usePageTitle("Memory");
     const navigate = useNavigate();
     const game = gameBySlug(MEMORY);
 
@@ -98,6 +101,15 @@ export function MemoryPage() {
     const [shownCount, setShownCount] = useState(0);
     const [picks, setPicks] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<Feedback | null>(null);
+    /**
+     * Where to go once the learner has read the comparison: the next round,
+     * or the results. Held until they press the button.
+     *
+     * UX audit: the "You played / It was" comparison -- the only place a miss
+     * is explained -- vanished after 2.6 seconds whether or not it had been
+     * read. A round here has no server clock, so waiting costs nothing.
+     */
+    const [after, setAfter] = useState<{ next: MemoryRoundRef | null; resultsId: string | null } | null>(null);
     const [paused, setPaused] = useState(false);
     const [resuming, setResuming] = useState(false);
     const [pausedInfo, setPausedInfo] = useState<{
@@ -119,6 +131,10 @@ export function MemoryPage() {
         timers.current = [];
     }, []);
 
+
+    // Leaving mid-run pauses it, so the clock stops and the run waits for
+    // Resume -- see usePauseOnLeave.
+    usePauseOnLeave(MEMORY, sessionId !== null && !paused && !resuming && phase !== "loading" && phase !== "intro" && phase !== "countingIn");
     useEffect(() => () => clearTimers(), [clearTimers]);
 
     useEffect(() => {
@@ -248,18 +264,12 @@ export function MemoryPage() {
                 perfect: res.perfect,
                 points: res.pointsAwarded
             });
+            play(res.perfect ? "correct" : "incorrect", round.roundId);
             setPhase("feedback");
-
-            later(() => {
-                if (res.complete && res.session) {
-                    navigate(`/memory/results/${res.session.id}`, { replace: true });
-                    return;
-                }
-
-                if (res.round) {
-                    present(res.round);
-                }
-            }, FEEDBACK_MS);
+            setAfter({
+                next: res.round ?? null,
+                resultsId: res.complete && res.session ? res.session.id : null
+            });
         } catch (err) {
             setError(err instanceof ApiError ? err.detailText : "Could not record that round");
         } finally {
@@ -345,33 +355,29 @@ export function MemoryPage() {
 
     if (phase === "intro") {
         return (
-            <section className="game memory mem-intro">
-                <p className="mem-eyebrow">Memory</p>
-                <h1 className="mem-title">Hold the sequence.</h1>
-
-                <p className="mem-lede">
-                    Symbols appear one at a time, then vanish.
-                    <br />
-                    Play them back in the order you saw them.
-                </p>
-
-                {/* The mechanic in miniature: three symbols, mid-fade. */}
-                <div className="mem-trace" aria-hidden="true">
-                    <SymbolGlyph name="triangle" />
-                    <SymbolGlyph name="star" />
-                    <SymbolGlyph name="circle" />
-                </div>
-
-                <p className="mem-shape">5 rounds · 4 to 8 symbols</p>
-
-                <button
-                    className="button primary big"
-                    onClick={() => setPhase("countingIn")}
-                    disabled={busy}
-                >
-                    {busy ? "Starting…" : "Start"}
-                </button>
-            </section>
+            /* The shared intro, as the other games use it. The wrapper keeps
+               Memory's accent. */
+            <div className="game memory">
+                <GameIntro
+                    eyebrow="Memory"
+                    title="Hold the sequence."
+                    // Memory records XP and no learning evidence: never a step.
+                    counts="fun"
+                    lede="Symbols appear one at a time, then vanish. Play them back in the order you saw them."
+                    // The mechanic in miniature: three symbols, mid-fade.
+                    preview={
+                        <div className="mem-trace">
+                            <SymbolGlyph name="triangle" />
+                            <SymbolGlyph name="star" />
+                            <SymbolGlyph name="circle" />
+                        </div>
+                    }
+                    shape="5 rounds · 4 to 8 symbols"
+                    busy={busy}
+                    onStart={() => setPhase("countingIn")}
+                    startLabel={startGame("Memory")}
+                />
+            </div>
         );
     }
 
@@ -416,7 +422,11 @@ export function MemoryPage() {
                     <ol className="mem-sequence" aria-label="Sequence">
                         {round.sequence.slice(0, shownCount).map((symbol, i) => (
                             <li key={i} className="mem-shown">
-                                <SymbolGlyph name={symbol} />
+                                {/* Named, not only drawn. Browser QA: every symbol
+                                    here was aria-hidden, so a screen reader
+                                    heard an empty list and the game could not
+                                    be played without sight. */}
+                                <SymbolGlyph name={symbol} labelled />
                             </li>
                         ))}
                     </ol>
@@ -437,7 +447,7 @@ export function MemoryPage() {
                             {Array.from({ length: round.sequence.length }, (_, i) => (
                                 <li key={i} className={`mem-slot${picks[i] ? " filled" : ""}`}>
                                     {picks[i] ? (
-                                        <SymbolGlyph name={picks[i]!} />
+                                        <SymbolGlyph name={picks[i]!} labelled />
                                     ) : (
                                         <span className="mem-slot-n">{i + 1}</span>
                                     )}
@@ -474,7 +484,15 @@ export function MemoryPage() {
                                                       : "miss"
                                             }
                                         >
-                                            {played ? <SymbolGlyph name={played} /> : <span>—</span>}
+                                            {played ? <SymbolGlyph name={played} labelled /> : <span aria-hidden="true">-</span>}
+                                            {/* Right and wrong were colour alone. */}
+                                            <span className="visually-hidden">
+                                                {played === undefined
+                                                    ? "nothing played"
+                                                    : played === feedback.sequence[i]
+                                                      ? ", right"
+                                                      : ", wrong"}
+                                            </span>
                                         </li>
                                     );
                                 })}
@@ -484,13 +502,34 @@ export function MemoryPage() {
                             <ol className="mem-row is-answer">
                                 {feedback.sequence.map((symbol, i) => (
                                     <li key={i}>
-                                        <SymbolGlyph name={symbol} />
+                                        <SymbolGlyph name={symbol} labelled />
                                     </li>
                                 ))}
                             </ol>
                         </div>
 
                         <p className="mem-points">+{feedback.points}</p>
+
+                        {/* The learner decides when they have read it. */}
+                        {after && (after.resultsId || after.next) && (
+                            <button
+                                className="button primary"
+                                autoFocus
+                                onClick={() => {
+                                    const { next, resultsId } = after;
+                                    setAfter(null);
+
+                                    if (resultsId) {
+                                        play("complete", resultsId);
+                                        navigate(`/memory/results/${resultsId}`, { replace: true });
+                                    } else if (next) {
+                                        present(next);
+                                    }
+                                }}
+                            >
+                                {after.resultsId ? "See results" : "Next round"}
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

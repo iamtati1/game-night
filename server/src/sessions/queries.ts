@@ -151,7 +151,7 @@ interface ResumableSummaryRow extends ResumableRow {
  * The unit counts come from a UNION ALL across both games' round tables rather
  * than a join: session_questions and flush_rounds have the same grain but are
  * different relations, and a session appears in exactly one of them. Adding
- * game #3 means adding a branch here -- the alternative, a shared polymorphic
+ * a game means adding a branch here (bug_hunt_rounds is the third) -- the alternative, a shared polymorphic
  * round table, would have cost every database-enforced invariant those two
  * tables carry.
  *
@@ -162,7 +162,11 @@ interface ResumableSummaryRow extends ResumableRow {
  * game_sessions_one_resumable_per_game_idx at one per game -- currently at most
  * two, not an unbounded N+1.
  */
-export async function listResumableSessions(userId: string): Promise<ResumableSummary[]> {
+export async function listResumableSessions(
+    userId: string,
+    /** Whether a run is relaxed (sessions/relaxedRuns.ts); absent means timed. */
+    isRelaxedRun: (sessionId: string) => boolean = () => false
+): Promise<ResumableSummary[]> {
     const result = await pool.query<ResumableSummaryRow>(
         `WITH resumable AS (
              SELECT gs.id, gs.game_id, gs.status, gs.started_at, gs.paused_at, gs.pause_count
@@ -185,6 +189,17 @@ export async function listResumableSessions(userId: string): Promise<ResumableSu
              FROM flush_rounds fr
              WHERE fr.game_session_id IN (SELECT id FROM resumable)
              GROUP BY fr.game_session_id
+
+             UNION ALL
+
+             -- Bug Hunt was missing, so a paused hunt reported "Incident 0 of 0"
+             -- on its paused card and the Home resume line.
+             SELECT br.game_session_id,
+                    COUNT(*)                                        AS total,
+                    COUNT(*) FILTER (WHERE br.status <> 'pending')  AS done
+             FROM bug_hunt_rounds br
+             WHERE br.game_session_id IN (SELECT id FROM resumable)
+             GROUP BY br.game_session_id
          )
          SELECT r.id,
                 g.slug  AS game_slug,
@@ -212,7 +227,7 @@ export async function listResumableSessions(userId: string): Promise<ResumableSu
                 unitsTotal: Number(row.units_total),
                 // A game with no adapter is a programming error, not a runtime
                 // one: report 0 rather than crashing the whole list.
-                score: adapter ? await adapter.scoreSoFar(row.id) : 0
+                score: adapter ? await adapter.scoreSoFar(row.id, isRelaxedRun(row.id)) : 0
             };
         })
     );

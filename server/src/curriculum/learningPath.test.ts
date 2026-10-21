@@ -10,6 +10,7 @@ import {
     TOPIC_CHALLENGES,
     VARIABLES_LESSONS
 } from "../../../client/src/games/lessons.ts";
+import { CONCEPT_IDS } from "../../../client/src/games/curriculum.ts";
 
 /**
  * The learning path: what a beginner is shown, in what order, and what moving
@@ -602,12 +603,20 @@ describe("variables and operators are authored to the curriculum's order", () =>
     it("covers the authored topics and nothing beyond them", () => {
         const taught = new Set(ALL_LESSONS.map((l) => l.concept ?? l.challengeFor));
 
-        // Every concept in the curriculum now has a lesson, plus the three
-        // authored topic challenges. The number stopped being a running total
-        // of "how far we have got" when this-and-classes landed -- it is now
-        // the whole curriculum, and the assertion below says so in the form
-        // that cannot drift.
-        expect(taught.size, "100 concepts plus 3 challenges").toBe(103);
+        // Every concept in the curriculum has a lesson, plus the authored topic
+        // challenges. The number stopped being a running total of "how far we
+        // have got" when this-and-classes landed -- it is now the whole
+        // curriculum. Counted from the curriculum itself rather than typed in:
+        // a literal here has to be edited every time a concept is added, which
+        // turns a real coverage check into a bookkeeping chore and teaches
+        // whoever hits it to bump the number instead of reading it.
+        expect(
+            taught.size,
+            `${CONCEPT_IDS.length} concepts plus ${TOPIC_CHALLENGES.length} challenges`
+        ).toBe(CONCEPT_IDS.length + TOPIC_CHALLENGES.length);
+
+        // ...and they are the SAME concepts, which the count alone cannot say.
+        expect([...CONCEPT_IDS].filter((id) => !taught.has(id))).toEqual([]);
     });
 });
 
@@ -1029,12 +1038,20 @@ describe("a learner always has one obvious next action", () => {
         // Home reads /api/curriculum/path rather than deciding anything itself,
         // so Home and Journey can never disagree about what is next.
         expect(home).toContain("/api/curriculum/path");
+        // Home no longer builds the route itself: it asks nextAction(), the one
+        // shared answer Home, the journey and the world all read, so they cannot
+        // point at different places.
+        expect(home).toContain("nextAction(path)");
+        const progression = readFileSync(
+            new URL("../../../client/src/games/progression.ts", import.meta.url),
+            "utf8"
+        );
         // The ENCOUNTER, not the bare lesson. Every concept door goes to one
         // place, so the learner never has to know that teaching and practice
         // used to live on different screens.
-        expect(home).toContain("`/concept/${current.slug}`");
-        expect(home, "and at the challenge when that is what is due").toContain(
-            "`/challenge/${challenge.slug}`"
+        expect(progression).toContain("`/concept/${path.current.slug}`");
+        expect(progression, "and at the challenge when that is what is due").toContain(
+            "`/challenge/${checkpoint.slug}`"
         );
     });
 
@@ -1044,7 +1061,8 @@ describe("a learner always has one obvious next action", () => {
         // accessible name is the thing that is always present, and it is the
         // stable contract this test actually cares about.
         const nav = app.slice(app.indexOf("{user ? ("), app.indexOf("nav-pilot"));
-        const links = [...nav.matchAll(/<Link to="[^"]+" aria-label="([^"]+)">/g)].map(
+        // Each link also carries aria-current for the area you are in.
+        const links = [...nav.matchAll(/<Link to="[^"]+" aria-label="([^"]+)"[^>]*>/g)].map(
             (m) => m[1]
         );
 
@@ -1060,7 +1078,9 @@ describe("a learner always has one obvious next action", () => {
          * exactly rather than loosely, because the point is that it stays
          * SHORT. A fourth should have to argue for itself here.
          */
-        expect(links).toEqual(["Learn", "Play", "Experiment"]);
+        // "Games" rather than "Play": the five games are what is there.
+        // "Home" rather than "Learn": the first item is the place to return to.
+        expect(links).toEqual(["Home", "Games", "Experiment"]);
     });
 
     it("keeps the log reachable, beside the pilot rather than as a fourth area", () => {

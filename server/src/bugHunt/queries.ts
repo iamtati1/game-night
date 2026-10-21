@@ -1,5 +1,7 @@
 import type { PoolClient } from "pg";
 import { curriculumCtes, curriculumSelects } from "../curriculum/selection.js";
+import { curriculumEligible } from "../curriculum/eligibility.js";
+import { roleEligible } from "../curriculum/roles.js";
 import { incidentWithinJourney, journeyCte } from "../curriculum/journey.js";
 import { QUESTIONS_PER_SESSION } from "../game/scoring.js";
 import { pool } from "../db.js";
@@ -107,16 +109,52 @@ export const ELIGIBLE_INCIDENT_PREDICATE = `
  * top-up path, so unlike Code Blitz there is no second caller that wants the
  * unfiltered count -- hence one function rather than two.
  */
-export async function countDealableIncidents(userId: string): Promise<number> {
-    const result = await pool.query<{ count: string }>(
-        `WITH ${curriculumCtes("$1")},
+/** The count the readiness check and the dealer agree on. Exported for tests. */
+export const DEALABLE_INCIDENTS_SQL = `WITH ${curriculumCtes("$1")},
               ${journeyCte("$1", QUESTIONS_PER_SESSION)}
          SELECT COUNT(*) AS count
          FROM bug_hunt_incidents i
          WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
            AND ${curriculumSelects("i")}
-           AND ${incidentWithinJourney("i")}`,
-        [userId]
+           AND ${incidentWithinJourney("i")}`;
+
+export async function countDealableIncidents(userId: string): Promise<number> {
+    const result = await pool.query<{ count: string }>(DEALABLE_INCIDENTS_SQL, [userId]);
+
+    return Number(result.rows[0]!.count);
+}
+
+/**
+ * Incidents this learner could be dealt but for the difficulty frontier.
+ *
+ * NOT A GATE -- nothing is dealt from this. It exists so the readiness answer
+ * can say WHY a run cannot be filled. The dealer's gate is curriculumSelects
+ * (prerequisites, role, frontier) plus the journey; this is the same minus the
+ * frontier. Where it exceeds countDealableIncidents, the learner has met the
+ * ideas and the bugs are a rung above anything they have played on them --
+ * a different problem with a different remedy from "not met yet".
+ */
+export const REACHABLE_INCIDENTS_SQL = `WITH ${curriculumCtes("$1")},
+              ${journeyCte("$1", QUESTIONS_PER_SESSION)}
+         SELECT COUNT(*) AS count
+         FROM bug_hunt_incidents i
+         WHERE ${ELIGIBLE_INCIDENT_PREDICATE}
+           AND ${curriculumEligible("i")}
+           AND ${roleEligible("i")}
+           AND ${incidentWithinJourney("i")}`;
+
+export async function countReachableIncidents(userId: string): Promise<number> {
+    const result = await pool.query<{ count: string }>(REACHABLE_INCIDENTS_SQL, [userId]);
+
+    return Number(result.rows[0]!.count);
+}
+
+/** How many incidents the run holding this round was dealt. */
+export async function countRoundsInSessionOf(roundId: string): Promise<number> {
+    const result = await pool.query<{ count: string }>(
+        `SELECT COUNT(*) AS count FROM bug_hunt_rounds
+         WHERE game_session_id = (SELECT game_session_id FROM bug_hunt_rounds WHERE id = $1)`,
+        [roundId]
     );
 
     return Number(result.rows[0]!.count);
@@ -229,7 +267,16 @@ export function dealRun<T extends { id: string; difficulty: number; concept_id?:
 
         const exact = remaining.find((c) => c.difficulty === want) ?? byDistance(want)[0];
 
-        if (!exact) break;
+        if (!exact) {
+            // A short run: the pool ran dry before the ramp did. Any incident
+            // held for a later hunt still belongs in it -- it is the one most
+            // worth dealing -- so it closes the run rather than vanishing.
+            for (const [later, held] of reserved) {
+                if (later > hunt) dealt.push(held);
+            }
+
+            break;
+        }
 
         dealt.push(exact);
         remaining.splice(remaining.indexOf(exact), 1);
@@ -241,7 +288,15 @@ export function dealRun<T extends { id: string; difficulty: number; concept_id?:
 export async function createSessionWithRounds(
     userId: string,
     /** The learner's current concept_id, resolved server-side by the caller. */
-    focusConcept: string | null = null
+    focusConcept: string | null = null,
+    /**
+     * A run played without a clock. Every round is dealt with no time limit,
+     * which is already how an untimed tier works end to end: nothing expires
+     * (expireOverdueRounds skips NULL) and speedBonus pays nothing for a NULL
+     * limit. Stored on the round, so it survives a pause, a reload or another
+     * browser.
+     */
+    relaxed = false
 ): Promise<BugHuntSessionRow> {
     const client: PoolClient = await pool.connect();
 
@@ -322,7 +377,7 @@ export async function createSessionWithRounds(
                     sessionId,
                     incident.id,
                     index + 1,
-                    timeLimitMs(incident.difficulty, countCodeLines(incident.code))
+                    relaxed ? null : timeLimitMs(incident.difficulty, countCodeLines(incident.code))
                 ]
             );
         }
@@ -649,6 +704,8 @@ export interface BugHuntResultRow extends BugHuntRoundRow {
     correct_explanation: string | null;
     selected_option_text: string | null;
     selected_explanation: string | null;
+    /** The lesson concept this incident practises; null for an untagged one. */
+    concept_name: string | null;
 }
 
 /**
@@ -671,9 +728,12 @@ export async function listRoundsForResults(sessionId: string): Promise<BugHuntRe
                 correct.option_text  AS correct_option_text,
                 correct.explanation  AS correct_explanation,
                 chosen.option_text   AS selected_option_text,
-                chosen.explanation   AS selected_explanation
+                chosen.explanation   AS selected_explanation,
+                concept.name         AS concept_name
          FROM bug_hunt_rounds r
          JOIN bug_hunt_incidents i ON i.id = r.incident_id
+         LEFT JOIN challenges ch   ON ch.id = i.challenge_id
+         LEFT JOIN concepts concept ON concept.id = ch.concept_id
          LEFT JOIN LATERAL (
              SELECT o.option_text, o.explanation
              FROM bug_hunt_options o
@@ -721,6 +781,45 @@ export async function findIncidentConcept(
          JOIN demands d     ON d.id  = ch.demand_id
          WHERE i.id = $1`,
         [incidentId]
+    );
+
+    return result.rows[0] ?? null;
+}
+
+/**
+ * Where a learner who cannot fill a Bug Hunt run can debug right now.
+ *
+ * A run needs at least BUG_HUNT_MIN_INCIDENTS_PER_SESSION incidents, so a
+ * beginner with fewer reachable is refused one. But the
+ * curriculum already holds debugging for that learner: every early concept has
+ * a "diagnose" or "repair" rung, played inside the concept, scaffolded by its
+ * lesson. This names that concept when it has such a rung with content, so the
+ * refusal can point at it instead of at an unrelated game.
+ *
+ * Reads only existing curriculum data. No threshold, no second gate.
+ */
+export async function findDebugPractice(
+    conceptId: string
+): Promise<{ slug: string; name: string } | null> {
+    const result = await pool.query<{ slug: string; name: string }>(
+        `SELECT c.slug, c.name
+         FROM concepts c
+         WHERE c.id = $1
+           AND EXISTS (
+               SELECT 1
+               FROM challenges ch
+               JOIN demands d ON d.id = ch.demand_id
+               WHERE ch.concept_id = c.id
+                 AND ch.role = 'practise'
+                 AND ch.is_active
+                 AND d.slug IN ('diagnose', 'repair')
+                 AND (
+                     EXISTS (SELECT 1 FROM questions q WHERE q.challenge_id = ch.id AND q.is_active)
+                     OR EXISTS (SELECT 1 FROM bug_hunt_incidents i
+                                WHERE i.challenge_id = ch.id AND i.is_active)
+                 )
+           )`,
+        [conceptId]
     );
 
     return result.rows[0] ?? null;

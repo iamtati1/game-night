@@ -22,8 +22,8 @@ export function RoundProgress({ current, total, unit = "Question" }: RoundProgre
     return (
         <div className="round-progress">
             <p className="round-label">
-                {unit} <strong>{current}</strong>
-                <span className="round-of">/ {total}</span>
+                {unit} <strong>{current}</strong>{" "}
+                <span className="round-of">of {total}</span>
             </p>
 
             {/* aria-hidden: the label above already states the position, so the

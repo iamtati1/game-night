@@ -239,10 +239,31 @@ export function generate(): string {
     //
     // So unchanged pairs are left strictly alone: inserted if missing, ignored
     // if present, and never deleted and recreated. Only a pair the curriculum no
-    // longer declares is removed, and if a challenge still points at that pair
-    // the delete is refused -- which is the loud failure the RESTRICT exists for.
-    // Removing a demand that has playable content should be a deliberate
-    // decision, not a silent one.
+    // longer declares is removed.
+    //
+    // AND ONLY IF NOTHING STILL POINTS AT IT. This guard used to be absent, on
+    // the reasoning that a refused delete is the loud failure RESTRICT exists
+    // for and that dropping a rung with playable content should be deliberate.
+    // The first half is right and the second half is unreachable, because the
+    // refusal is not a warning -- it aborts the whole seed file, and every seed
+    // after it. The content migration that re-homes the challenge is one of
+    // those later seeds. So the "deliberate decision" could be authored but
+    // never applied: 014 refused until the content moved, and the content could
+    // not move until 014 passed.
+    //
+    // Measured, not theorised -- dropping (arithmetic-operators, explain) for
+    // operator-precedence deadlocked seeding exactly this way:
+    //
+    //   seeding 014_curriculum.sql ... FAILED
+    //   update or delete on table "concept_demands" violates RESTRICT setting
+    //   of foreign key constraint "challenges_concept_demand_fk"
+    //
+    // With the guard the projection converges over two runs instead of one: the
+    // first leaves the referenced pair in place and lets the content migration
+    // run, the second finds nothing pointing at it and removes it. A rung with
+    // playable content is still never dropped out from under that content --
+    // which is the property RESTRICT was protecting. What is given up is the
+    // abort, and the abort was never actionable.
     //
     // The emitted rows and their order are unchanged from the previous
     // projection: CONCEPTS in declaration order, each concept's demands in
@@ -272,19 +293,65 @@ export function generate(): string {
     // The targeted removal. Matched on slugs rather than ids so the statement
     // does not depend on identity values, and run after the inserts so a pair
     // that moved is added before anything is considered stale.
-    p("-- Only pairs the curriculum no longer declares. A pair still referenced by");
-    p("-- a challenge is refused here by challenges_concept_demand_fk, which is");
-    p("-- the intended failure rather than a bug.");
+    p("-- Only pairs the curriculum no longer declares, and only once nothing");
+    p("-- points at them. A pair a challenge still references is left in place for");
+    p("-- this run: deleting it is refused by challenges_concept_demand_fk, and");
+    p("-- that refusal aborts every remaining seed -- including the content");
+    p("-- migration that re-homes the challenge. Skipping it lets that migration");
+    p("-- run, and the next seeding removes the pair.");
 
     if (pairs.length === 0) {
         // Defensive: NOT IN () is not valid SQL. Unreachable while any concept
         // declares a demand, which a curriculum test already requires.
         p("DELETE FROM concept_demands;");
     } else {
+        // THE DECISION, STILL SURFACED. The abort this replaces was meant to
+        // turn "a rung with content was dropped" into a decision rather than a
+        // silent change. The abort could not do that -- it took the whole seed
+        // run down, including the migration that resolves it -- but the
+        // requirement behind it is real, so it is met by naming the pairs that
+        // were left standing. Its copy of the keep-set is indented eight spaces
+        // so the DELETE's six-space list stays the canonical one for anything
+        // reading this file by shape.
+        p("DO $$");
+        p("DECLARE v_blocked TEXT;");
+        p("BEGIN");
+        p("    SELECT string_agg(c.slug || '/' || d.slug, ', ' ORDER BY c.slug, d.slug)");
+        p("    INTO v_blocked");
+        p("    FROM concept_demands cd");
+        p("    JOIN concepts c ON c.id = cd.concept_id");
+        p("    JOIN demands  d ON d.id = cd.demand_id");
+        p("    WHERE EXISTS (");
+        p("        SELECT 1 FROM challenges ch");
+        p("        WHERE ch.concept_id = cd.concept_id");
+        p("          AND ch.demand_id  = cd.demand_id");
+        p("    )");
+        p("      AND (c.slug, d.slug) NOT IN (");
+
+        for (const [i, [concept, demand]] of pairs.entries()) {
+            const comma = i === pairs.length - 1 ? "" : ",";
+
+            p(`        (${lit(concept)}, ${lit(demand)})${comma}`);
+        }
+
+        p("      );");
+        p();
+        p("    IF v_blocked IS NOT NULL THEN");
+        p("        RAISE NOTICE 'concept_demands: the curriculum no longer declares % -- left in place because a challenge still points at it. Re-run seeding after the content migration that re-homes that challenge.', v_blocked;");
+        p("    END IF;");
+        p("END;");
+        p("$$;");
+        p();
+
         p("DELETE FROM concept_demands cd");
         p("USING concepts c, demands d");
         p("WHERE cd.concept_id = c.id");
         p("  AND cd.demand_id = d.id");
+        p("  AND NOT EXISTS (");
+        p("      SELECT 1 FROM challenges ch");
+        p("      WHERE ch.concept_id = cd.concept_id");
+        p("        AND ch.demand_id  = cd.demand_id");
+        p("  )");
         p("  AND (c.slug, d.slug) NOT IN (");
 
         for (const [i, [concept, demand]] of pairs.entries()) {

@@ -69,7 +69,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (!response.ok) {
         throw new ApiError(
             response.status,
-            body?.error ?? `Request failed with status ${response.status}`,
+            body?.error ??
+                // A 5xx with no body of ours is the server, or a proxy in front
+                // of it, failing -- not Jolt answering. "Request failed with
+                // status 502" told a learner nothing they could act on.
+                (response.status >= 500
+                    ? "Jolt's server is not responding right now. Try again in a moment."
+                    : `Request failed with status ${response.status}`),
             body?.details ?? [],
             body
         );
@@ -86,3 +92,20 @@ export const api = {
             body: body === undefined ? undefined : JSON.stringify(body)
         })
 };
+
+/**
+ * Whether a failure means the API could not be reached, as opposed to the API
+ * answering with a refusal.
+ *
+ * No response at all is status 0. A 502 or 504 with none of Jolt's own error
+ * body is a gateway with nothing behind it -- what the Vite proxy returns when
+ * the API is down. A 503 carrying Jolt's error body is the server ANSWERING (a
+ * readiness refusal), so it is not this.
+ */
+export function isUnreachable(err: unknown): boolean {
+    if (!(err instanceof ApiError)) return false;
+    if (err.status === 0) return true;
+
+    const answered = typeof (err.body as { error?: unknown } | null)?.error === "string";
+    return (err.status === 502 || err.status === 504) && !answered;
+}

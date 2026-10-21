@@ -31,14 +31,38 @@
 BEGIN;
 
 CREATE OR REPLACE FUNCTION seed_recognise(
-    p_prompt TEXT, p_concept TEXT, p_correct TEXT, p_wrong TEXT[], p_why TEXT
+    p_ref TEXT, p_prompt TEXT, p_concept TEXT, p_correct TEXT, p_wrong TEXT[], p_why TEXT
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE
     v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-variables-recognise' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    -- ADOPTION for rows seeded before names existed: give the existing row the
+    -- name rather than inserting beside it. Only rows with no name yet, so this
+    -- can never take a question that already belongs to another.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-variables-recognise' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     INSERT INTO challenges (concept_id, demand_id, role, difficulty)
     SELECT c.id, d.id, 'practise', 1
@@ -47,9 +71,9 @@ BEGIN
     RETURNING id INTO v_challenge;
 
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation, external_ref)
     VALUES (p_prompt, 1, 'variables', 'match-concept', v_challenge,
-            'jolt-variables-recognise', p_why)
+            'jolt-variables-recognise', p_why, p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -66,12 +90,14 @@ $$;
 -- 1 · variables-name-values. The name and the value are two separate things,
 -- which is the whole concept. Naming the parts comes before using them.
 SELECT seed_recognise(
+    'vars-recognise-001',
     E'Which part of this line is the name?\n\nlet fuel = 100;',
     'variables-name-values', 'fuel', ARRAY['100', 'let', '='],
     'The name is the word you choose: `fuel`. `100` is the value it holds, `let` is the instruction to create a name, and `=` is what puts the value into it.');
 
 -- 2 · declaration. Creating a name, versus using one that already exists.
 SELECT seed_recognise(
+    'vars-recognise-002',
     E'Which line brings a new name into existence?',
     'declaration', 'let crew = 4;',
     ARRAY['console.log(crew);', 'console.log("crew");', 'crew'],
@@ -79,6 +105,7 @@ SELECT seed_recognise(
 
 -- 3 · initialization. Created WITH a value, versus created empty.
 SELECT seed_recognise(
+    'vars-recognise-003',
     E'Which line creates a name and gives it a value at the same time?',
     'initialization', 'let fuel = 100;',
     ARRAY['let fuel;', 'console.log(fuel);', 'console.log("fuel = 100");'],
@@ -86,6 +113,7 @@ SELECT seed_recognise(
 
 -- 5 · reading-variables. Using the value a name holds, versus the word itself.
 SELECT seed_recognise(
+    'vars-recognise-004',
     E'Which line displays the value that `fuel` is holding?',
     'reading-variables', 'console.log(fuel);',
     ARRAY['console.log("fuel");', 'let fuel = 80;', 'console.log("Fuel: 80");'],
@@ -93,11 +121,12 @@ SELECT seed_recognise(
 
 -- 7 · let-vs-const. What const actually refuses.
 SELECT seed_recognise(
+    'vars-recognise-005',
     E'Which line creates a name that cannot be given a different value later?',
     'let-vs-const', 'const crew = 5;',
     ARRAY['let crew = 5;', 'crew = 5;', 'console.log(crew);'],
     'A `const` name keeps the value it was created with. `let` creates a name that can be given a new one, `crew = 5;` gives a value to a name that already exists, and `console.log` only displays.');
 
-DROP FUNCTION seed_recognise(TEXT, TEXT, TEXT, TEXT[], TEXT);
+DROP FUNCTION seed_recognise(TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
 
 COMMIT;

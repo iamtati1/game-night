@@ -584,3 +584,118 @@ describe("the correct option cannot be picked by length alone", () => {
         expect(tells).toEqual([]);
     });
 });
+
+/**
+ * WHICH OF SEVERAL CANDIDATES A BEGINNER ACTUALLY MEETS.
+ *
+ * A rung can hold many exercises -- arithmetic-operators/predict holds six --
+ * and the encounter hands the learner options[0]. The query used to order by
+ * challenge id, which is seed order, so the learner always met whichever was
+ * written first. In that concept's case the first was the hardest: a precedence
+ * question the lesson never teaches, with 7 - 10 and 10 / 4 sitting unused
+ * behind it.
+ *
+ * questions.difficulty is the pacing tier from migration 017 -- 1 is "one idea,
+ * read and answer", 4 is "combines concepts" -- so ascending is easiest first.
+ * These assert the order comes from that tier rather than from insertion.
+ */
+describe("the easiest candidate at a rung is the one offered", () => {
+    let fx: CurriculumFixture;
+    let user: string;
+
+    beforeAll(async () => {
+        fx = await buildCurriculumFixture();
+        user = await fx.insertUser("ordering@example.com");
+    }, 120000);
+
+    const optionsAt = async (concept: string, demand: string) => {
+        const rungs = rungsFromRows(await fx.rows(ENCOUNTER_RUNGS_SQL, [user, concept]));
+
+        return rungs.find((r) => r.demandSlug === demand)?.options ?? [];
+    };
+
+    it("offers the lower difficulty first even when it was written second", async () => {
+        await fx.scenario(async () => {
+            // Written in the order a seed would write them: the hard one first.
+            const hard = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+            const easy = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+
+            await fx.rows(`UPDATE questions SET difficulty = 3 WHERE id = $1`, [hard.questionId]);
+            await fx.rows(`UPDATE questions SET difficulty = 1 WHERE id = $1`, [easy.questionId]);
+
+            const options = await optionsAt("booleans", "predict");
+            // content.id is String(row.question_id); the fixture hands back the
+            // raw bigint, so both sides are normalised before comparing.
+            const ids = options.map((o) =>
+                o.content.kind === "question" ? o.content.id : null
+            );
+            const easyId = String(easy.questionId);
+            const hardId = String(hard.questionId);
+
+            expect(ids).toContain(easyId);
+            expect(ids).toContain(hardId);
+
+            // The point of the test: insertion order does not decide this.
+            expect(ids.indexOf(easyId)).toBeLessThan(ids.indexOf(hardId));
+        });
+    });
+
+    it("puts an unrated question behind every rated one", async () => {
+        await fx.scenario(async () => {
+            const unrated = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+            const rated = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+
+            await fx.rows(`UPDATE questions SET difficulty = NULL WHERE id = $1`, [
+                unrated.questionId
+            ]);
+            await fx.rows(`UPDATE questions SET difficulty = 4 WHERE id = $1`, [rated.questionId]);
+
+            const ids = (await optionsAt("booleans", "predict")).map((o) =>
+                o.content.kind === "question" ? o.content.id : null
+            );
+
+            // NULLS LAST: a question nobody has tiered does not get to jump the
+            // queue ahead of one that was deliberately rated hardest.
+            expect(ids.indexOf(String(rated.questionId))).toBeLessThan(
+                ids.indexOf(String(unrated.questionId))
+            );
+        });
+    });
+
+    it("leaves a rung that holds an incident exactly as it was", async () => {
+        await fx.scenario(async () => {
+            // Written hardest-first, as a seed would. If difficulty ranking
+            // reached this rung, `easy` would overtake `hard`.
+            const hard = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+            const easy = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+            const carrier = await fx.challengeFor("booleans", "practise", { demand: "predict" });
+
+            await fx.rows(`UPDATE questions SET difficulty = 4 WHERE id = $1`, [hard.questionId]);
+            await fx.rows(`UPDATE questions SET difficulty = 1 WHERE id = $1`, [easy.questionId]);
+
+            await fx.attachIncident(carrier.challengeId);
+            // Leaves the incident as that challenge's only playable content, so
+            // the rung genuinely holds both kinds.
+            await fx.rows(`UPDATE questions SET is_active = FALSE WHERE id = $1`, [
+                carrier.questionId
+            ]);
+
+            const options = await optionsAt("booleans", "predict");
+
+            expect(options.map((o) => o.content.kind)).toContain("incident");
+
+            const ids = options.map((o) => (o.content.kind === "question" ? o.content.id : null));
+            const hardId = String(hard.questionId);
+            const easyId = String(easy.questionId);
+
+            /*
+             * Incidents carry no difficulty, so ranking the two kinds together
+             * moves one in front of the other wholesale -- measured over the
+             * migrated curriculum, keying on (q.id IS NOT NULL) changed which
+             * KIND 11 repair rungs served. A rung holding an incident is
+             * therefore left in its original order, hardest-first and all.
+             */
+            expect(ids.indexOf(hardId)).toBeLessThan(ids.indexOf(easyId));
+        });
+    });
+});

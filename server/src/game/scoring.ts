@@ -132,8 +132,11 @@ export function stanceFor(answers: readonly Settled[]): Stance {
 export function timeLimitFor(
     challengeType: string,
     displayOrder = Number.MAX_SAFE_INTEGER,
-    stance: Stance = "developing"
+    stance: Stance = "developing",
+    /** A run the learner chose to play without a clock (sessions/relaxedRuns.ts). */
+    relaxed = false
 ): number | null {
+    if (relaxed) return null;
     if (stance === "struggling") return null;
     if (displayOrder <= UNTIMED_OPENING_BEATS) return null;
 
@@ -174,7 +177,8 @@ export function pointsForAnswer(
     elapsedMs: number,
     challengeType = "predict-output",
     displayOrder = Number.MAX_SAFE_INTEGER,
-    stance: Stance = "developing"
+    stance: Stance = "developing",
+    relaxed = false
 ): number {
     if (!isCorrect) {
         return 0;
@@ -189,7 +193,7 @@ export function pointsForAnswer(
      * correct, not from points -- so a perfect game is still worth exactly
      * PERFECT_GAME_XP.
      */
-    if (timeLimitFor(challengeType, displayOrder, stance) === null) {
+    if (timeLimitFor(challengeType, displayOrder, stance, relaxed) === null) {
         return BASE_POINTS;
     }
 
@@ -216,14 +220,29 @@ export interface ScoredAnswer {
     answeredAt: Date | null;
 }
 
-/** Session score: the sum of every answer's points. */
-export function scoreForSession(answers: ScoredAnswer[]): number {
+/**
+ * Session score: the sum of every answer's points.
+ *
+ * A relaxed run scores every correct answer at BASE_POINTS -- the speed bonus
+ * belongs to the clock, and a relaxed run has none. XP is unaffected.
+ */
+export function scoreForSession(answers: ScoredAnswer[], relaxed = false): number {
     return answers.reduce((total, answer) => {
         if (answer.isCorrect !== true || !answer.servedAt || !answer.answeredAt) {
             return total;
         }
 
-        return total + pointsForAnswer(true, answer.answeredAt.getTime() - answer.servedAt.getTime());
+        return (
+            total +
+            pointsForAnswer(
+                true,
+                answer.answeredAt.getTime() - answer.servedAt.getTime(),
+                "predict-output",
+                Number.MAX_SAFE_INTEGER,
+                "developing",
+                relaxed
+            )
+        );
     }, 0);
 }
 
@@ -242,9 +261,10 @@ export function isExpired(
     now: Date,
     challengeType = "predict-output",
     displayOrder = Number.MAX_SAFE_INTEGER,
-    stance: Stance = "developing"
+    stance: Stance = "developing",
+    relaxed = false
 ): boolean {
-    const limit = timeLimitFor(challengeType, displayOrder, stance);
+    const limit = timeLimitFor(challengeType, displayOrder, stance, relaxed);
 
     // An untimed beat cannot expire. Enforcing a deadline the learner was told
     // they did not have is the same mistake as awarding a speed bonus for it.

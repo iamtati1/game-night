@@ -19,12 +19,16 @@ import { ELIGIBLE_INCIDENT_PREDICATE } from "../bugHunt/queries.js";
  * moved it to the concept it actually tests. The frontier rules under test are
  * concept-agnostic; what this file needs is a concept with one seeded practise
  * challenge at difficulty 1, and that is now this one.
+ *
+ * Seed 086 retired that legacy question (two-argument console.log, which no
+ * lesson shows) and put a named replacement on a rung of its own at the same
+ * difficulty, so the seeded practice is the replacement.
  */
 
 const CONCEPT = "typeof";
 
 /** Seeded: one practise challenge at difficulty 1, one question behind it. */
-const SEEDED_PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5", typeof 5);';
+const SEEDED_PRACTICE_PROMPT = 'What does this log?\n\nconsole.log(typeof "5");\nconsole.log(typeof 5);';
 
 let fx: CurriculumFixture;
 let seededPracticeId: string;

@@ -9,11 +9,13 @@ import {
     findResumableSession,
     resumePausedSession
 } from "../sessions/queries.js";
-import { wantsFreshSession } from "../sessions/schemas.js";
+import { wantsFreshSession, wantsRelaxedRun } from "../sessions/schemas.js";
+import { isRelaxed, markRelaxed } from "../sessions/relaxedRuns.js";
 import { mayPlayChallenge, recordActivityCompletion } from "../curriculum/encounter.js";
 import * as db from "./queries.js";
 import { placementSchema } from "./schemas.js";
 import {
+    FLUSH_MIN_ROUNDS_PER_SESSION,
     FLUSH_ROUNDS_PER_SESSION,
     roundTimeLimitMs,
     isExpired,
@@ -136,7 +138,9 @@ async function roundTeaching(
 
 async function nextPlayableRound(
     sessionId: string,
-    now: Date
+    now: Date,
+    /** A relaxed run has no deadline, so nothing in it times out. */
+    relaxed = false
 ): Promise<db.FlushRoundRow | null> {
     for (;;) {
         const round = await db.findNextPendingRound(sessionId);
@@ -145,7 +149,7 @@ async function nextPlayableRound(
             return null;
         }
 
-        if (round.served_at && isExpired(round.served_at, now, round.total_outputs)) {
+        if (!relaxed && round.served_at && isExpired(round.served_at, now, round.total_outputs)) {
             await db.markRoundTimedOut(round.id);
             continue;
         }
@@ -161,7 +165,7 @@ async function nextPlayableRound(
  * the wire until the round has ended -- the same reason Code Blitz withholds
  * correct_option_text until an answer is submitted.
  */
-async function serveRound(round: db.FlushRoundRow) {
+async function serveRound(round: db.FlushRoundRow, relaxed = false) {
     const servedAt = round.served_at ?? (await db.markServed(round.id));
     const [tiles, placed] = await Promise.all([
         db.listTiles(round.snippet_id),
@@ -170,15 +174,25 @@ async function serveRound(round: db.FlushRoundRow) {
     // The window depends on how many outputs this round holds, so the client is
     // told the limit rather than assuming a constant. Without this the countdown
     // bar would animate against a different number than the deadline it draws.
-    const limitMs = roundTimeLimitMs(round.total_outputs);
-    const deadline = servedAt.getTime() + limitMs;
+    // A relaxed run sends no deadline at all, and the client draws no clock --
+    // the same contract as Code Blitz's untimed beats.
+    const limitMs = relaxed ? null : roundTimeLimitMs(round.total_outputs);
+    const deadline = limitMs === null ? null : servedAt.getTime() + limitMs;
     const placedIds = new Set(placed.map((p) => p.output_id));
+    // The rounds this game was actually dealt. A learner with few puzzles open
+    // gets a shorter game, and "Round 1 of 5" over a three-round game would
+    // promise rounds that never come.
+    const totalRounds = await db.countRoundsInSessionOf(round.id);
+    // What this puzzle teaches, said before the learner starts ordering --
+    // Understand before Try. Display only: it changes nothing that is scored.
+    const practising = await db.snippetConcept(round.snippet_id);
 
     return {
         roundId: round.id,
         roundNumber: round.display_order,
-        totalRounds: FLUSH_ROUNDS_PER_SESSION,
+        totalRounds,
         prompt: round.prompt_text,
+        practising,
         // Tiles already placed are returned separately so the client can render
         // them in their slots rather than back in the pool.
         tiles: shuffle(tiles.filter((t) => !placedIds.has(t.id))),
@@ -186,16 +200,22 @@ async function serveRound(round: db.FlushRoundRow) {
         totalOutputs: round.total_outputs,
         pointsBanked: pointsForPlacements(round.correct_placements),
         servedAt: servedAt.toISOString(),
-        deadlineAt: new Date(deadline).toISOString(),
+        deadlineAt: deadline === null ? null : new Date(deadline).toISOString(),
         limitMs,
-        msRemaining: Math.max(0, deadline - Date.now())
+        msRemaining: deadline === null ? null : Math.max(0, deadline - Date.now()),
+        relaxed
     };
 }
 
 /** Serves whatever the player left behind: the next playable round, or the
  *  finished session if every round is already adjudicated. */
-async function respondResumed(res: Response, sessionId: string, now: Date): Promise<void> {
-    const round = await nextPlayableRound(sessionId, now);
+async function respondResumed(
+    res: Response,
+    sessionId: string,
+    now: Date,
+    relaxed = false
+): Promise<void> {
+    const round = await nextPlayableRound(sessionId, now, relaxed);
 
     if (!round) {
         const finished = await finishSession(sessionId);
@@ -210,9 +230,56 @@ async function respondResumed(res: Response, sessionId: string, now: Date): Prom
         resumed: true,
         sessionId,
         scoreSoFar: await db.scoreSoFar(sessionId),
-        round: await serveRound(round)
+        round: await serveRound(round, relaxed)
     });
 }
+
+/**
+ * Whether this learner can be dealt a Flush game, and what to tell them if not.
+ *
+ * ONE ANSWER, TWO READERS: the start route below refuses on it, and GET
+ * /readiness reports it so the Games page can say the same thing before
+ * anything is started. Counted by the same predicate the dealer uses.
+ */
+export interface FlushReadiness {
+    ready: boolean;
+    /** Puzzles this learner could be dealt right now. */
+    eligible: number;
+    /** The fewest a game is dealt with. */
+    needed: number;
+    /** A full game's length; a ready game with fewer puzzles is a short one. */
+    full: number;
+    /** The learner-facing reason, when not ready. */
+    message: string | null;
+}
+
+export async function flushReadiness(userId: string): Promise<FlushReadiness> {
+    const available = await db.countEligibleSnippets(userId);
+    const ready = available >= FLUSH_MIN_ROUNDS_PER_SESSION;
+
+    // "Met" is what the dealer reads (curriculum/eligibility.ts): Code
+    // Blitz questions, Bug Hunt rounds, Learn Beats, and lesson steps
+    // passed or lessons finished. The remedy names the learning path first.
+    const message = ready
+        ? null
+        : `Flush needs at least ${FLUSH_MIN_ROUNDS_PER_SESSION} puzzles about ideas you have learned. ` +
+          (available === 0 ? "None are open yet. " : `So far ${available === 1 ? "1 is" : `${available} are`} open. `) +
+          "Puzzles open as you work through lessons on your Journey, or meet ideas in Code Blitz.";
+
+    return {
+        ready,
+        eligible: available,
+        needed: FLUSH_MIN_ROUNDS_PER_SESSION,
+        full: FLUSH_ROUNDS_PER_SESSION,
+        message
+    };
+}
+
+// GET /api/flush/readiness -- what the start route would say, without starting.
+// Read-only: no session, no round, no evidence.
+flushRouter.get("/readiness", requireAuth, async (req: Request, res: Response) => {
+    res.status(200).json(await flushReadiness(req.user!.id));
+});
 
 // POST /api/flush/sessions -- resume this player's Flush game, or deal a new one.
 //
@@ -252,22 +319,28 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
         const full = await db.findFlushSessionForUser(existing.id, userId);
 
         if (full && full.status === "in_progress") {
-            await respondResumed(res, existing.id, now);
+            await respondResumed(res, existing.id, now, isRelaxed(req, existing.id));
             return;
         }
     }
 
-    const available = await db.countEligibleSnippets();
+    // Per learner, through the curriculum gate: a game is built only from
+    // puzzles whose concepts this learner has met. Below a full game but at or
+    // above the minimum, a SHORTER game is dealt from the puzzles there are --
+    // the dealer's LIMIT simply returns fewer. Only below the minimum is the
+    // learner refused.
+    const readiness = await flushReadiness(userId);
 
-    if (available < FLUSH_ROUNDS_PER_SESSION) {
+    if (!readiness.ready) {
+        // A readiness answer, written for the learner, with somewhere to go --
+        // the same shape as Bug Hunt's. The counts stay in the body for whoever
+        // is debugging the bank.
         res.status(503).json({
-            error: "Not enough snippets available",
-            details: [
-                {
-                    field: "snippets",
-                    message: `Need ${FLUSH_ROUNDS_PER_SESSION} playable snippets, found ${available}`
-                }
-            ]
+            error: "Not enough to play yet",
+            details: [{ field: "snippets", message: readiness.message }],
+            eligible: readiness.eligible,
+            needed: readiness.needed,
+            practice: null
         });
         return;
     }
@@ -338,19 +411,23 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
                     return;
                 }
 
-                await respondResumed(res, winner!.id, now);
+                await respondResumed(res, winner!.id, now, isRelaxed(req, winner!.id));
                 return;
             }
         }
     }
 
-    const round = await nextPlayableRound(session.id, now);
+    // Chosen once, for a new run; a resumed run keeps its own pace.
+    const relaxed = wantsRelaxedRun(req.body);
+    if (relaxed) markRelaxed(req, session.id);
+
+    const round = await nextPlayableRound(session.id, now, relaxed);
 
     res.status(201).json({
         resumed: false,
         sessionId: session.id,
         scoreSoFar: 0,
-        round: round ? await serveRound(round) : null
+        round: round ? await serveRound(round, relaxed) : null
     });
 });
 
@@ -364,7 +441,8 @@ flushRouter.get("/sessions/current", requireAuth, async (req: Request, res: Resp
         return;
     }
 
-    const round = await nextPlayableRound(active.id, now);
+    const relaxed = isRelaxed(req, active.id);
+    const round = await nextPlayableRound(active.id, now, relaxed);
 
     if (!round) {
         const finished = await finishSession(active.id);
@@ -379,7 +457,7 @@ flushRouter.get("/sessions/current", requireAuth, async (req: Request, res: Resp
         complete: false,
         sessionId: active.id,
         scoreSoFar: await db.scoreSoFar(active.id),
-        round: await serveRound(round)
+        round: await serveRound(round, relaxed)
     });
 });
 
@@ -428,10 +506,12 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
 
     // The deadline is enforced against the server's own served_at. A late
     // placement is refused outright, not merely scored zero.
-    if (isExpired(round.served_at, now, round.total_outputs)) {
+    const relaxed = isRelaxed(req, sessionId);
+
+    if (!relaxed && isExpired(round.served_at, now, round.total_outputs)) {
         await db.markRoundTimedOut(round.id);
 
-        const remaining = await nextPlayableRound(sessionId, now);
+        const remaining = await nextPlayableRound(sessionId, now, relaxed);
         const finished = remaining ? null : await finishSession(sessionId);
 
         res.status(200).json({
@@ -446,7 +526,7 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
             ...(await roundTeaching(userId, round.snippet_id, false)),
             yourSequence: (await db.listPlacements(round.id)).map((p) => p.output_text),
             complete: !remaining,
-            round: remaining ? await serveRound(remaining) : null,
+            round: remaining ? await serveRound(remaining, relaxed) : null,
             session: finished ? summarize(finished, await db.listRounds(sessionId)) : null
         });
         return;
@@ -477,7 +557,7 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
     const roundEnded = !correct || completesRound;
     const banked = pointsForPlacements(correct ? placementIndex : round.correct_placements);
 
-    const remaining = roundEnded ? await nextPlayableRound(sessionId, now) : null;
+    const remaining = roundEnded ? await nextPlayableRound(sessionId, now, relaxed) : null;
     const finished = roundEnded && !remaining ? await finishSession(sessionId) : null;
 
     res.status(200).json({
@@ -510,7 +590,7 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
         //
         // A round that has NOT ended is still re-served: it is the same round,
         // served_at is already set, and markServed leaves it alone.
-        round: roundEnded ? null : await serveRound((await db.findRound(round.id, sessionId))!),
+        round: roundEnded ? null : await serveRound((await db.findRound(round.id, sessionId))!, relaxed),
         session: finished ? summarize(finished, await db.listRounds(sessionId)) : null
     });
 });

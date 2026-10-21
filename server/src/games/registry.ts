@@ -40,7 +40,7 @@ export async function checkGameRegistry(): Promise<RegistryCheck> {
 export function registryMessage(missing: string[]): string {
     return (
         `${missing.join(", ")} registered in code but missing from the games table. ` +
-        `A migration has not been applied — sessions for these games will fail with ` +
+        `A migration has not been applied: sessions for these games will fail with ` +
         `a game_id not-null violation until it is.`
     );
 }

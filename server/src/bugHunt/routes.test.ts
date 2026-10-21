@@ -44,10 +44,10 @@ describe("Bug Hunt is a first-class Jolt game", () => {
 });
 
 describe("every endpoint is behind requireAuth", () => {
-    it("attaches it to all four routes", () => {
+    it("attaches it to every route, the read-only /readiness included", () => {
         const routes = [...ROUTES.matchAll(/bugHuntRouter\.(get|post)\((.*?),/g)];
 
-        expect(routes).toHaveLength(4);
+        expect(routes).toHaveLength(5);
 
         for (const [, verb, path] of routes) {
             const line = ROUTES.slice(ROUTES.indexOf(`bugHuntRouter.${verb}(${path},`));
@@ -239,9 +239,15 @@ describe("incident selection", () => {
         expect(QUERIES).toMatch(/ORDER BY \(i\.id IN \(SELECT incident_id FROM recent\)\) ASC/);
     });
 
-    it("refuses to deal a short session", () => {
-        expect(ROUTES).toMatch(/eligible < BUG_HUNT_INCIDENTS_PER_SESSION/);
+    it("deals a short run down to the minimum, and refuses only below it", () => {
+        expect(ROUTES).toMatch(/eligible >= BUG_HUNT_MIN_INCIDENTS_PER_SESSION/);
+        expect(ROUTES).toMatch(/const readiness = await bugHuntReadiness\(userId\);\s*if \(!readiness\.ready\)/);
+        expect(ROUTES).not.toMatch(/eligible < BUG_HUNT_INCIDENTS_PER_SESSION/);
         expect(ROUTES).toMatch(/503/);
+    });
+
+    it("reports the dealt run's length, not the full-run constant", () => {
+        expect(ROUTES).toMatch(/totalIncidents: await db\.countRoundsInSessionOf\(round\.id\)/);
     });
 
     it("stores each round's own clock at deal time, from the pure rule", () => {

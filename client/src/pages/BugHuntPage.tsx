@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { play } from "../games/sound.js";
+import { plainIdea } from "../games/lessons.js";
 import { useNavigate } from "react-router-dom";
-import { ApiError, api } from "../api/client.js";
+import { PaceChoice } from "../components/PaceChoice.js";
+import { usePace } from "../games/usePace.js";
+import { ApiError, api, isUnreachable } from "../api/client.js";
 import type {
     BugHuntCurrentResponse,
     BugHuntDiagnosisResponse,
@@ -10,12 +14,16 @@ import type {
     ResumableResponse
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
+import { NotReady, readinessFrom, type Readiness } from "../components/NotReady.js";
 import { Countdown } from "../components/Countdown.js";
 import { PausedRun } from "../components/PausedRun.js";
 import { GetReady } from "../components/GetReady.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { BUG_HUNT, gameBySlug } from "../games/catalog.js";
 import { INTEGRITY_COSTS } from "../games/bugHuntIntegrity.js";
+import { usePageTitle } from "../usePageTitle.js";
+import { ACTION, startGame } from "../vocabulary.js";
+import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
 import {
     TIMER_LABELS,
     alertLine,
@@ -42,6 +50,15 @@ export const RECOVERY_MS = 2600;
 
 /** A failed incident earns a longer look: there is a correct answer to read. */
 export const FAILURE_MS = 4200;
+
+/**
+ * Incidents in a full hunt, as the briefing states it. The server decides
+ * (BUG_HUNT_INCIDENTS_PER_SESSION); BugHuntPage.test.tsx pins this to it, so
+ * the briefing cannot again say ten while the server deals six. A learner with
+ * fewer bugs open is dealt a shorter run, so the briefing says "up to" and the
+ * run's own counter shows the dealt total.
+ */
+export const INCIDENTS_PER_HUNT = 6;
 
 /**
  * The alert beat before an incident is fetched.
@@ -84,6 +101,7 @@ interface Feedback {
 }
 
 export function BugHuntPage() {
+    usePageTitle("Bug Hunt");
     const navigate = useNavigate();
     const game = gameBySlug(BUG_HUNT);
 
@@ -121,7 +139,19 @@ export function BugHuntPage() {
     } | null>(null);
     const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
     const [error, setError] = useState<string | null>(null);
+    // Whether `error` is a lost connection, as opposed to a request the server
+    // answered and refused. Only the first is worth offering to reconnect.
+    const [offline, setOffline] = useState(false);
+    // The server's "nothing here for you yet": a readiness answer, not a fault,
+    // and -- when the current concept has one -- where to debug instead.
+    const [notReady, setNotReady] = useState<Readiness | null>(null);
+
+    const failed = useCallback((err: unknown, fallback: string) => {
+        setOffline(!(err instanceof ApiError) || isUnreachable(err));
+        setError(err instanceof ApiError ? err.detailText : fallback);
+    }, []);
     const [busy, setBusy] = useState(false);
+    const [timed, setTimed] = usePace();
 
     /** Guards the window between submitting and the outcome landing, so a double
      *  click cannot spend the second attempt on the first click's answer. */
@@ -136,6 +166,10 @@ export function BugHuntPage() {
         timers.current = [];
     }, []);
 
+
+    // Leaving mid-run pauses it, so the clock stops and the run waits for
+    // Resume -- see usePauseOnLeave.
+    usePauseOnLeave(BUG_HUNT, sessionId !== null && !paused && !resuming && phase !== "loading" && phase !== "briefing" && phase !== "restored");
     useEffect(() => () => clearTimers(), [clearTimers]);
 
     /**
@@ -172,16 +206,23 @@ export function BugHuntPage() {
         settling.current = false;
     }, []);
 
-    // Arrive: show a paused run if one is held, otherwise offer the briefing.
+    // Arrive: show a paused run if one is held, otherwise offer the briefing --
+    // or, when no run can be dealt, say why before anything is pressed.
     useEffect(() => {
         let active = true;
 
         void (async () => {
+            /** Any unfinished hunt -- paused or live -- is always resumable, so
+             *  readiness is only asked when there is none. Unknown if the probe
+             *  failed, and then it is not asked either. */
+            let noRun = false;
+
             try {
                 const open = await api.get<ResumableResponse>("/api/me/sessions/resumable");
                 const held = open.sessions.find(
                     (s) => s.game.slug === BUG_HUNT && s.status === "paused"
                 );
+                noRun = !open.sessions.some((s) => s.game.slug === BUG_HUNT);
 
                 if (!active) return;
 
@@ -201,6 +242,30 @@ export function BugHuntPage() {
             }
 
             if (!active) return;
+
+            // The same answer the start route would give (GET /readiness shares
+            // its function), asked up front so the reason is on screen at once
+            // rather than after the alert beat. A failure changes nothing --
+            // Start still asks.
+            if (noRun) {
+                try {
+                    const readiness = await api.get<{
+                        ready: boolean;
+                        message: string | null;
+                        practice: { slug: string; name: string } | null;
+                    }>("/api/bug-hunt/readiness");
+
+                    if (!active) return;
+
+                    if (!readiness.ready && readiness.message) {
+                        setNotReady({ message: readiness.message, practice: readiness.practice });
+                    }
+                } catch {
+                    // Start will ask again.
+                }
+            }
+
+            if (!active) return;
             setPhase("briefing");
         })();
 
@@ -213,6 +278,7 @@ export function BugHuntPage() {
         async (fresh: boolean) => {
             setBusy(true);
             setError(null);
+            setNotReady(null);
             setResuming(false);
             setPaused(false);
 
@@ -221,8 +287,11 @@ export function BugHuntPage() {
                 // clock. So the alert has to be on screen before this call, not
                 // after the response lands.
 
+                // `relaxed` shapes only a newly dealt hunt; a resumed one keeps
+                // the time limits its rounds were dealt with.
                 const data = await api.post<BugHuntCurrentResponse>("/api/bug-hunt/sessions", {
-                    fresh
+                    fresh,
+                    relaxed: !timed
                 });
 
                 if (data.complete) {
@@ -241,14 +310,18 @@ export function BugHuntPage() {
                     }
                 }
 
-                setError(
-                    err instanceof ApiError ? err.detailText : "Could not reach the incident feed"
-                );
+                const readiness = readinessFrom(err, "Not enough to hunt yet");
+                if (readiness) {
+                    setNotReady(readiness);
+                    return;
+                }
+
+                failed(err, "Could not reach the incident feed");
             } finally {
                 setBusy(false);
             }
         },
-        [applyLive, navigate]
+        [applyLive, failed, navigate, timed]
     );
 
     /**
@@ -276,9 +349,9 @@ export function BugHuntPage() {
 
             applyLive(data);
         } catch (err) {
-            setError(err instanceof ApiError ? err.detailText : "Lost contact with the system");
+            failed(err, "Lost contact with the system");
         }
-    }, [applyLive, later, navigate]);
+    }, [applyLive, failed, later, navigate]);
 
     async function revealHint() {
         if (!sessionId || !incident || busy) return;
@@ -293,12 +366,13 @@ export function BugHuntPage() {
             // The server decides which rung this is and what it says. The client
             // only ever appends what it is handed.
             setHints((prev) => [...prev, data.hint]);
+            play("hint", `${incident.roundId}:${data.hint.order}`);
             setIncident((prev) => (prev ? { ...prev, hintsUsed: data.hintsUsed } : prev));
             // A trace costs integrity, so the meter has to move now rather than
             // waiting for the next diagnosis to reveal what it already cost.
             setIntegrity(data.systemIntegrity);
         } catch (err) {
-            setError(err instanceof ApiError ? err.detailText : "No trace available");
+            failed(err, "No trace available");
         } finally {
             setBusy(false);
         }
@@ -321,7 +395,7 @@ export function BugHuntPage() {
             setPhase("diagnostic");
         } catch (err) {
             settling.current = false;
-            setError(err instanceof ApiError ? err.detailText : "The patch could not be applied");
+            failed(err, "The patch could not be applied");
         } finally {
             setBusy(false);
         }
@@ -344,6 +418,11 @@ export function BugHuntPage() {
                 attemptsRemaining: data.attemptsRemaining,
                 timedOut: false
             });
+            play(
+                data.outcome === "resolved" ? "correct" : "incorrect",
+                `${incident.roundId}:${data.attemptsRemaining}:${data.outcome}`
+            );
+            if (data.complete) later(() => play("complete", sessionId ?? undefined), 900);
 
             if (data.outcome === "retry") {
                 // The incident stays open and the clock keeps running. Only the
@@ -379,6 +458,9 @@ export function BugHuntPage() {
         }
     }
 
+    /** How to move on after a timeout, held until the learner presses Continue. */
+    const [afterTimeout, setAfterTimeout] = useState<(() => void) | null>(null);
+
     /**
      * The countdown hit zero on screen.
      *
@@ -400,14 +482,17 @@ export function BugHuntPage() {
         });
         setStreak(0);
         setPhase("failed");
+        play("incorrect", `timeout:${incident?.roundId ?? ""}`);
 
         const next = (incident?.incidentNumber ?? 0) + 1;
 
-        later(
-            () => announce(next, next === (incident?.totalIncidents ?? 5), () => void pullNext()),
-            FAILURE_MS
+        // HELD, NOT TIMED. This moved on by itself after 4.2 seconds, so a
+        // timeout was the one loss a learner could not stop to read. The next
+        // incident is not fetched until they press on, so no clock runs.
+        setAfterTimeout(() => () =>
+            announce(next, next === (incident?.totalIncidents ?? 5), () => void pullNext())
         );
-    }, [announce, incident, later, pullNext]);
+    }, [announce, incident, pullNext]);
 
     async function handlePause() {
         if (!sessionId || busy) return;
@@ -428,7 +513,7 @@ export function BugHuntPage() {
 
             setPaused(true);
         } catch (err) {
-            setError(err instanceof ApiError ? err.detailText : "Could not pause the run");
+            failed(err, "Could not pause the run");
         } finally {
             setBusy(false);
         }
@@ -449,15 +534,28 @@ export function BugHuntPage() {
         );
     }
 
+    if (notReady) {
+        return (
+            <NotReady
+                title="Not enough for a hunt yet"
+                readiness={notReady}
+                practiceLabel={(name) => `Find a bug in ${name}`}
+                // Lessons on the Journey open bugs here, as do Code Blitz
+                // questions -- the learning path is the way in named first.
+                other={{ to: "/journey", label: ACTION.seeJourney }}
+            />
+        );
+    }
+
     if (error) {
         return (
             <section className="panel narrow">
-                <h1>Connection lost</h1>
+                <h1>{offline ? "Connection lost" : "Something went wrong"}</h1>
                 <p className="form-error" role="alert">
                     {error}
                 </p>
                 <button className="button primary" onClick={() => window.location.reload()}>
-                    Reconnect
+                    {offline ? "Reconnect" : "Try again"}
                 </button>
             </section>
         );
@@ -485,7 +583,12 @@ export function BugHuntPage() {
 
     if (phase === "briefing") {
         return (
-            <Briefing busy={busy} onStart={() => announce(1, false, () => void start(false))} />
+            <Briefing
+                busy={busy}
+                timed={timed}
+                onTimedChange={setTimed}
+                onStart={() => announce(1, false, () => void start(false))}
+            />
         );
     }
 
@@ -534,6 +637,15 @@ export function BugHuntPage() {
             onHint={() => void revealHint()}
             onExpire={handleExpire}
             onPause={() => void handlePause()}
+            onContinue={
+                afterTimeout
+                    ? () => {
+                          const go = afterTimeout;
+                          setAfterTimeout(null);
+                          go();
+                      }
+                    : null
+            }
         />
     );
 }
@@ -568,7 +680,17 @@ function AlertBeat({ number, isBoss }: { number: number; isBoss: boolean }) {
 
 /* ------------------------------------------------------------------ briefing */
 
-function Briefing({ busy, onStart }: { busy: boolean; onStart: () => void }) {
+function Briefing({
+    busy,
+    timed,
+    onTimedChange,
+    onStart
+}: {
+    busy: boolean;
+    timed: boolean;
+    onTimedChange: (timed: boolean) => void;
+    onStart: () => void;
+}) {
     return (
         <section className="bh-briefing">
             <p className="bh-alert" role="status">
@@ -577,12 +699,14 @@ function Briefing({ busy, onStart }: { busy: boolean; onStart: () => void }) {
             </p>
 
             <h1 className="bh-title">Bug Hunt</h1>
-            <p className="bh-tagline">Ten incidents detected across production.</p>
+            {/* Same wording as the other games' intros (GameIntro). */}
+            <p className="game-intro-counts course">Counts toward your course</p>
+            <p className="bh-tagline">Up to {INCIDENTS_PER_HUNT} incidents detected across production.</p>
 
             <dl className="bh-brief-stats">
                 <div>
                     <dt>Incidents</dt>
-                    <dd>10</dd>
+                    <dd>Up to {INCIDENTS_PER_HUNT}</dd>
                 </div>
                 <div>
                     <dt>System integrity</dt>
@@ -598,12 +722,21 @@ function Briefing({ busy, onStart }: { busy: boolean; onStart: () => void }) {
                 manual to start a game they can learn by playing one round of. */}
             <ol className="bh-rules">
                 <li>Read the failing code and find what is actually wrong.</li>
-                <li>The first incidents are untimed. Later ones are not.</li>
-                <li>Stuck? Pull a trace — it costs points, not your attempt.</li>
+                {/* Relaxed needs no line of its own: the pace choice below
+                    already says "No timer". */}
+                {timed && <li>The first incidents are untimed. Later ones are not.</li>}
+                {/* What a trace really costs: the server takes points off
+                    the incident's score AND integrity -- never an attempt. */}
+                <li>
+                    Stuck? Pull a trace: it costs a little score and{" "}
+                    {INTEGRITY_COSTS[2]!.cost}% integrity, never an attempt.
+                </li>
             </ol>
 
+            <PaceChoice timed={timed} onChange={onTimedChange} clock="later incidents have a time limit" />
+
             <button className="button primary big" disabled={busy} onClick={onStart}>
-                {busy ? "Connecting…" : "Start hunt"}
+                {busy ? "Connecting…" : startGame("Bug Hunt")}
             </button>
         </section>
     );
@@ -628,6 +761,8 @@ interface IncidentScreenProps {
     onHint: () => void;
     onExpire: () => void;
     onPause: () => void;
+    /** Moving on after a timeout; null unless one is waiting for the learner. */
+    onContinue: (() => void) | null;
 }
 
 function IncidentScreen({
@@ -646,7 +781,8 @@ function IncidentScreen({
     onDiagnose,
     onHint,
     onExpire,
-    onPause
+    onPause,
+    onContinue
 }: IncidentScreenProps) {
     /** Can the player still act? Actions hide the moment a patch is submitted. */
     const live = phase === "investigating" || phase === "retry";
@@ -785,7 +921,7 @@ function IncidentScreen({
                 <p className="form-error" role="alert">
                     This incident type is not supported by this version of Bug Hunt.
                 </p>
-            ) : incident.challengeType === "find_line" ? (
+            ) : incident.challengeType === "find_line" && linesIdentifyOptions(incident) ? (
                 <CodeLines
                     incident={incident}
                     selected={selected}
@@ -802,6 +938,7 @@ function IncidentScreen({
                         selected={selected}
                         disabled={!live}
                         onSelect={onSelect}
+                        findFault={incident.challengeType === "find_line"}
                     />
                 </>
             )}
@@ -822,6 +959,12 @@ function IncidentScreen({
             )}
 
             {feedback && <FeedbackPanel feedback={feedback} incident={incident} />}
+
+            {feedback?.timedOut && onContinue && (
+                <button className="button primary" autoFocus onClick={onContinue}>
+                    Continue
+                </button>
+            )}
 
             {/* Selecting is an act, not a form entry -- it gets an
                 acknowledgement of its own before anything is submitted. */}
@@ -871,6 +1014,22 @@ function IncidentScreen({
 /* ------------------------------------------------------- challenge renderers */
 
 /**
+ * Whether clicking a line can name exactly one option.
+ *
+ * The beginner incidents are one-line programs whose wrong answer is a
+ * sentence ("The quotation marks around Hello") filed on the same line as the
+ * fault. Clicking line 1 then had two candidates, the later one won, and the
+ * correct answer could not be chosen at all. When lines do not identify the
+ * options one-to-one, the options are listed instead -- as the lesson shows
+ * the same incident.
+ */
+export function linesIdentifyOptions(incident: Pick<BugHuntIncident, "options">): boolean {
+    const lines = incident.options.map((o) => o.lineNumber);
+
+    return lines.every((n) => typeof n === "number") && new Set(lines).size === lines.length;
+}
+
+/**
  * find_line: the snippet itself is the answer sheet.
  *
  * Radio inputs, visually hidden but really there -- so arrow keys, tab order and
@@ -898,7 +1057,7 @@ function CodeLines({
                 choose_patch renderer has always shown its instruction, and this
                 one needs it more, not less. */}
             <legend className="bh-patches-legend">
-                Locate the fault <span className="bh-legend-sub">— which line is causing this?</span>
+                Locate the fault. <span className="bh-legend-sub">Which line is causing this?</span>
             </legend>
 
             <ol className="bh-code">
@@ -924,10 +1083,16 @@ function CodeLines({
 
                             {option ? (
                                 <label className="bh-line-label">
+                                    {/* Named explicitly, not only by wrapping, and
+                                        valued with the same words: inspection tools
+                                        print a radio's value as its name, and the
+                                        default value is "on". */}
                                     <input
                                         className="visually-hidden"
                                         type="radio"
                                         name="bh-line"
+                                        value={`Line ${number}: ${line.trim() || "blank"}`}
+                                        aria-label={`Line ${number}: ${line.trim() || "blank"}`}
                                         checked={isSelected}
                                         onChange={() => onSelect(option.id)}
                                     />
@@ -949,24 +1114,33 @@ function CodeLines({
     );
 }
 
-/** choose_patch: the snippet is context, the patches are the decision. */
+/** choose_patch: the snippet is context, the patches are the decision. Also
+ *  find_line when its lines cannot name the options (see linesIdentifyOptions). */
 function PatchChoices({
     incident,
     selected,
     disabled,
-    onSelect
+    onSelect,
+    findFault = false
 }: {
     incident: BugHuntIncident;
     selected: string | null;
     disabled: boolean;
     onSelect: (id: string) => void;
+    findFault?: boolean;
 }) {
     return (
         <fieldset className="bh-patches" disabled={disabled}>
-            <legend className="bh-patches-legend">
-                Deploy a patch{" "}
-                <span className="bh-legend-sub">— which change will stabilise the service?</span>
-            </legend>
+            {findFault ? (
+                <legend className="bh-patches-legend">
+                    Locate the fault. <span className="bh-legend-sub">What is causing this?</span>
+                </legend>
+            ) : (
+                <legend className="bh-patches-legend">
+                    Deploy a patch.{" "}
+                    <span className="bh-legend-sub">Which change will stabilise the service?</span>
+                </legend>
+            )}
 
             {incident.options.map((option) => {
                 const isSelected = selected === option.id;
@@ -976,17 +1150,22 @@ function PatchChoices({
                         key={option.id}
                         className={`bh-patch${isSelected ? " selected" : ""}`}
                     >
+                        {/* Named explicitly by its visible text, not only by
+                            wrapping, and valued with it: inspection tools print
+                            a radio's value as its name, and the default is "on". */}
                         <input
                             className="visually-hidden"
                             type="radio"
                             name="bh-patch"
+                            value={option.text}
+                            aria-labelledby={`bh-option-${option.id}`}
                             checked={isSelected}
                             onChange={() => onSelect(option.id)}
                         />
                         <span className="bh-patch-mark" aria-hidden="true">
                             {isSelected ? "▸" : ""}
                         </span>
-                        <code>{option.text}</code>
+                        <code id={`bh-option-${option.id}`}>{option.text}</code>
                     </label>
                 );
             })}
@@ -1090,14 +1269,16 @@ function FeedbackPanel({
         ? feedback.outcome === "resolved"
             ? "That's it"
             : feedback.outcome === "retry"
-              ? "Not quite — look again"
-              : "Here's what was happening"
+              ? "Not quite: look again"
+              : feedback.timedOut
+                ? "Out of time"
+                : "Here's what was happening"
         : feedback.outcome === "resolved"
           ? "Patch successful"
           : feedback.outcome === "retry"
             ? "Patch rejected"
             : feedback.timedOut
-              ? "Incident unresolved — out of time"
+              ? "Incident unresolved: out of time"
               : "Incident unresolved";
 
     // One line from the system, chosen by position and outcome rather than at
@@ -1139,7 +1320,7 @@ function FeedbackPanel({
                 whatever the outcome: a learner who guessed right still benefits
                 from being told why it was right. */}
             {learning && (
-                <p className="bh-feedback-rule">{incident.concept!.meaning}</p>
+                <p className="bh-feedback-rule">{plainIdea(incident.concept!.slug, incident.concept!.meaning)}</p>
             )}
 
             {feedback.outcome === "resolved" && (
@@ -1158,6 +1339,17 @@ function FeedbackPanel({
             )}
 
             {feedback.explanation && <p className="bh-explanation">{feedback.explanation}</p>}
+
+            {/* A timeout has no explanation to show here: the server reveals
+                the fix only for an incident it has closed, and closing this one
+                also deals the next. The mission report lists it, so say where
+                rather than leaving the learner with nothing. */}
+            {feedback.timedOut && (
+                <p className="bh-explanation">
+                    This one counts as not fixed. The fix, and why it works, are in your
+                    mission report at the end of the hunt.
+                </p>
+            )}
 
             {/* A loss is where a player is most likely to stop, so the system
                 hands them a reason to keep going rather than leaving them with

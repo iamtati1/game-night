@@ -78,7 +78,7 @@ describe("what to play for what you are learning", () => {
     it("names the concept the server says the learner is on", () => {
         show(pathWith(CURRENT), encounterWith(["question"]));
 
-        expect(screen.getByText("You are learning")).toBeTruthy();
+        expect(screen.getByText("You’re here")).toBeTruthy();
         expect(
             screen.getByRole("heading", { name: /Running Code and Reading Output/ })
         ).toBeTruthy();
@@ -89,7 +89,7 @@ describe("what to play for what you are learning", () => {
         // The only concept-TARGETED route there is.
         show(pathWith(CURRENT), encounterWith(["question", "mission"]));
 
-        expect(hrefOf(/Keep going/)).toBe("/concept/console-output");
+        expect(hrefOf(/Start learning/)).toBe("/concept/console-output");
         expect(screen.getByText("the 2 stops left on this concept")).toBeTruthy();
     });
 
@@ -104,23 +104,74 @@ describe("what to play for what you are learning", () => {
         expect(screen.getByText("the last stop left on this concept")).toBeTruthy();
     });
 
-    it("does not dress a game up as being aimed at this concept", () => {
-        // The defect this replaced, kept as a test because it was invisible:
-        // linking `/code-blitz?focus=values` LOOKED targeted, but the dealer's
-        // focus enum is the nine-unit legacy taxonomy from migration 018 and the
-        // curriculum topic `values` is not in it, so the parameter was silently
-        // dropped. A link that looks aimed and is not is worse than a plain one.
-        show(pathWith(CURRENT), encounterWith(["question"]));
+    it("offers no game in the course band, so the course is the one thing it points at", () => {
+        // UX audit: the band offered Keep going, Code Blitz and Bug Hunt at
+        // equal weight, and recommended Bug Hunt to beginners it usually cannot
+        // deal a full run to. The games are below the band, as optional
+        // practice. (The old guard against a fake "aimed" game link -- see
+        // `?focus=` in PlayFocus.tsx -- holds trivially: there is none.)
+        const { container } = render(
+            <MemoryRouter>
+                <PlayFocus path={pathWith(CURRENT)} encounter={encounterWith(["question"])} />
+            </MemoryRouter>
+        );
 
-        expect(hrefOf(/Code Blitz/)).toBe("/code-blitz");
-        expect(hrefOf(/Bug Hunt/)).toBe("/bug-hunt");
+        expect(screen.queryByRole("link", { name: /Code Blitz/ })).toBeNull();
+        expect(screen.queryByRole("link", { name: /Bug Hunt/ })).toBeNull();
+        expect([...container.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
+            "/concept/console-output"
+        ]);
+    });
+
+    it("says Continue learning once the learner has finished something", () => {
+        const returning = { ...pathWith(CURRENT), points: { total: 25, concepts: 1, challenges: 0 } };
+        render(
+            <MemoryRouter>
+                <PlayFocus path={returning} encounter={encounterWith(["question", "mission"])} />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByRole("link", { name: "Continue learning" }).getAttribute("href")).toBe("/concept/console-output");
+        expect(screen.queryByRole("link", { name: "Start learning" })).toBeNull();
+    });
+
+    it("makes the next step the single primary action -- Start learning before anything is done", () => {
+        const { container } = render(
+            <MemoryRouter>
+                <PlayFocus path={pathWith(CURRENT)} encounter={encounterWith(["question", "mission"])} />
+            </MemoryRouter>
+        );
+
+        const primaries = [...container.querySelectorAll("a.button.primary")];
+        expect(primaries.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+            ["Start learning", "/concept/console-output"]
+        ]);
+    });
+
+    it("offers the checkpoint as the one action when that is the next step", () => {
+        // The band used to vanish here: the server sends no current concept
+        // while a checkpoint is due.
+        const path = pathWith(null);
+        path.topics[0]!.challenge = { state: "current" };
+
+        const { container } = render(
+            <MemoryRouter>
+                <PlayFocus path={path} encounter={null} />
+            </MemoryRouter>
+        );
+
+        const primaries = [...container.querySelectorAll("a.button.primary")];
+        expect(primaries.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+            ["Take the checkpoint", "/challenge/values"]
+        ]);
+        expect(screen.getByText("Values and Types checkpoint")).toBeTruthy();
     });
 
     it("says so plainly when there is nothing to play on this concept yet", () => {
         show(pathWith(CURRENT), encounterWith([]));
 
         expect(screen.getByText(/nothing to play on this one yet/)).toBeTruthy();
-        expect(screen.queryByRole("link", { name: /Keep going/ })).toBeNull();
+        expect(screen.queryByRole("link", { name: /Start learning|Continue learning/ })).toBeNull();
     });
 
     it("shows nothing at all before the curriculum has answered", () => {
@@ -154,7 +205,7 @@ describe("what to play for what you are learning", () => {
         expect(
             screen.getByRole("heading", { name: /Running Code and Reading Output/ })
         ).toBeTruthy();
-        expect(screen.queryByRole("link", { name: /Keep going/ })).toBeNull();
+        expect(screen.queryByRole("link", { name: /Start learning|Continue learning/ })).toBeNull();
         expect(screen.queryByText(/nothing to play on this one yet/)).toBeNull();
     });
 });

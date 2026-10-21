@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { play } from "../games/sound.js";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { activeGameFrom } from "../api/types.js";
@@ -13,16 +14,22 @@ import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
 import { withCode } from "../components/CodeText.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
+import { PaceChoice } from "../components/PaceChoice.js";
+import { usePace } from "../games/usePace.js";
+import { ACTION, startGame } from "../vocabulary.js";
 import { PausedRun } from "../components/PausedRun.js";
 import { GetReady } from "../components/GetReady.js";
 import { FLUSH, gameBySlug } from "../games/catalog.js";
 import { RoundProgress } from "../components/RoundProgress.js";
+import { HighlightedCode } from "../components/HighlightedCode.js";
+import { NotReady, readinessFrom, type Readiness } from "../components/NotReady.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
 /** Fallback only. The real limit varies with the round's output count and comes
  *  from the served round, so the countdown bar is sized by the same number the
  *  deadline was computed from. */
 const FALLBACK_ROUND_LIMIT_MS = 60_000;
-const REVEAL_MS = 2600;
 
 /** Round exit. Matches Code Blitz, so both games settle at the same rhythm. */
 const EXIT_MS = 170;
@@ -38,6 +45,12 @@ const EXIT_MS = 170;
  * what should it have been?".
  */
 const RESOLVE_MS = 520;
+
+/** Whether the placement that ended the round was a line the program never prints. */
+function neverPrints(reveal: { yourSequence: string[]; correctSequence: string[] }): boolean {
+    const last = reveal.yourSequence[reveal.yourSequence.length - 1];
+    return last !== undefined && !reveal.correctSequence.includes(last);
+}
 
 /** What the round is worth if you bank n placements, and if you finish.
  *  Mirrors the server's formula purely for display -- the server remains
@@ -63,6 +76,7 @@ interface Reveal {
 }
 
 export function FlushPage() {
+    usePageTitle("Flush");
     const navigate = useNavigate();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [round, setRound] = useState<FlushRound | null>(null);
@@ -71,13 +85,25 @@ export function FlushPage() {
     /** Runs before begin(), because begin() serves round one and starts its clock. */
     const [countingIn, setCountingIn] = useState(false);
     const [beginning, setBeginning] = useState(false);
+    const [timed, setTimed] = usePace();
     const [score, setScore] = useState(0);
     const [reveal, setReveal] = useState<Reveal | null>(null);
     const [lastWrong, setLastWrong] = useState<string | null>(null);
+    /**
+     * How to leave the reveal, held until the learner presses the button.
+     *
+     * UX audit: the reveal -- the two sequences side by side, and the rule that
+     * decided the order -- was Flush's whole teaching moment, and it vanished
+     * after 2.6 seconds. Now it stays until the learner moves on. Nothing is
+     * fetched until then, so no clock runs while they read.
+     */
+    const [proceed, setProceed] = useState<{ complete: boolean; go: () => void } | null>(null);
     const [conflict, setConflict] = useState<{ slug: string; name: string } | null>(null);
     /** Bumped after abandoning, to re-run the start effect. */
     const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    // The server's "not enough puzzles for you yet": a next step, not a fault.
+    const [notReady, setNotReady] = useState<Readiness | null>(null);
     const [busy, setBusy] = useState(false);
 
     const [paused, setPaused] = useState(false);
@@ -113,6 +139,10 @@ export function FlushPage() {
         timers.current.push(window.setTimeout(fn, ms));
     }, []);
 
+
+    // Leaving mid-run pauses it, so the clock stops and the run waits for
+    // Resume -- see usePauseOnLeave.
+    usePauseOnLeave(FLUSH, entered && sessionId !== null && round !== null && !paused && !resuming && !proceed?.complete);
     useEffect(
         () => () => {
             timers.current.forEach(window.clearTimeout);
@@ -154,8 +184,19 @@ export function FlushPage() {
             // round with its clock restored, so there is no separate resume call.
             const data = await api.post<FlushStartResponse>("/api/flush/sessions");
 
+            if (data.session) {
+                navigate(`/flush/results/${data.session.id}`, { replace: true });
+                return;
+            }
+
+            // The run's id and `entered` as well as its round. Arriving on a
+            // paused run after a reload, neither was set: Resume showed the
+            // intro instead of the round, and with no session id a placement
+            // would have done nothing.
+            setSessionId(data.sessionId ?? null);
             setRound(data.round ?? null);
             setScore(data.scoreSoFar ?? 0);
+            setEntered(true);
             setPausedInfo(null);
             setPaused(false);
             setResuming(false);
@@ -172,7 +213,8 @@ export function FlushPage() {
         setBeginning(true);
 
         try {
-            const data = await api.post<FlushStartResponse>("/api/flush/sessions");
+            // Pace chosen once, for a new run; resume sends nothing.
+            const data = await api.post<FlushStartResponse>("/api/flush/sessions", { relaxed: !timed });
 
             if (data.session) {
                 navigate(`/flush/results/${data.session.id}`, { replace: true });
@@ -188,6 +230,12 @@ export function FlushPage() {
 
             if (conflicting) {
                 setConflict(conflicting);
+                return;
+            }
+
+            const readiness = readinessFrom(err, "Not enough to play yet");
+            if (readiness) {
+                setNotReady(readiness);
                 return;
             }
 
@@ -243,12 +291,36 @@ export function FlushPage() {
                 if (!active) return;
 
                 if (current.round) {
+                    // The run's id as well as its round. Without it place()
+                    // returns early, so after a reload no tile did anything --
+                    // the bug Code Blitz had, found by the learner audit.
+                    setSessionId(current.sessionId ?? null);
                     setRound(current.round);
                     setScore(current.scoreSoFar ?? 0);
                     setEntered(true);
+                    return;
                 }
             } catch {
                 // 404 -- no run in progress, which is the normal first arrival.
+            }
+
+            if (!active) return;
+
+            // Nothing to resume: can a game be dealt at all? Asked up front so
+            // a learner who cannot play yet is told why on arrival, rather than
+            // after pressing Start and sitting through a countdown. The same
+            // answer the start route would give (GET /readiness shares its
+            // function). A failed probe changes nothing -- Start still asks.
+            try {
+                const readiness = await api.get<{ ready: boolean; message: string | null }>(
+                    "/api/flush/readiness"
+                );
+
+                if (active && !readiness.ready && readiness.message) {
+                    setNotReady({ message: readiness.message, practice: null });
+                }
+            } catch {
+                // Start will ask again.
             }
 
         })();
@@ -262,26 +334,32 @@ export function FlushPage() {
         (r: Reveal, _next: FlushRound | null, complete: boolean, id: string | null) => {
             setReveal(r);
 
-            later(() => {
-                setLeaving(true);
+            // Stored rather than run: the learner says when they have read it.
+            setProceed({
+                complete,
+                go: () => {
+                    setProceed(null);
+                    setLeaving(true);
 
-                later(() => {
-                    setLeaving(false);
-                    setReveal(null);
-                    setLastWrong(null);
+                    later(() => {
+                        setLeaving(false);
+                        setReveal(null);
+                        setLastWrong(null);
 
-                    if (complete && id) {
-                        navigate(`/flush/results/${id}`, { replace: true });
-                        return;
-                    }
+                        if (complete && id) {
+                            play("complete", id);
+                            navigate(`/flush/results/${id}`, { replace: true });
+                            return;
+                        }
 
-                    // The next round is fetched here rather than read off the
-                    // placement response, because asking for it is what starts its
-                    // clock. Bundling it in began the round's window during the
-                    // reveal -- 3.29s of it, measured.
-                    void advanceToNext();
-                }, EXIT_MS);
-            }, REVEAL_MS);
+                        // The next round is fetched here rather than read off the
+                        // placement response, because asking for it is what starts its
+                        // clock. Bundling it in began the round's window during the
+                        // reveal -- 3.29s of it, measured.
+                        void advanceToNext();
+                    }, EXIT_MS);
+                }
+            });
         },
         [navigate, later]
     );
@@ -312,11 +390,16 @@ export function FlushPage() {
 
             if (!res.roundEnded) {
                 // Banked. Keep going -- the tile moves into its slot and the
-                // stake goes up.
+                // stake goes up. A light tick, not a chime: the round is not won yet.
+                play("place", `${round.roundId}:${outputId}`);
                 setRound(res.round);
                 settling.current = false;
                 return;
             }
+
+            // The round's verdict: a chime for the full order, a soft cue for a
+            // wrong tap. The reveal below says the same thing in words.
+            play(res.outcome === "round_complete" ? "correct" : "incorrect", `${round.roundId}:end`);
 
             if (res.outcome === "wrong") {
                 // Left on screen for RESOLVE_MS so the shake and the red border
@@ -396,12 +479,37 @@ export function FlushPage() {
         }
     }, [navigate]);
 
-    const onExpire = useCallback(async () => {
-        if (settling.current) return;
+    /*
+     * OUT OF TIME, SAID OUT LOUD.
+     *
+     * This went straight to the next round, so a round that ran out simply
+     * vanished. It now shows what the learner had placed and waits for them,
+     * like any other round end.
+     *
+     * The correct order is NOT shown, because the client does not have it: the
+     * server only reveals it at a round end it adjudicates, and asking it to
+     * adjudicate this one (GET /sessions/current) also serves the next round
+     * and starts its clock. So the round is recorded as timed out when the
+     * learner presses on -- the same request as before, just not until then.
+     */
+    const onExpire = useCallback(() => {
+        if (settling.current || !round) return;
         settling.current = true;
+        play("incorrect", `${round.roundId}:end`);
 
-        await advanceToNext();
-    }, [advanceToNext]);
+        showReveal(
+            {
+                outcome: "timed_out",
+                roundScore: null,
+                correctSequence: [],
+                yourSequence: round.placed.map((p) => p.text),
+                explanation: null
+            },
+            null,
+            false,
+            sessionId
+        );
+    }, [round, sessionId, showReveal]);
 
     if (conflict) {
         return (
@@ -416,6 +524,19 @@ export function FlushPage() {
         );
     }
 
+    if (notReady) {
+        return (
+            <NotReady
+                title="Not enough for a Flush game yet"
+                readiness={notReady}
+                practiceLabel={(name) => `Continue with ${name}`}
+                // Lesson steps on the Journey open puzzles here, as do Code
+                // Blitz's Learn Beats and questions.
+                other={{ to: "/journey", label: ACTION.seeJourney }}
+            />
+        );
+    }
+
     if (error) {
         return (
             <section className="panel narrow">
@@ -424,7 +545,7 @@ export function FlushPage() {
                     {error}
                 </p>
                 <Link className="button primary" to="/play">
-                    Back home
+                    {ACTION.backToGames}
                 </Link>
             </section>
         );
@@ -458,17 +579,14 @@ export function FlushPage() {
             <GameIntro
                 eyebrow="Flush"
                 title="Predict the order."
-                lede={
-                    <>
-                        The code runs. Place each line of output in the order it prints.
-                        <br />
-                        One wrong call ends the round.
-                    </>
-                }
-                shape="5 rounds · 20s + 10s per output"
+                counts="course"
+                lede="Read the code, then tap each output in the order it prints. One wrong tap ends the round and shows you the real order, and why."
+                howTo={<FlushHowTo />}
+                shape={`Up to 5 rounds · ${timed ? "20 seconds + 10 per output" : "no timer"}`}
+                pace={<PaceChoice timed={timed} onChange={setTimed} clock="20 seconds plus 10 per output" speedBonus={false} />}
                 busy={beginning}
                 onStart={() => setCountingIn(true)}
-                startLabel="Start flush"
+                startLabel={startGame("Flush")}
             />
         );
     }
@@ -515,11 +633,19 @@ export function FlushPage() {
                 unit="Round"
             />
 
-            <Countdown
-                deadlineAt={round.deadlineAt}
-                totalMs={round.limitMs ?? FALLBACK_ROUND_LIMIT_MS}
-                onExpire={onExpire}
-            />
+            {/* Held while the reveal is up: the round is over, and a bar
+                still draining under the feedback read as time running out. */}
+            {/* A relaxed run has no deadline: no bar, and nothing to expire. */}
+            {round.deadlineAt === null ? (
+                <p className="untimed-note">Relaxed run: no timer.</p>
+            ) : (
+                <Countdown
+                    deadlineAt={round.deadlineAt}
+                    totalMs={round.limitMs ?? FALLBACK_ROUND_LIMIT_MS}
+                    onExpire={onExpire}
+                    paused={reveal !== null}
+                />
+            )}
 
             {/* Keyed on the round, so a new round remounts and animates in rather
                 than appearing in place. Same mechanism as Code Blitz. */}
@@ -532,10 +658,20 @@ export function FlushPage() {
                     are one place where the game happens, rather than three
                     stacked blocks floating on the page. */}
                 <div className="flush-stage">
+                {/* What this puzzle teaches, before the learner orders anything.
+                    Same line Code Blitz uses above a question on the concept
+                    being studied; here every curriculum puzzle has one. */}
+                {round.practising && (
+                    <p className="ask-practising flush-practising">
+                        <span className="ask-practising-dot" aria-hidden="true" />
+                        Practicing <strong>{round.practising.name}</strong>
+                        <span className="flush-practising-meaning">{round.practising.meaning}</span>
+                    </p>
+                )}
                 <div className="board">
                     <div className="board-panel">
                         <span className="board-label">Code</span>
-                        <pre className="prompt">{round.prompt}</pre>
+                        <pre className="prompt"><HighlightedCode code={round.prompt} /></pre>
                     </div>
 
                     <div className="board-panel">
@@ -570,23 +706,29 @@ export function FlushPage() {
                 </div>
 
                 {/* The stake. Banked is safe; the multiplier is what another
-                    placement risks. This is the whole decision, stated plainly. */}
-                <div className="stake">
-                    <span className="stake-safe">
-                        Banked <strong>{round.pointsBanked}</strong>
-                    </span>
-                    <span className="stake-risk">
-                        {placedCount === round.totalOutputs - 1 ? (
-                            <>
-                                Next one finishes the round · <strong>×2</strong>
-                            </>
-                        ) : (
-                            <>
-                                Finish for <strong>×2</strong> · {atRisk} at risk
-                            </>
-                        )}
-                    </span>
-                </div>
+                    placement risks. This is the whole decision, stated plainly.
+
+                    Gone once the round is over: no decision is left, and it
+                    still read "Finish the order to double" over a reveal saying
+                    the round was lost. The reveal's tag says what it came to. */}
+                {!reveal && (
+                    <div className="stake">
+                        <span className="stake-safe">
+                            Points so far <strong>{round.pointsBanked}</strong>
+                        </span>
+                        <span className="stake-risk">
+                            {placedCount === round.totalOutputs - 1 ? (
+                                <>
+                                    The next one finishes the order and <strong>doubles</strong> the round
+                                </>
+                            ) : (
+                                <>
+                                    Finish the order to <strong>double</strong> the round · {atRisk} more to win
+                                </>
+                            )}
+                        </span>
+                    </div>
+                )}
 
                 {/* A rack of chips, not a column of buttons. Auto-width tiles that
                     wrap read as objects to pick up; full-width rows read as a
@@ -617,15 +759,49 @@ export function FlushPage() {
                         </p>
                     )}
                     {reveal.outcome === "wrong" && (
-                        <p className="tag incorrect">Wrong order · kept {reveal.roundScore}</p>
+                        <p className="tag incorrect">
+                            {/* A distractor is not out of order: it never prints
+                                at all, and "Wrong order" sent the learner looking
+                                for a sequencing mistake they had not made. */}
+                            {neverPrints(reveal) ? "That line never prints" : "Wrong order"} · kept{" "}
+                            {reveal.roundScore}
+                        </p>
                     )}
-                    {reveal.outcome === "timed_out" && (
-                        <p className="tag timeout">Out of time · kept {reveal.roundScore}</p>
-                    )}
+                    {/* Two timeouts. The server's (a tile placed just after the
+                        deadline) carries the score and the real order; the
+                        clock's own carries neither, so it claims neither. */}
+                    {reveal.outcome === "timed_out" &&
+                        (reveal.roundScore !== null ? (
+                            <p className="tag timeout">Out of time · kept {reveal.roundScore}</p>
+                        ) : (
+                            <>
+                                <p className="tag timeout">Out of time</p>
+                                <p className="reveal-why">
+                                    The round ended before the order was finished. You placed{" "}
+                                    {reveal.yourSequence.length} of {round.totalOutputs}{" "}
+                                    {round.totalOutputs === 1 ? "line" : "lines"}.
+                                </p>
+                            </>
+                        ))}
 
                     {/* The teaching moment. Seeing both sequences side by side is
                         what turns "the game screwed me" into "ohhh, microtasks
-                        first". */}
+                        first". Without the real order there is nothing to set
+                        beside, so what was placed is shown alone and unmarked. */}
+                    {reveal.correctSequence.length === 0 ? (
+                        reveal.yourSequence.length > 0 && (
+                            <div className="sequences">
+                                <div>
+                                    <span className="muted">You placed</span>
+                                    <ol className="seq">
+                                        {reveal.yourSequence.map((t, i) => (
+                                            <li key={i}>{t}</li>
+                                        ))}
+                                    </ol>
+                                </div>
+                            </div>
+                        )
+                    ) : (
                     <div className="sequences">
                         <div>
                             <span className="muted">You said</span>
@@ -646,6 +822,7 @@ export function FlushPage() {
                             </ol>
                         </div>
                     </div>
+                    )}
 
                     {/* THE RULE, under the two sequences.
                         The diff above is the evidence; this is the lesson. It
@@ -654,9 +831,55 @@ export function FlushPage() {
                     {reveal.explanation && (
                         <p className="reveal-why">{withCode(reveal.explanation)}</p>
                     )}
+
+                    {/* The learner moves on when they have read it. */}
+                    {proceed && (
+                        <button className="button primary" autoFocus onClick={proceed.go}>
+                            {proceed.complete || round.roundNumber === round.totalRounds
+                                ? "See results"
+                                : "Next round"}
+                        </button>
+                    )}
                 </div>
             )}
             </div>
         </section>
+    );
+}
+
+const FLUSH_EXAMPLE = 'console.log("Ready");\nconsole.log(2 + 3);\nconsole.log("Go");';
+
+/**
+ * What a beginner needs before their first Flush round.
+ *
+ * Flush deals only puzzles whose concepts the learner has met (the curriculum
+ * gate, server-side), so the first games are about the order plain lines run
+ * in -- and the example says exactly that, using nothing a first lesson has
+ * not shown. Code that waits, like setTimeout, arrives with the Async topic,
+ * and its puzzles explain themselves when they are played.
+ */
+function FlushHowTo() {
+    return (
+        <dl className="game-howto">
+            <dt>What you are practicing</dt>
+            <dd>
+                Reading code the way JavaScript runs it: line by line, from the top. Every puzzle
+                uses ideas you have already met, and new ones open as you learn more.
+            </dd>
+
+            <dt>How to play</dt>
+            <dd>
+                Read the code. Then tap the outputs in the order they appear, first to last.
+            </dd>
+
+            <dt>Example</dt>
+            <dd>
+                <pre className="prompt">
+                    <HighlightedCode code={FLUSH_EXAMPLE} />
+                </pre>
+                Prints <strong>Ready</strong>, then <strong>5</strong>, then <strong>Go</strong>.
+                Each line runs in turn, and a sum is worked out before it is displayed.
+            </dd>
+        </dl>
     );
 }

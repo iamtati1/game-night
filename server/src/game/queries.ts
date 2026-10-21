@@ -710,7 +710,7 @@ export async function completeSession(
  * in the client. That is what makes a reload, a resume, or a pause incapable of
  * desynchronising the score: there is nothing to drift.
  */
-export async function scoreSoFar(sessionId: string): Promise<number> {
+export async function scoreSoFar(sessionId: string, relaxed = false): Promise<number> {
     const questions = await listSessionQuestions(sessionId);
 
     return scoreForSession(
@@ -718,7 +718,8 @@ export async function scoreSoFar(sessionId: string): Promise<number> {
             isCorrect: q.is_correct,
             servedAt: q.served_at,
             answeredAt: q.answered_at
-        }))
+        })),
+        relaxed
     );
 }
 

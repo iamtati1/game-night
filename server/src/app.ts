@@ -7,6 +7,7 @@ import express, {
 import { authRouter, meHandler } from "./auth/routes.js";
 import { bugHuntRouter } from "./bugHunt/routes.js";
 import { curriculumRouter } from "./curriculum/routes.js";
+import { errorHandler } from "./requestErrors.js";
 import { pool } from "./db.js";
 import { flushRouter } from "./flush/routes.js";
 import { join, sep } from "node:path";
@@ -197,13 +198,6 @@ app.use((_req: Request, res: Response) => {
     });
 });
 
-// Express only treats middleware as an error handler when it declares all four
-// parameters, so _next must stay even though it is unused.
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    console.error(err);
-    res.status(500).json({
-        error: "Internal Server Error"
-    });
-});
+app.use(errorHandler);
 
 export { app };

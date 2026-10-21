@@ -52,3 +52,30 @@ cd client && npm run dev     # http://localhost:5173
 cd server && npm test        # scoring, routes, registry, migration runner
 cd client && npm test        # component and page tests
 ```
+
+Neither suite needs a running PostgreSQL. The database tests build an ephemeral
+one in-process from the real migrations and seeds, so they check the shipping
+SQL rather than a hand-written fixture.
+
+Type checks and the production build:
+
+```bash
+cd server && npm run typecheck
+cd client && npm run typecheck && npm run build
+```
+
+## Known limitations
+
+**Postgres.app refuses `trust` authentication to some applications.** Postgres.app
+18 preloads `auth_permission_dialog`, which gates password-less connections on a
+per-application macOS approval. A connection from an application that has not
+been approved fails with:
+
+```
+FATAL: Postgres.app rejected "trust" authentication
+```
+
+Grant the application access in **Postgres.app → Settings → app permissions**, or
+connect with a role password instead. The approval is per application, not per
+command, so every tool launched by that application is covered at once. The test
+suites are unaffected — they never open a connection to this database.

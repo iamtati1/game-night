@@ -16,7 +16,8 @@
     "import:questions": "tsx --env-file=.env scripts/import-questions.ts",
     "migrate:prod": "tsx scripts/migrate.ts",
     "seed:prod": "tsx scripts/seed.ts",
-    "curriculum:generate": "tsx scripts/generate-curriculum.ts"
+    "curriculum:generate": "tsx scripts/generate-curriculum.ts",
+    "reconcile:duplicates": "tsx --env-file=.env scripts/reconcile-duplicates.ts"
   },
   "keywords": [],
   "author": "",

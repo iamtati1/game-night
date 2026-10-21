@@ -120,3 +120,25 @@ describe("the page reports the acknowledgement before it deals the run", () => {
         }
     });
 });
+
+describe("every Learn Beat shows real code", () => {
+    // Understand -> See -> Try. A concept with no hand-written beat used to fall
+    // back to its name and a sentence; GamePage now shows the first worked
+    // example from the concept's own lesson instead. This holds the data that
+    // fallback depends on, for every concept the server can introduce.
+    it("has a beat or a lesson example with code for every concept", async () => {
+        const { lessonFor } = await import("./lessons.js");
+        const missing = CONCEPTS.filter(
+            (c) =>
+                !learnBeatForConcept(c.id)?.code &&
+                !lessonFor(c.id)?.teach.some((block) => block.code.trim() !== "")
+        ).map((c) => c.id);
+
+        expect(missing).toEqual([]);
+    });
+
+    it("builds the fallback from the lesson rather than the bare meaning", () => {
+        expect(GAME_PAGE).toContain("beatFromLesson(introduction)");
+        expect(GAME_PAGE).not.toMatch(/code: "",\s*output: "",\s*rule: introduction\.meaning/);
+    });
+});

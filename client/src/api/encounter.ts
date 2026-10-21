@@ -32,6 +32,15 @@ export interface Encounter {
     rungs: EncounterRung[];
     reachable: boolean;
     unmetPrerequisites: string[];
+    /**
+     * What has to be done first, for a locked concept; null for an open one.
+     *
+     * The server's findBlocker: the earliest unfinished concept before this
+     * one, or -- once every earlier concept is done -- the checkpoint that is
+     * due. It was always in the response and never read, so a concept locked
+     * by path order showed "builds on something else" over an empty list.
+     */
+    blockedBy: { kind: "concept" | "checkpoint"; slug: string; name: string } | null;
     allowedConcepts: string[];
     currentRung: string | null;
     next: { slug: string; name: string } | null;
@@ -47,6 +56,8 @@ export interface Exercise {
     /** What is wrong, for a diagnosis. Null for a question. */
     brief: string | null;
     options: { id: string; text: string }[];
+    /** A diagnosis's authored hints, weakest first. Empty for a question. */
+    hints?: string[];
 }
 
 export interface Judgement {

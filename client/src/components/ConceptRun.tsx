@@ -1,6 +1,7 @@
 import { Ship } from "../world/Ship.js";
 import { rungLabel, type EncounterRung } from "../api/encounter.js";
 
+import { STATE } from "../vocabulary.js";
 /**
  * THE CONCEPT, AS A SHORT ROUTE YOU FLY.
  *
@@ -51,7 +52,12 @@ export function ConceptRun({ rungs }: { rungs: readonly EncounterRung[] }) {
                 {atEnd
                     ? "Every stop on this one is behind you."
                     : done === 0
-                      ? `${playable.length} stops on this concept.`
+                      ? /* What "done" means, before anything is asked: the
+                           learner audit found the caption counted stops without
+                           saying clearing them is what finishes the concept. */
+                        playable.length === 1
+                        ? "Clear 1 stop to finish this concept."
+                        : `Clear all ${playable.length} stops to finish this concept.`
                       : `${playable.length - done} to go.`}
             </p>
 
@@ -84,7 +90,7 @@ export function ConceptRun({ rungs }: { rungs: readonly EncounterRung[] }) {
                                 and the craft's label, so the marks do not
                                 repeat it one element at a time. */}
                             <span className="visually-hidden">
-                                {rung.cleared ? " — done" : i === here ? " — you are here" : ""}
+                                {rung.cleared ? ": done" : i === here ? `: ${STATE.here.toLowerCase()}` : ""}
                             </span>
                         </li>
                     );

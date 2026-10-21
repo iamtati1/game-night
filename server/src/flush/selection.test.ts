@@ -11,10 +11,21 @@ const deal = QUERIES.slice(
 
 describe("Flush deals snippets the player has not just seen", () => {
     it("prefers unseen snippets", () => {
-        expect(deal).toMatch(/WITH recent AS/);
+        // The CTE may follow the curriculum CTEs; it only has to exist.
+        expect(deal).toMatch(/\brecent AS \(/);
         expect(deal).toMatch(
             /ORDER BY \(s\.id IN \(SELECT snippet_id FROM recent\)\) ASC, RANDOM\(\)/
         );
+    });
+
+    it("deals through the curriculum gate, so puzzles arrive with their concepts", () => {
+        // Flush used to deal on playability alone: every learner drew from the
+        // whole bank, which was all Async. The dealer and the count share one
+        // predicate, so they cannot disagree about whether a game can be built.
+        expect(deal).toMatch(/WHERE \$\{dealableSnippet\("s"\)\}/);
+        expect(deal).toMatch(/curriculumCtes\("\$3"\)/);
+        expect(QUERIES).toMatch(/AND \$\{curriculumSelects\(alias\)\}/);
+        expect(QUERIES).toMatch(/countEligibleSnippets\(userId: string\)[\s\S]*?dealableSnippet\("s"\)/);
     });
 
     it("prefers rather than filters, so five rounds are always dealt", () => {

@@ -21,8 +21,10 @@ export interface GameSessionAdapter {
      *  still set. */
     shiftClock(client: PoolClient, sessionId: string): Promise<void>;
 
-    /** Points banked so far, recomputed from stored units. */
-    scoreSoFar(sessionId: string): Promise<number>;
+    /** Points banked so far, recomputed from stored units. `relaxed` matters
+     *  only to Code Blitz, whose speed bonus a relaxed run does not earn; the
+     *  other games' scores do not depend on the clock and ignore it. */
+    scoreSoFar(sessionId: string, relaxed?: boolean): Promise<number>;
 }
 
 /**

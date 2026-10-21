@@ -20,7 +20,7 @@
 --                              holds a composite FK to it ON DELETE
 --                              RESTRICT -- see that section
 --
--- 16 topics · 100 concepts · 8 demands
+-- 16 topics · 101 concepts · 8 demands
 
 BEGIN;
 
@@ -701,13 +701,35 @@ INSERT INTO concepts
     (topic_id, slug, name, objective, meaning, why, weight, display_order)
 VALUES (
     (SELECT id FROM topics WHERE slug = 'operators'),
+    'operator-precedence',
+    'Working Out the Order',
+    'work out which operator runs first in a multi-operator expression',
+    'operators have an order, and brackets override it',
+    'Arithmetic taught one operation at a time, which is the right place to start and leaves a gap the moment a line holds two. `2 + 3 * 4` is not read left to right and a learner who assumes it is will be wrong about every expression that mixes operators -- including the conditions `logical-operators` is about, which is why this comes before it rather than after.',
+    'core',
+    2
+)
+ON CONFLICT (slug) DO UPDATE
+    SET topic_id      = EXCLUDED.topic_id,
+        name          = EXCLUDED.name,
+        objective     = EXCLUDED.objective,
+        meaning       = EXCLUDED.meaning,
+        why           = EXCLUDED.why,
+        weight        = EXCLUDED.weight,
+        display_order = EXCLUDED.display_order,
+        updated_at    = CURRENT_TIMESTAMP;
+
+INSERT INTO concepts
+    (topic_id, slug, name, objective, meaning, why, weight, display_order)
+VALUES (
+    (SELECT id FROM topics WHERE slug = 'operators'),
     'type-coercion',
     'Predicting Type Coercion',
     'predict what happens when types are mixed in an expression',
     'JavaScript silently converts types to make an operation work',
     'Sits in Operators because that is where it is used and where it can be shown: coercion happens when an OPERATOR mixes types, and both equality and truthiness are built directly on it. It reappears in array joining and JSON for the rest of the curriculum.',
     'load-bearing',
-    2
+    3
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -729,7 +751,7 @@ VALUES (
     '=== compares value and type; == converts first and then compares',
     'The most consequential two-character decision a beginner makes, and the source of bugs that survive review because both forms look correct.',
     'load-bearing',
-    3
+    4
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -751,7 +773,7 @@ VALUES (
     '&& and || return one of their operands, not necessarily a boolean',
     'That they return an operand rather than true or false is what makes default-value idioms work, and what makes them surprising until it is understood.',
     'core',
-    4
+    5
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -773,7 +795,7 @@ VALUES (
     'every value is either truthy or falsy, and the falsy list is short and worth memorising',
     'The falsy set is finite and learnable, and knowing it converts a whole class of mysterious branches into obvious ones.',
     'load-bearing',
-    5
+    6
 )
 ON CONFLICT (slug) DO UPDATE
     SET topic_id      = EXCLUDED.topic_id,
@@ -2549,7 +2571,7 @@ ON CONFLICT (slug) DO UPDATE
         display_order = EXCLUDED.display_order,
         updated_at    = CURRENT_TIMESTAMP;
 
-DELETE FROM concepts WHERE slug <> ALL (ARRAY['console-output', 'arithmetic-operators', 'expressions-produce-values', 'primitive-types', 'booleans', 'comparison-operators', 'typeof', 'null-vs-undefined', 'variables-name-values', 'declaration', 'initialization', 'assignment', 'reading-variables', 'reassignment', 'let-vs-const', 'variable-state', 'assignment-operators', 'type-coercion', 'equality', 'logical-operators', 'truthy-falsy', 'if-else', 'else-if-chains', 'compound-conditions', 'nested-conditions', 'ternary', 'string-literals', 'string-concatenation', 'string-length', 'string-indexing', 'string-methods', 'template-literals', 'string-immutability', 'for-loop-anatomy', 'while-loops', 'loop-conditions', 'accumulators', 'break-continue', 'nested-loops', 'function-declaration', 'parameters-arguments', 'return-values', 'guard-clauses', 'arrow-functions', 'functions-as-values', 'block-vs-function-scope', 'hoisting-tdz', 'shadowing', 'closures', 'loop-variable-capture', 'array-indexing', 'array-length', 'array-mutation', 'array-copy-spread', 'default-rest-params', 'nested-arrays', 'array-reference-identity', 'map', 'for-each', 'filter', 'find-some-every', 'reduce', 'sort', 'flat', 'method-chaining', 'object-access', 'object-mutation', 'nested-objects', 'for-of-for-in', 'optional-chaining', 'destructuring', 'object-references', 'json-shape', 'built-in-collections', 'error-types', 'throwing', 'try-catch', 'stack-traces', 'debugging-strategy', 'selecting-elements', 'element-properties', 'event-listeners', 'event-order', 'dom-as-tree', 'callbacks', 'promise-states', 'event-loop', 'async-await', 'error-propagation', 'promise-all', 'this-binding', 'methods', 'classes', 'prototypes', 'inheritance', 'recursion', 'base-cases', 'search-strategies', 'sorting-basics', 'complexity']);
+DELETE FROM concepts WHERE slug <> ALL (ARRAY['console-output', 'arithmetic-operators', 'expressions-produce-values', 'primitive-types', 'booleans', 'comparison-operators', 'typeof', 'null-vs-undefined', 'variables-name-values', 'declaration', 'initialization', 'assignment', 'reading-variables', 'reassignment', 'let-vs-const', 'variable-state', 'assignment-operators', 'operator-precedence', 'type-coercion', 'equality', 'logical-operators', 'truthy-falsy', 'if-else', 'else-if-chains', 'compound-conditions', 'nested-conditions', 'ternary', 'string-literals', 'string-concatenation', 'string-length', 'string-indexing', 'string-methods', 'template-literals', 'string-immutability', 'for-loop-anatomy', 'while-loops', 'loop-conditions', 'accumulators', 'break-continue', 'nested-loops', 'function-declaration', 'parameters-arguments', 'return-values', 'guard-clauses', 'arrow-functions', 'functions-as-values', 'block-vs-function-scope', 'hoisting-tdz', 'shadowing', 'closures', 'loop-variable-capture', 'array-indexing', 'array-length', 'array-mutation', 'array-copy-spread', 'default-rest-params', 'nested-arrays', 'array-reference-identity', 'map', 'for-each', 'filter', 'find-some-every', 'reduce', 'sort', 'flat', 'method-chaining', 'object-access', 'object-mutation', 'nested-objects', 'for-of-for-in', 'optional-chaining', 'destructuring', 'object-references', 'json-shape', 'built-in-collections', 'error-types', 'throwing', 'try-catch', 'stack-traces', 'debugging-strategy', 'selecting-elements', 'element-properties', 'event-listeners', 'event-order', 'dom-as-tree', 'callbacks', 'promise-states', 'event-loop', 'async-await', 'error-propagation', 'promise-all', 'this-binding', 'methods', 'classes', 'prototypes', 'inheritance', 'recursion', 'base-cases', 'search-strategies', 'sorting-basics', 'complexity']);
 
 -- ───────────────────────────────────────────────────── prerequisites ──
 
@@ -2612,6 +2634,9 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
         (SELECT id FROM concepts WHERE slug = 'reassignment'));
 INSERT INTO prerequisites (concept_id, requires_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
+        (SELECT id FROM concepts WHERE slug = 'arithmetic-operators'));
+INSERT INTO prerequisites (concept_id, requires_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'operator-precedence'),
         (SELECT id FROM concepts WHERE slug = 'arithmetic-operators'));
 INSERT INTO prerequisites (concept_id, requires_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'type-coercion'),
@@ -2977,10 +3002,6 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'arithmetic-operators'),
         (SELECT id FROM demands WHERE slug = 'predict'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
-VALUES ((SELECT id FROM concepts WHERE slug = 'arithmetic-operators'),
-        (SELECT id FROM demands WHERE slug = 'explain'))
-ON CONFLICT (concept_id, demand_id) DO NOTHING;
-INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'expressions-produce-values'),
         (SELECT id FROM demands WHERE slug = 'recognise'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
@@ -3143,6 +3164,14 @@ ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'assignment-operators'),
         (SELECT id FROM demands WHERE slug = 'produce'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'operator-precedence'),
+        (SELECT id FROM demands WHERE slug = 'predict'))
+ON CONFLICT (concept_id, demand_id) DO NOTHING;
+INSERT INTO concept_demands (concept_id, demand_id)
+VALUES ((SELECT id FROM concepts WHERE slug = 'operator-precedence'),
+        (SELECT id FROM demands WHERE slug = 'explain'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 INSERT INTO concept_demands (concept_id, demand_id)
 VALUES ((SELECT id FROM concepts WHERE slug = 'type-coercion'),
@@ -4085,19 +4114,330 @@ VALUES ((SELECT id FROM concepts WHERE slug = 'complexity'),
         (SELECT id FROM demands WHERE slug = 'explain'))
 ON CONFLICT (concept_id, demand_id) DO NOTHING;
 
--- Only pairs the curriculum no longer declares. A pair still referenced by
--- a challenge is refused here by challenges_concept_demand_fk, which is
--- the intended failure rather than a bug.
+-- Only pairs the curriculum no longer declares, and only once nothing
+-- points at them. A pair a challenge still references is left in place for
+-- this run: deleting it is refused by challenges_concept_demand_fk, and
+-- that refusal aborts every remaining seed -- including the content
+-- migration that re-homes the challenge. Skipping it lets that migration
+-- run, and the next seeding removes the pair.
+DO $$
+DECLARE v_blocked TEXT;
+BEGIN
+    SELECT string_agg(c.slug || '/' || d.slug, ', ' ORDER BY c.slug, d.slug)
+    INTO v_blocked
+    FROM concept_demands cd
+    JOIN concepts c ON c.id = cd.concept_id
+    JOIN demands  d ON d.id = cd.demand_id
+    WHERE EXISTS (
+        SELECT 1 FROM challenges ch
+        WHERE ch.concept_id = cd.concept_id
+          AND ch.demand_id  = cd.demand_id
+    )
+      AND (c.slug, d.slug) NOT IN (
+        ('console-output', 'recognise'),
+        ('console-output', 'predict'),
+        ('console-output', 'diagnose'),
+        ('arithmetic-operators', 'predict'),
+        ('expressions-produce-values', 'recognise'),
+        ('expressions-produce-values', 'predict'),
+        ('expressions-produce-values', 'diagnose'),
+        ('expressions-produce-values', 'explain'),
+        ('primitive-types', 'recognise'),
+        ('primitive-types', 'predict'),
+        ('booleans', 'recognise'),
+        ('booleans', 'predict'),
+        ('comparison-operators', 'recognise'),
+        ('comparison-operators', 'predict'),
+        ('typeof', 'recall'),
+        ('typeof', 'predict'),
+        ('null-vs-undefined', 'recognise'),
+        ('null-vs-undefined', 'predict'),
+        ('null-vs-undefined', 'explain'),
+        ('variables-name-values', 'recognise'),
+        ('variables-name-values', 'predict'),
+        ('declaration', 'recognise'),
+        ('declaration', 'predict'),
+        ('declaration', 'produce'),
+        ('initialization', 'recognise'),
+        ('initialization', 'predict'),
+        ('initialization', 'produce'),
+        ('assignment', 'predict'),
+        ('assignment', 'produce'),
+        ('assignment', 'diagnose'),
+        ('reading-variables', 'recognise'),
+        ('reading-variables', 'predict'),
+        ('reading-variables', 'apply'),
+        ('reading-variables', 'diagnose'),
+        ('reassignment', 'predict'),
+        ('reassignment', 'apply'),
+        ('reassignment', 'diagnose'),
+        ('let-vs-const', 'recognise'),
+        ('let-vs-const', 'predict'),
+        ('let-vs-const', 'diagnose'),
+        ('let-vs-const', 'explain'),
+        ('variable-state', 'predict'),
+        ('variable-state', 'produce'),
+        ('assignment-operators', 'predict'),
+        ('assignment-operators', 'produce'),
+        ('operator-precedence', 'predict'),
+        ('operator-precedence', 'explain'),
+        ('type-coercion', 'predict'),
+        ('type-coercion', 'diagnose'),
+        ('type-coercion', 'repair'),
+        ('type-coercion', 'explain'),
+        ('equality', 'predict'),
+        ('equality', 'diagnose'),
+        ('equality', 'repair'),
+        ('equality', 'explain'),
+        ('logical-operators', 'predict'),
+        ('logical-operators', 'explain'),
+        ('truthy-falsy', 'recall'),
+        ('truthy-falsy', 'predict'),
+        ('truthy-falsy', 'explain'),
+        ('if-else', 'recognise'),
+        ('if-else', 'predict'),
+        ('else-if-chains', 'predict'),
+        ('else-if-chains', 'diagnose'),
+        ('compound-conditions', 'predict'),
+        ('compound-conditions', 'produce'),
+        ('compound-conditions', 'diagnose'),
+        ('nested-conditions', 'predict'),
+        ('nested-conditions', 'diagnose'),
+        ('nested-conditions', 'repair'),
+        ('ternary', 'recognise'),
+        ('ternary', 'predict'),
+        ('ternary', 'produce'),
+        ('string-literals', 'recognise'),
+        ('string-literals', 'predict'),
+        ('string-concatenation', 'predict'),
+        ('string-concatenation', 'produce'),
+        ('string-concatenation', 'diagnose'),
+        ('string-length', 'predict'),
+        ('string-length', 'diagnose'),
+        ('string-indexing', 'recognise'),
+        ('string-indexing', 'predict'),
+        ('string-methods', 'recall'),
+        ('string-methods', 'predict'),
+        ('string-methods', 'produce'),
+        ('template-literals', 'recognise'),
+        ('template-literals', 'predict'),
+        ('template-literals', 'produce'),
+        ('string-immutability', 'predict'),
+        ('string-immutability', 'diagnose'),
+        ('string-immutability', 'repair'),
+        ('for-loop-anatomy', 'recognise'),
+        ('for-loop-anatomy', 'predict'),
+        ('while-loops', 'recognise'),
+        ('while-loops', 'predict'),
+        ('while-loops', 'explain'),
+        ('loop-conditions', 'predict'),
+        ('loop-conditions', 'produce'),
+        ('loop-conditions', 'diagnose'),
+        ('loop-conditions', 'repair'),
+        ('accumulators', 'predict'),
+        ('accumulators', 'produce'),
+        ('break-continue', 'predict'),
+        ('break-continue', 'explain'),
+        ('nested-loops', 'predict'),
+        ('nested-loops', 'produce'),
+        ('function-declaration', 'recognise'),
+        ('function-declaration', 'predict'),
+        ('function-declaration', 'produce'),
+        ('parameters-arguments', 'recognise'),
+        ('parameters-arguments', 'predict'),
+        ('parameters-arguments', 'diagnose'),
+        ('return-values', 'predict'),
+        ('return-values', 'diagnose'),
+        ('return-values', 'repair'),
+        ('return-values', 'explain'),
+        ('guard-clauses', 'predict'),
+        ('guard-clauses', 'produce'),
+        ('guard-clauses', 'explain'),
+        ('arrow-functions', 'recognise'),
+        ('arrow-functions', 'predict'),
+        ('arrow-functions', 'produce'),
+        ('functions-as-values', 'predict'),
+        ('functions-as-values', 'diagnose'),
+        ('functions-as-values', 'explain'),
+        ('block-vs-function-scope', 'recognise'),
+        ('block-vs-function-scope', 'predict'),
+        ('block-vs-function-scope', 'explain'),
+        ('hoisting-tdz', 'predict'),
+        ('hoisting-tdz', 'diagnose'),
+        ('hoisting-tdz', 'explain'),
+        ('shadowing', 'predict'),
+        ('shadowing', 'diagnose'),
+        ('closures', 'predict'),
+        ('closures', 'produce'),
+        ('closures', 'diagnose'),
+        ('closures', 'explain'),
+        ('loop-variable-capture', 'predict'),
+        ('loop-variable-capture', 'diagnose'),
+        ('loop-variable-capture', 'repair'),
+        ('loop-variable-capture', 'explain'),
+        ('array-indexing', 'recognise'),
+        ('array-indexing', 'predict'),
+        ('array-length', 'predict'),
+        ('array-length', 'diagnose'),
+        ('array-mutation', 'predict'),
+        ('array-mutation', 'diagnose'),
+        ('array-mutation', 'repair'),
+        ('array-mutation', 'explain'),
+        ('array-copy-spread', 'predict'),
+        ('array-copy-spread', 'produce'),
+        ('array-copy-spread', 'explain'),
+        ('default-rest-params', 'predict'),
+        ('default-rest-params', 'produce'),
+        ('nested-arrays', 'recognise'),
+        ('nested-arrays', 'predict'),
+        ('array-reference-identity', 'predict'),
+        ('array-reference-identity', 'explain'),
+        ('map', 'recall'),
+        ('map', 'recognise'),
+        ('map', 'predict'),
+        ('map', 'produce'),
+        ('map', 'diagnose'),
+        ('map', 'repair'),
+        ('for-each', 'recall'),
+        ('for-each', 'recognise'),
+        ('for-each', 'predict'),
+        ('for-each', 'explain'),
+        ('filter', 'recall'),
+        ('filter', 'predict'),
+        ('filter', 'produce'),
+        ('filter', 'diagnose'),
+        ('find-some-every', 'recall'),
+        ('find-some-every', 'predict'),
+        ('find-some-every', 'explain'),
+        ('reduce', 'predict'),
+        ('reduce', 'produce'),
+        ('reduce', 'diagnose'),
+        ('reduce', 'explain'),
+        ('sort', 'predict'),
+        ('sort', 'diagnose'),
+        ('sort', 'repair'),
+        ('sort', 'explain'),
+        ('flat', 'predict'),
+        ('flat', 'explain'),
+        ('method-chaining', 'predict'),
+        ('method-chaining', 'produce'),
+        ('object-access', 'recognise'),
+        ('object-access', 'predict'),
+        ('object-mutation', 'predict'),
+        ('object-mutation', 'diagnose'),
+        ('nested-objects', 'recognise'),
+        ('nested-objects', 'predict'),
+        ('for-of-for-in', 'recognise'),
+        ('for-of-for-in', 'predict'),
+        ('for-of-for-in', 'diagnose'),
+        ('optional-chaining', 'recognise'),
+        ('optional-chaining', 'predict'),
+        ('optional-chaining', 'explain'),
+        ('destructuring', 'recognise'),
+        ('destructuring', 'predict'),
+        ('destructuring', 'produce'),
+        ('object-references', 'predict'),
+        ('object-references', 'diagnose'),
+        ('object-references', 'repair'),
+        ('object-references', 'explain'),
+        ('json-shape', 'recognise'),
+        ('json-shape', 'predict'),
+        ('json-shape', 'produce'),
+        ('built-in-collections', 'recall'),
+        ('built-in-collections', 'recognise'),
+        ('built-in-collections', 'predict'),
+        ('error-types', 'recall'),
+        ('error-types', 'recognise'),
+        ('throwing', 'recognise'),
+        ('throwing', 'predict'),
+        ('try-catch', 'predict'),
+        ('try-catch', 'explain'),
+        ('stack-traces', 'recognise'),
+        ('stack-traces', 'diagnose'),
+        ('stack-traces', 'explain'),
+        ('debugging-strategy', 'diagnose'),
+        ('debugging-strategy', 'repair'),
+        ('debugging-strategy', 'explain'),
+        ('selecting-elements', 'recognise'),
+        ('selecting-elements', 'predict'),
+        ('element-properties', 'predict'),
+        ('element-properties', 'explain'),
+        ('event-listeners', 'recognise'),
+        ('event-listeners', 'predict'),
+        ('event-listeners', 'diagnose'),
+        ('event-order', 'predict'),
+        ('event-order', 'explain'),
+        ('dom-as-tree', 'recognise'),
+        ('dom-as-tree', 'explain'),
+        ('callbacks', 'predict'),
+        ('callbacks', 'diagnose'),
+        ('callbacks', 'repair'),
+        ('promise-states', 'recognise'),
+        ('promise-states', 'predict'),
+        ('promise-states', 'explain'),
+        ('event-loop', 'predict'),
+        ('event-loop', 'produce'),
+        ('event-loop', 'explain'),
+        ('async-await', 'recognise'),
+        ('async-await', 'predict'),
+        ('async-await', 'produce'),
+        ('async-await', 'diagnose'),
+        ('async-await', 'repair'),
+        ('async-await', 'explain'),
+        ('error-propagation', 'predict'),
+        ('error-propagation', 'diagnose'),
+        ('error-propagation', 'repair'),
+        ('error-propagation', 'explain'),
+        ('promise-all', 'predict'),
+        ('promise-all', 'produce'),
+        ('promise-all', 'explain'),
+        ('this-binding', 'predict'),
+        ('this-binding', 'diagnose'),
+        ('this-binding', 'repair'),
+        ('this-binding', 'explain'),
+        ('methods', 'recognise'),
+        ('methods', 'predict'),
+        ('classes', 'recognise'),
+        ('classes', 'predict'),
+        ('classes', 'produce'),
+        ('prototypes', 'recognise'),
+        ('prototypes', 'explain'),
+        ('inheritance', 'predict'),
+        ('inheritance', 'explain'),
+        ('recursion', 'predict'),
+        ('recursion', 'produce'),
+        ('recursion', 'diagnose'),
+        ('base-cases', 'diagnose'),
+        ('base-cases', 'repair'),
+        ('base-cases', 'explain'),
+        ('search-strategies', 'predict'),
+        ('search-strategies', 'explain'),
+        ('sorting-basics', 'predict'),
+        ('sorting-basics', 'explain'),
+        ('complexity', 'recall'),
+        ('complexity', 'explain')
+      );
+
+    IF v_blocked IS NOT NULL THEN
+        RAISE NOTICE 'concept_demands: the curriculum no longer declares % -- left in place because a challenge still points at it. Re-run seeding after the content migration that re-homes that challenge.', v_blocked;
+    END IF;
+END;
+$$;
+
 DELETE FROM concept_demands cd
 USING concepts c, demands d
 WHERE cd.concept_id = c.id
   AND cd.demand_id = d.id
+  AND NOT EXISTS (
+      SELECT 1 FROM challenges ch
+      WHERE ch.concept_id = cd.concept_id
+        AND ch.demand_id  = cd.demand_id
+  )
   AND (c.slug, d.slug) NOT IN (
       ('console-output', 'recognise'),
       ('console-output', 'predict'),
       ('console-output', 'diagnose'),
       ('arithmetic-operators', 'predict'),
-      ('arithmetic-operators', 'explain'),
       ('expressions-produce-values', 'recognise'),
       ('expressions-produce-values', 'predict'),
       ('expressions-produce-values', 'diagnose'),
@@ -4139,6 +4479,8 @@ WHERE cd.concept_id = c.id
       ('variable-state', 'produce'),
       ('assignment-operators', 'predict'),
       ('assignment-operators', 'produce'),
+      ('operator-precedence', 'predict'),
+      ('operator-precedence', 'explain'),
       ('type-coercion', 'predict'),
       ('type-coercion', 'diagnose'),
       ('type-coercion', 'repair'),

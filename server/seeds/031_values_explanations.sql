@@ -58,6 +58,12 @@ SELECT explain_values('%console.log(false);%', 'booleans',
 SELECT explain_values('%console.log("false");%', 'booleans',
     'This is text that happens to spell the word. It displays identically to the boolean, which is exactly the trap: once printed you cannot tell them apart, and the quotes in the code are the only clue.');
 
+-- expressions-produce-values: the two 029 rewrote, authored in 020 as rewritten.
+SELECT explain_values('%console.log(4 + 5 - 3);%', 'expressions-produce-values',
+    'The whole expression is worked out into one value before anything is displayed: 4 + 5 is 9, then 9 - 3 is 6.');
+SELECT explain_values('%console.log(2 * 2 * 2);%', 'expressions-produce-values',
+    'Each step produces a value that the next step uses: 2 * 2 is 4, then 4 * 2 is 8. One expression, one final value.');
+
 DROP FUNCTION explain_values(TEXT, TEXT, TEXT);
 
 COMMIT;

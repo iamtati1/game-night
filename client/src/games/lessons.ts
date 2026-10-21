@@ -145,11 +145,11 @@ export const LESSONS: readonly Lesson[] = [
             {
                 code: 'console.log("Hello");',
                 output: "Hello",
-                note: "This is the whole of it — a line of code, and what it displays.",
+                note: "This is the whole of it: a line of code, and what it displays.",
                 parts: [
                     { piece: "console.log(  )", means: "displays whatever you put inside the brackets" },
                     { piece: '"Hello"', means: "the thing being displayed" },
-                    { piece: "the quotes", means: "tell JavaScript this is text — they are not displayed themselves" }
+                    { piece: "the quotes", means: "tell JavaScript this is text: they are not displayed themselves" }
                 ]
             },
             {
@@ -169,7 +169,7 @@ export const LESSONS: readonly Lesson[] = [
                     {
                         text: '"Hi"',
                         feedback:
-                            "Very close — the quotes are instructions to JavaScript, not part of the text. It displays Hi without them."
+                            "Very close: the quotes are instructions to JavaScript, not part of the text. It displays Hi without them."
                     },
                     {
                         text: "console.log",
@@ -196,7 +196,7 @@ export const LESSONS: readonly Lesson[] = [
                             "There are no quotes here at all, so none appear. It displays just 5."
                     }
                 ],
-                confirm: "Numbers do not need quotes — they go in as they are.",
+                confirm: "Numbers do not need quotes: they go in as they are.",
                 aside: 'So `5` and `"5"` are both allowed. They display the same thing, and shortly you will see they are not the same kind of value.'
             },
             {
@@ -268,7 +268,7 @@ export const LESSONS: readonly Lesson[] = [
                 output: "5",
                 note: "The sum is worked out first, and the single value it produces is what gets displayed.",
                 parts: [
-                    { piece: "2 + 3", means: "an expression — code that produces a value" },
+                    { piece: "2 + 3", means: "an expression: code that produces a value" },
                     { piece: "5", means: "the one value it produced" }
                 ]
             },
@@ -314,7 +314,7 @@ export const LESSONS: readonly Lesson[] = [
                     code: "console.log(9 / 2);",
                     choices: [
                         { text: "4.5", correct: true },
-                        { text: "4", feedback: "No rounding — the answer keeps its decimal." }
+                        { text: "4", feedback: "No rounding: the answer keeps its decimal." }
                     ],
                     confirm: "Right."
                 }
@@ -394,7 +394,7 @@ export const LESSONS: readonly Lesson[] = [
                         { text: "5 - 1", correct: true },
                         { text: "let", feedback: "let is a keyword for making variables, not a sum." }
                     ],
-                    confirm: "Right — it becomes 4."
+                    confirm: "Right: it becomes 4."
                 }
             }
         ]
@@ -408,19 +408,19 @@ export const LESSONS: readonly Lesson[] = [
                 code: "console.log(25);",
                 output: "25",
                 note: "No quotes. This is a number.",
-                parts: [{ piece: "25", means: "a number — JavaScript can do arithmetic with it" }]
+                parts: [{ piece: "25", means: "a number. JavaScript can do arithmetic with it" }]
             },
             {
                 code: 'console.log("25");',
                 output: "25",
                 note: "Quotes. This one is text, even though it looks the same on screen.",
-                parts: [{ piece: '"25"', means: "a string — two characters that happen to be digits" }]
+                parts: [{ piece: '"25"', means: "a string: two characters that happen to be digits" }]
             },
             {
                 code: "console.log(true);",
                 output: "true",
                 note: "A third kind: true and false are the only two of these.",
-                parts: [{ piece: "true", means: "a boolean — one of exactly two values" }]
+                parts: [{ piece: "true", means: "a boolean: one of exactly two values" }]
             }
         ],
         notice: "The quotes are what decide it, not what the characters look like.",
@@ -462,7 +462,7 @@ export const LESSONS: readonly Lesson[] = [
                         {
                             text: "a boolean",
                             feedback:
-                                "The word is true, but it is inside quotes — so it is text that happens to spell a boolean."
+                                "The word is true, but it is inside quotes, so it is text that happens to spell a boolean."
                         }
                     ],
                     confirm: "Quotes win."
@@ -505,7 +505,7 @@ export const LESSONS: readonly Lesson[] = [
                 code: "console.log(true);\nconsole.log(false);",
                 output: "true\nfalse",
                 note: "These two are the whole set. There is no third.",
-                parts: [{ piece: "true / false", means: "values, like 25 or \"hello\" — just only two of them" }]
+                parts: [{ piece: "true / false", means: "values, like 25 or \"hello\", just only two of them" }]
             },
             {
                 code: 'console.log("true");',
@@ -517,7 +517,7 @@ export const LESSONS: readonly Lesson[] = [
                 ]
             }
         ],
-        notice: "true and false are values in their own right — not words, and not numbers.",
+        notice: "true and false are values in their own right, not words, and not numbers.",
         steps: [
             {
                 demand: "recognise",
@@ -528,7 +528,7 @@ export const LESSONS: readonly Lesson[] = [
                     {
                         text: '"true"',
                         feedback:
-                            'The quotes make it text. "true" is a string that happens to spell the word — the boolean is the one without quotes.'
+                            'The quotes make it text. "true" is a string that happens to spell the word: the boolean is the one without quotes.'
                     },
                     {
                         text: "5",
@@ -543,7 +543,7 @@ export const LESSONS: readonly Lesson[] = [
                     code: 'console.log("false");\nconsole.log(false);',
                     choices: [
                         { text: "false", correct: true },
-                        { text: '"false"', feedback: "Still text — the quotes are the giveaway." }
+                        { text: '"false"', feedback: "Still text: the quotes are the giveaway." }
                     ],
                     confirm: "Without quotes, it is the boolean."
                 }
@@ -568,7 +568,7 @@ export const LESSONS: readonly Lesson[] = [
                     code: 'console.log("false");',
                     choices: [
                         { text: "false", correct: true },
-                        { text: '"false"', feedback: "The quotes mark where the text starts and ends — they are not printed." }
+                        { text: '"false"', feedback: "The quotes mark where the text starts and ends: they are not printed." }
                     ],
                     confirm: "Same output, different kind of value. That is what typeof is for, shortly."
                 }
@@ -592,7 +592,7 @@ export const LESSONS: readonly Lesson[] = [
                 note: "The comparison is a question, and the answer it produces is a boolean.",
                 parts: [
                     { piece: "5 > 3", means: "asks: is 5 bigger than 3?" },
-                    { piece: "true", means: "the answer — not either of the numbers" }
+                    { piece: "true", means: "the answer, not either of the numbers" }
                 ]
             },
             {
@@ -605,7 +605,7 @@ export const LESSONS: readonly Lesson[] = [
                 ]
             }
         ],
-        notice: "A comparison always produces a boolean — never one of the numbers.",
+        notice: "A comparison always produces a boolean, never one of the numbers.",
         steps: [
             {
                 demand: "predict",
@@ -673,7 +673,7 @@ export const LESSONS: readonly Lesson[] = [
                     {
                         text: "number",
                         feedback:
-                            'The quotes make 25 a string. typeof reports how the value is stored, not what it looks like — so this gives "string".'
+                            'The quotes make 25 a string. typeof reports how the value is stored, not what it looks like, so this gives "string".'
                     },
                     { text: "25", feedback: "typeof reports the type, never the value itself." }
                 ],
@@ -694,14 +694,14 @@ export const LESSONS: readonly Lesson[] = [
                 confirm: "No quotes, so number.",
                 retry: {
                     demand: "predict",
-                    ask: "One more — what does this print?",
+                    ask: "One more: what does this print?",
                     code: "console.log(typeof false);",
                     choices: [
                         { text: "boolean", correct: true },
                         { text: "false", feedback: "typeof gives the type's name, not the value." },
                         { text: "string", feedback: 'It would only be a string if it were written "false".' }
                     ],
-                    confirm: "Boolean — true and false are the two of them."
+                    confirm: "Boolean: true and false are the two of them."
                 }
             }
         ]
@@ -754,7 +754,7 @@ export let VALUES_TAIL_LESSONS: readonly Lesson[] = [
             {
                 code: "console.log(typeof undefined);\nconsole.log(typeof null);",
                 output: "undefined\nobject",
-                note: "They are not the same kind of thing — and the second answer is a famous mistake JavaScript has never been able to fix.",
+                note: "They are not the same kind of thing, and the second answer is a famous mistake JavaScript has never been able to fix.",
                 parts: [
                     { piece: '"undefined"', means: "undefined is its own type, with only itself in it" },
                     { piece: '"object"', means: "wrong, and kept wrong on purpose: fixing it would break the web" }
@@ -774,7 +774,7 @@ export let VALUES_TAIL_LESSONS: readonly Lesson[] = [
                         feedback:
                             "undefined is what JavaScript reaches for on its own. This one was written down deliberately, so it prints as what it is."
                     },
-                    { text: "nothing", feedback: "It does print — the value it prints just happens to mean emptiness." }
+                    { text: "nothing", feedback: "It does print: the value it prints just happens to mean emptiness." }
                 ],
                 confirm: "null is a value you can write, and it displays as itself.",
                 retry: {
@@ -834,7 +834,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
                     {
                         text: "40",
                         feedback:
-                            "40 is the value — the actual piece of information. The name is the label on the left of the =, which is total."
+                            "40 is the value: the actual piece of information. The name is the label on the left of the =, which is total."
                     },
                     {
                         text: "const",
@@ -863,7 +863,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
                     code: "let age = 7;\nconsole.log(age);",
                     choices: [
                         { text: "7", correct: true },
-                        { text: "age", feedback: "The name fetches the value — 7." }
+                        { text: "age", feedback: "The name fetches the value: 7." }
                     ],
                     confirm: "Right."
                 }
@@ -875,8 +875,8 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
         title: "Declaring a variable",
         why: "Before a name can hold anything, the name has to exist.",
         teach: [
-            { code: "let score;", note: "makes the name score — no value given yet" },
-            { code: "let score;\nconsole.log(score);", note: "prints  undefined  — nothing was put in it" }
+            { code: "let score;", note: "makes the name score: no value given yet" },
+            { code: "let score;\nconsole.log(score);", note: "prints  undefined: nothing was put in it" }
         ],
         notice: "A declaration on its own creates the name and leaves it holding undefined.",
         steps: [
@@ -888,7 +888,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
                     {
                         text: "count = 5;",
                         feedback:
-                            "This puts 5 into count, but it does not create the name — no let or let here."
+                            "This puts 5 into count, but it does not create the name: no let or let here."
                     },
                     {
                         text: "let count = 5;",
@@ -934,8 +934,8 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
         title: "Giving it a first value",
         why: "Almost all real code creates the name and fills it in the same breath.",
         teach: [
-            { code: "let score;", note: "declaration — score holds undefined" },
-            { code: "let score = 25;", note: "initialization — the name and its first value together" }
+            { code: "let score;", note: "declaration: score holds undefined" },
+            { code: "let score = 25;", note: "initialization: the name and its first value together" }
         ],
         notice: "Initialization is a declaration and a first value on one line.",
         steps: [
@@ -992,7 +992,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
         why: "Assignment is how a value gets into a name that already exists.",
         teach: [
             { code: "let score;\nscore = 25;", note: "the name first, the value after" },
-            { code: "let total;\ntotal = 2 + 3;", note: "the right side is worked out first — total becomes 5" }
+            { code: "let total;\ntotal = 2 + 3;", note: "the right side is worked out first: total becomes 5" }
         ],
         notice: "Everything on the right of the = is worked out first, then stored under the name on the left.",
         steps: [
@@ -1027,7 +1027,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
                     },
                     { text: "let score;", feedback: "This creates the name but puts nothing in it." }
                 ],
-                confirm: "No let or let — just the name and the value.",
+                confirm: "No let or let, just the name and the value.",
                 retry: {
                     demand: "recognise",
                     ask: "And which of these assigns to an existing name?",
@@ -1046,7 +1046,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
         why: "Following any program means working out what each name holds at that moment.",
         teach: [
             { code: "let score = 25;\nconsole.log(score);", note: "prints  25" },
-            { code: "let a = 4;\nconsole.log(a + 1);", note: "prints  5  — a is swapped for 4 first" }
+            { code: "let a = 4;\nconsole.log(a + 1);", note: "prints  5: a is swapped for 4 first" }
         ],
         notice: "Wherever a name appears, swap it for the value it currently holds.",
         steps: [
@@ -1157,8 +1157,8 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
         title: "let and const",
         why: "Choosing const where you can is how you say a value is not meant to change.",
         teach: [
-            { code: "let score = 10;\nscore = 20;", note: "fine — let can be reassigned" },
-            { code: "const score = 10;\nscore = 20;", note: "error — const cannot be reassigned" }
+            { code: "let score = 10;\nscore = 20;", note: "fine: let can be reassigned" },
+            { code: "const score = 10;\nscore = 20;", note: "error: const cannot be reassigned" }
         ],
         notice: "let allows a new value later. const does not.",
         steps: [
@@ -1174,7 +1174,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
                     {
                         text: "let n;\nn = 2;",
                         feedback:
-                            "This is fine too — n was declared with let, so putting a value in is allowed."
+                            "This is fine too: n was declared with let, so putting a value in is allowed."
                     }
                 ],
                 confirm: "const refuses a new value."
@@ -1211,7 +1211,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
         teach: [
             {
                 code: "let score = 10;\nscore = 20;\nscore = 30;\nconsole.log(score);",
-                note: "prints  30  — only the last assignment survives"
+                note: "prints  30 , only the last assignment survives"
             }
         ],
         notice: "At any line, a variable holds exactly one value: whatever was put in most recently.",
@@ -1250,7 +1250,7 @@ export let VARIABLES_LESSONS: readonly Lesson[] = [
                     code: "let x = 1;\nlet y = x;\nx = 9;\nconsole.log(y);",
                     choices: [
                         { text: "1", correct: true },
-                        { text: "9", feedback: "y kept the value it was given — 1." }
+                        { text: "9", feedback: "y kept the value it was given: 1." }
                     ],
                     confirm: "Right."
                 }
@@ -1273,7 +1273,7 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
         title: "Updating a value in place",
         why: "Counters and running totals are written this way in essentially all real code.",
         teach: [
-            { code: "let score = 10;\nscore += 5;", note: "score becomes 15 — the same as score = score + 5" },
+            { code: "let score = 10;\nscore += 5;", note: "score becomes 15: the same as score = score + 5" },
             { code: "let score = 10;\nscore -= 2;", note: "score becomes 8" }
         ],
         notice: "+= reads the variable, changes it, and stores the result back under the same name.",
@@ -1299,7 +1299,7 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
                 code: "let n = 8;\nn -= 3;\nn += 1;\nconsole.log(n);",
                 choices: [
                     { text: "6", correct: true },
-                    { text: "5", feedback: "Close — the last line adds one back, so 5 becomes 6." },
+                    { text: "5", feedback: "Close: the last line adds one back, so 5 becomes 6." },
                     { text: "12", feedback: "-= subtracts. 8 - 3 is 5, then + 1 is 6." }
                 ],
                 confirm: "Each line updates the value the next line sees.",
@@ -1317,6 +1317,89 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
         ]
     },
     {
+        concept: "operator-precedence",
+        title: "Working out the order",
+        why: "A line with two operators is not read left to right, and a learner who assumes it is will be wrong about every expression that mixes them.",
+        teach: [
+            {
+                code: "console.log(2 + 3 * 4);",
+                output: "14",
+                note: "Not 20. The multiplication runs first, so this is 2 + 12.",
+                parts: [
+                    { piece: "3 * 4", means: "worked out first, because * runs before +" },
+                    { piece: "2 + 12", means: "what is left once it has" }
+                ]
+            },
+            {
+                code: "console.log((2 + 3) * 4);",
+                output: "20",
+                note: "Brackets go first, so the addition happens before the multiplication.",
+                parts: [{ piece: "(  )", means: "do this bit first, whatever the usual order says" }]
+            },
+            {
+                code: "console.log(6 / 2 * 3);\nconsole.log(5 + 5 - 4);",
+                output: "9\n6",
+                note: "Two operators of equal rank run left to right: 6 / 2 is 3, then 3 * 3. Same for + and -."
+            }
+        ],
+        notice:
+            "Multiplication and division run before addition and subtraction. Brackets go first. Operators of equal rank run left to right.",
+        steps: [
+            {
+                demand: "predict",
+                ask: "What does this print?",
+                code: "console.log(1 + 2 * 3);",
+                choices: [
+                    { text: "7", correct: true },
+                    {
+                        text: "9",
+                        feedback:
+                            "That is left to right -- 1 + 2 first, then times 3. The multiplication runs first, so it is 1 + 6."
+                    }
+                ],
+                confirm: "Multiplication first, then the addition.",
+                aside: "Brackets are how you ask for the other order: (1 + 2) * 3 really is 9."
+            },
+            {
+                demand: "predict",
+                ask: "And with brackets?",
+                code: "console.log((1 + 2) * 3);",
+                choices: [
+                    { text: "9", correct: true },
+                    { text: "7", feedback: "The brackets go first, so the addition happens before the multiply." }
+                ],
+                confirm: "Brackets first.",
+                retry: {
+                    demand: "predict",
+                    ask: "One more.",
+                    code: "console.log((4 + 4) / 2);",
+                    choices: [
+                        { text: "4", correct: true },
+                        { text: "6", feedback: "Brackets first: 4 + 4 is 8, then 8 / 2." }
+                    ],
+                    confirm: "Right."
+                }
+            },
+            {
+                demand: "explain",
+                ask: "Why does 10 - 4 - 3 print 3 rather than 9?",
+                choices: [
+                    { text: "equal operators run left to right", correct: true },
+                    {
+                        text: "subtraction always runs from the right",
+                        feedback:
+                            "It does not. 10 - 4 is 6, then 6 - 3 is 3. Reading right to left would give 10 - 1."
+                    },
+                    {
+                        text: "the last number is always subtracted first",
+                        feedback: "Position does not change the order -- rank does, and these two share a rank."
+                    }
+                ],
+                confirm: "Same rank, so left to right."
+            }
+        ]
+    },
+    {
         concept: "type-coercion",
         title: "When types get mixed",
         why: "JavaScript will quietly convert a value to make an operation work, and the result surprises everyone once.",
@@ -1326,7 +1409,7 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
                 output: "53",
                 note: "One side is text, and + joins text rather than adding.",
                 parts: [
-                    { piece: '"5"', means: "a string — the quotes make it text" },
+                    { piece: '"5"', means: "a string: the quotes make it text" },
                     { piece: "+", means: "joins, when either side is text" }
                 ]
             },
@@ -1373,7 +1456,7 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
                 confirm: "Same string, different operator, completely different answer.",
                 retry: {
                     demand: "predict",
-                    ask: "One more — what does this print?",
+                    ask: "One more: what does this print?",
                     code: 'console.log("10" * 2);',
                     choices: [
                         { text: "20", correct: true },
@@ -1391,7 +1474,7 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
         teach: [
             { code: "5 === 5", note: "produces  true" },
             { code: "5 === 6", note: "produces  false" },
-            { code: '"5" === 5', note: 'produces  false  — a string is not a number' }
+            { code: '"5" === 5', note: 'produces  false: a string is not a number' }
         ],
         notice: "=== checks the value AND the type. !== is the opposite question.",
         steps: [
@@ -1440,9 +1523,9 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
         title: "Combining two conditions",
         why: "Real checks usually depend on more than one thing being true at once.",
         teach: [
-            { code: "true && true", note: "produces  true  — && needs both sides" },
+            { code: "true && true", note: "produces  true: && needs both sides" },
             { code: "true && false", note: "produces  false" },
-            { code: "false || true", note: "produces  true  — || needs only one side" }
+            { code: "false || true", note: "produces  true: || needs only one side" }
         ],
         notice: "&& is 'both'. || is 'either'.",
         steps: [
@@ -1493,7 +1576,7 @@ export const OPERATORS_LESSONS: readonly Lesson[] = [
         teach: [
             { code: "Boolean(true)\nBoolean(false)", note: "true  ·  false" },
             { code: 'Boolean("hello")\nBoolean(0)', note: "true  ·  false" },
-            { code: 'Boolean("")', note: "false — an empty string counts as no" }
+            { code: 'Boolean("")', note: "false: an empty string counts as no" }
         ],
         notice: "A short list counts as false: 0, an empty string, null and undefined. Almost everything else counts as true.",
         steps: [
@@ -1573,14 +1656,14 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
                 note: "The condition in the brackets is asked first. It answered true, so the block ran.",
                 parts: [
                     { piece: "if ( )", means: "asks a question before deciding whether to run the block" },
-                    { piece: "fuel > 50", means: "the question — it produces true or false" },
+                    { piece: "fuel > 50", means: "the question: it produces true or false" },
                     { piece: "{ }", means: "the block: what runs when the answer is true" }
                 ]
             },
             {
                 code: 'let fuel = 10;\nif (fuel > 50) {\n  console.log("Plenty");\n} else {\n  console.log("Running low");\n}',
                 output: "Running low",
-                note: "`else` is the other road. Exactly one of the two blocks runs — never both, never neither.",
+                note: "`else` is the other road. Exactly one of the two blocks runs, never both, never neither.",
                 parts: [{ piece: "else", means: "what runs when the condition was false" }]
             }
         ],
@@ -1596,7 +1679,7 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
                     { text: 'console.log("Full")', feedback: "That is what runs afterwards, not what decides." }
                 ],
                 confirm: "The condition is the expression inside the brackets.",
-                aside: "Anything that produces a value can go there — which is why truthiness matters.",
+                aside: "Anything that produces a value can go there, which is why truthiness matters.",
                 retry: {
                     demand: "recognise",
                     ask: "And in this one?",
@@ -1654,7 +1737,7 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
                 code: 'let n = 100;\nif (n > 10) {\n  console.log("big");\n} else if (n > 50) {\n  console.log("huge");\n}',
                 choices: [
                     { text: "big", correct: true },
-                    { text: "huge", feedback: "Both conditions are true — but the first one was asked first, and the chain stops there." },
+                    { text: "huge", feedback: "Both conditions are true, but the first one was asked first, and the chain stops there." },
                     { text: "big then huge", feedback: "A chain runs at most one branch." }
                 ],
                 confirm: "The first true branch wins, even when a later one is also true.",
@@ -1681,7 +1764,7 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
                 code: 'let fuel = 80;\nlet crew = 4;\nif (fuel > 50 && crew > 2) {\n  console.log("Cleared");\n}',
                 output: "Cleared",
                 note: "`&&` needs both sides true. Both were, so the block ran.",
-                parts: [{ piece: "&&", means: "and — true only when both sides are true" }]
+                parts: [{ piece: "&&", means: "and: true only when both sides are true" }]
             },
             {
                 code: 'let fuel = 10;\nif (fuel > 50 && fuel < 100) {\n  console.log("Cleared");\n}',
@@ -1733,7 +1816,7 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
                 code: 'let docked = false;\nlet fuel = 80;\nif (docked) {\n  if (fuel > 50) {\n    console.log("Launch");\n  }\n}\nconsole.log("Done");',
                 choices: [
                     { text: "Done", correct: true },
-                    { text: "Launch then Done", feedback: "`fuel > 50` is true, but it is never asked — the outer condition was false." },
+                    { text: "Launch then Done", feedback: "`fuel > 50` is true, but it is never asked: the outer condition was false." },
                     { text: "Launch", feedback: "The last line is outside both blocks, so it always runs." }
                 ],
                 confirm: "The inner question was never reached.",
@@ -1754,7 +1837,7 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
     {
         concept: "ternary",
         title: "A decision that produces a value",
-        why: "Sometimes you do not want to run different code — you want to choose between two values.",
+        why: "Sometimes you do not want to run different code: you want to choose between two values.",
         teach: [
             {
                 code: 'let fuel = 80;\nlet status = fuel > 50 ? "Plenty" : "Low";\nconsole.log(status);',
@@ -1783,7 +1866,7 @@ export const CONTROL_FLOW_LESSONS: readonly Lesson[] = [
                     code: 'let label = ready ? "Go" : "Wait";',
                     choices: [
                         { text: '"Wait"', correct: true },
-                        { text: '"Go"', feedback: "That is the true side — it comes before the colon." }
+                        { text: '"Go"', feedback: "That is the true side: it comes before the colon." }
                     ],
                     confirm: "After the colon is the false side."
                 }
@@ -1853,7 +1936,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: '"7"', correct: true },
                     { text: "7", feedback: "No quotes, so this is the number seven." },
-                    { text: "true", feedback: "That is a boolean — one of exactly two values." }
+                    { text: "true", feedback: "That is a boolean: one of exactly two values." }
                 ],
                 confirm: "The quotes are what make it text.",
                 aside: "Single and double quotes both work, as long as you close with the one you opened with.",
@@ -1874,7 +1957,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "34", correct: true },
                     { text: "7", feedback: "Both sides are text, so `+` joins them rather than adding." },
-                    { text: '"34"', feedback: "The quotes mark where text starts and ends in the code — they are not printed." }
+                    { text: '"34"', feedback: "The quotes mark where text starts and ends in the code: they are not printed." }
                 ],
                 confirm: "Two pieces of text joined end to end.",
                 retry: {
@@ -1900,7 +1983,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 output: "Hello, Tati!",
                 note: "Three pieces, joined left to right into one value.",
                 parts: [
-                    { piece: '"Hello, "', means: "text, including the space — spaces inside quotes are real" },
+                    { piece: '"Hello, "', means: "text, including the space: spaces inside quotes are real" },
                     { piece: "name", means: "the value held by the name, dropped in" }
                 ]
             },
@@ -1945,7 +2028,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
             {
                 code: 'let name = "Tati";\nconsole.log(name.length);',
                 output: "4",
-                note: "`.length` counts characters. It is not a question you call — there are no brackets after it.",
+                note: "`.length` counts characters. It is not a question you call: there are no brackets after it.",
                 parts: [
                     { piece: ".length", means: "how many characters the text holds" },
                     { piece: "4", means: "T, a, t, i" }
@@ -1955,7 +2038,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 code: 'console.log("".length);\nconsole.log("a b".length);',
                 output: "0\n3",
                 note: "Empty text has length 0, and a space counts as a character like any other.",
-                parts: [{ piece: '""', means: "empty text — a real value, just with nothing in it" }]
+                parts: [{ piece: '""', means: "empty text: a real value, just with nothing in it" }]
             }
         ],
         notice: "Spaces count. `.length` counts characters, not words.",
@@ -1976,7 +2059,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                     code: 'console.log("  ".length);',
                     choices: [
                         { text: "2", correct: true },
-                        { text: "0", feedback: "It is not empty — it holds two spaces." }
+                        { text: "0", feedback: "It is not empty: it holds two spaces." }
                     ],
                     confirm: "Two spaces, two characters."
                 }
@@ -1994,7 +2077,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 note: "Positions start at 0, not 1. The first character is at 0 and the last is at length minus one.",
                 parts: [
                     { piece: "[0]", means: "the first character" },
-                    { piece: "[3]", means: "the fourth — and the last, in text of length 4" }
+                    { piece: "[3]", means: "the fourth, and the last, in text of length 4" }
                 ]
             }
         ],
@@ -2010,7 +2093,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                     { text: "word.length", feedback: "That counts the characters rather than reaching one." }
                 ],
                 confirm: "Position 0 is the first.",
-                aside: "This zero-based counting is everywhere in JavaScript — arrays work the same way.",
+                aside: "This zero-based counting is everywhere in JavaScript: arrays work the same way.",
                 retry: {
                     demand: "recognise",
                     ask: "And which reaches the LAST character of `Jolt`?",
@@ -2066,7 +2149,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 note: "`slice` takes a piece out by position; `includes` answers a yes-or-no question.",
                 parts: [
                     { piece: ".slice(0, 2)", means: "from position 0 up to but not including 2" },
-                    { piece: ".includes( )", means: "is this text inside that text — true or false" }
+                    { piece: ".includes( )", means: "is this text inside that text: true or false" }
                 ]
             }
         ],
@@ -2108,7 +2191,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                     code: 'console.log("jolt".toUpperCase());',
                     choices: [
                         { text: "JOLT", correct: true },
-                        { text: "jolt", feedback: "The method hands back the changed text — that is what is being logged." }
+                        { text: "jolt", feedback: "The method hands back the changed text: that is what is being logged." }
                     ],
                     confirm: "Every letter capitalised."
                 }
@@ -2144,7 +2227,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                 ask: "Which one is a template literal?",
                 choices: [
                     { text: "`Hi ${name}`", correct: true },
-                    { text: '"Hi " + name', feedback: "That joins with `+` — the same result, but not a template." },
+                    { text: '"Hi " + name', feedback: "That joins with `+`: the same result, but not a template." },
                     { text: '"Hi ${name}"', feedback: "Ordinary quotes, so `${name}` is printed as written rather than filled in." }
                 ],
                 confirm: "Backticks are what make it a template.",
@@ -2169,7 +2252,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
                     { text: "Hi", feedback: "The whole of what is inside the quotes is printed." }
                 ],
                 confirm: "Without backticks, `${ }` is just characters.",
-                aside: "This is a real and very common typo — the fix is to swap the quotes for backticks.",
+                aside: "This is a real and very common typo: the fix is to swap the quotes for backticks.",
                 retry: {
                     demand: "predict",
                     ask: "And with backticks?",
@@ -2191,7 +2274,7 @@ export const STRING_LESSONS: readonly Lesson[] = [
             {
                 code: 'let name = "tati";\nname.toUpperCase();\nconsole.log(name);',
                 output: "tati",
-                note: "The method ran and produced `TATI` — and nothing kept it, so the name still holds what it always held.",
+                note: "The method ran and produced `TATI`, and nothing kept it, so the name still holds what it always held.",
                 parts: [{ piece: "name.toUpperCase()", means: "hands back new text; does not change `name`" }]
             },
             {
@@ -2250,9 +2333,9 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                 output: "0\n1\n2",
                 note: "Three passes, and `i` was 0, then 1, then 2. The loop stopped when the condition stopped being true.",
                 parts: [
-                    { piece: "let i = 0", means: "the start — runs once, before anything else" },
-                    { piece: "i < 3", means: "the condition — checked before every pass" },
-                    { piece: "i += 1", means: "the step — runs after every pass" }
+                    { piece: "let i = 0", means: "the start: runs once, before anything else" },
+                    { piece: "i < 3", means: "the condition: checked before every pass" },
+                    { piece: "i += 1", means: "the step: runs after every pass" }
                 ]
             },
             {
@@ -2274,7 +2357,7 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                     { text: "i += 1", feedback: "That runs after each pass. It changes `i`, but the condition is what is asked." }
                 ],
                 confirm: "The middle part is the condition.",
-                aside: "Change it and you change how many passes happen — that is the whole of loop-conditions.",
+                aside: "Change it and you change how many passes happen: that is the whole of loop-conditions.",
                 retry: {
                     demand: "recognise",
                     ask: "And which part runs only once?",
@@ -2295,7 +2378,7 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                     { text: "5", feedback: "`i` is 0, 1, 2 and 3. At 4 the condition is false, so there is no fifth pass." },
                     { text: "3", feedback: "Counting starts at 0, so 0 through 3 is four passes." }
                 ],
-                confirm: "Zero through three — four passes.",
+                confirm: "Zero through three: four passes.",
                 retry: {
                     demand: "predict",
                     ask: "And this one?",
@@ -2312,16 +2395,16 @@ export const LOOP_LESSONS: readonly Lesson[] = [
     {
         concept: "while-loops",
         title: "Repeating without counting",
-        why: "Sometimes you do not know how many passes you need — only when to stop.",
+        why: "Sometimes you do not know how many passes you need, only when to stop.",
         teach: [
             {
                 code: "let n = 0;\nwhile (n < 3) {\n  console.log(n);\n  n += 1;\n}",
                 output: "0\n1\n2",
                 note: "Same result as a for loop, with the three parts spread out instead of gathered on one line.",
                 parts: [
-                    { piece: "let n = 0", means: "the start — now an ordinary line above the loop" },
+                    { piece: "let n = 0", means: "the start: now an ordinary line above the loop" },
                     { piece: "while (n < 3)", means: "the condition, checked before every pass" },
-                    { piece: "n += 1", means: "the step — now your job, inside the body" }
+                    { piece: "n += 1", means: "the step: now your job, inside the body" }
                 ]
             }
         ],
@@ -2376,7 +2459,7 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                     },
                     {
                         text: "Because while loops have no built-in limit on passes",
-                        feedback: "True of for loops too — what stops either is the condition going false."
+                        feedback: "True of for loops too: what stops either is the condition going false."
                     },
                     {
                         text: "Because the condition is only checked once at the start",
@@ -2406,7 +2489,7 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                 code: 'let word = "Jolt";\nfor (let i = 0; i <= word.length; i += 1) {\n  console.log(word[i]);\n}',
                 output: "J\no\nl\nt",
                 note: "`<=` asks for position 4, which does not exist. The first four are right and then it reaches past the end.",
-                parts: [{ piece: "i <= word.length", means: "one pass too many — the off-by-one" }]
+                parts: [{ piece: "i <= word.length", means: "one pass too many: the off-by-one" }]
             }
         ],
         notice: "Positions run from 0 to length minus one, so the condition is `<` and not `<=`.",
@@ -2429,7 +2512,7 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                         { text: "5", correct: true },
                         { text: "4", feedback: "`<=` lets 4 through as well, so there is one extra pass." }
                     ],
-                    confirm: "One too many — and position 4 is past the end."
+                    confirm: "One too many, and position 4 is past the end."
                 }
             }
         ]
@@ -2444,15 +2527,15 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                 output: "10",
                 note: "`total` is declared OUTSIDE so it survives every pass. Inside, each pass adds to what is already there.",
                 parts: [
-                    { piece: "let total = 0", means: "outside the loop — it has to outlive each pass" },
-                    { piece: "total += i", means: "inside — add this pass's value to what is already there" }
+                    { piece: "let total = 0", means: "outside the loop: it has to outlive each pass" },
+                    { piece: "total += i", means: "inside: add this pass's value to what is already there" }
                 ]
             },
             {
                 code: 'let word = "Jolt";\nlet backwards = "";\nfor (let i = 0; i < word.length; i += 1) {\n  backwards = word[i] + backwards;\n}\nconsole.log(backwards);',
                 output: "tloJ",
                 note: "The same shape builds text rather than a number. Putting each character in FRONT is what reverses it.",
-                parts: [{ piece: 'let backwards = ""', means: "the starting point — empty, like 0 is for a total" }]
+                parts: [{ piece: 'let backwards = ""', means: "the starting point: empty, like 0 is for a total" }]
             }
         ],
         notice: "Declare it outside the loop. Declared inside, it would start over on every pass.",
@@ -2463,11 +2546,11 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                 code: "let total = 0;\nfor (let i = 1; i < 4; i += 1) {\n  total += i;\n}\nconsole.log(total);",
                 choices: [
                     { text: "6", correct: true },
-                    { text: "3", feedback: "It adds 1, then 2, then 3 — the total, not the last value." },
+                    { text: "3", feedback: "It adds 1, then 2, then 3: the total, not the last value." },
                     { text: "0", feedback: "`total` is outside the loop, so what each pass adds stays." }
                 ],
                 confirm: "One plus two plus three.",
-                aside: "Move the declaration inside the loop and it resets every pass — a classic bug.",
+                aside: "Move the declaration inside the loop and it resets every pass: a classic bug.",
                 retry: {
                     demand: "predict",
                     ask: "And this one?",
@@ -2536,7 +2619,7 @@ export const LOOP_LESSONS: readonly Lesson[] = [
                     },
                     {
                         text: "Because break makes the loop condition false",
-                        feedback: "It does not touch the condition — it leaves regardless of what the condition says."
+                        feedback: "It does not touch the condition: it leaves regardless of what the condition says."
                     }
                 ],
                 confirm: "Stopping early is about the work being done, not about the loop being broken."
@@ -2607,15 +2690,15 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 output: "Hello",
                 note: "Two separate things: the definition stores the instructions, and the call runs them.",
                 parts: [
-                    { piece: "function greet()", means: "the definition — a name for these instructions" },
+                    { piece: "function greet()", means: "the definition: a name for these instructions" },
                     { piece: "{ }", means: "the body: what runs when it is called" },
-                    { piece: "greet()", means: "the call — the brackets are what make it run" }
+                    { piece: "greet()", means: "the call: the brackets are what make it run" }
                 ]
             },
             {
                 code: 'function greet() {\n  console.log("Hello");\n}',
                 output: "",
-                note: "Nothing printed. Defining a function never runs it — something has to call it.",
+                note: "Nothing printed. Defining a function never runs it: something has to call it.",
                 parts: [{ piece: "no call", means: "so the body never runs" }]
             }
         ],
@@ -2628,7 +2711,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "greet();", correct: true },
                     { text: "function greet()", feedback: "That defines it. Defining never runs anything." },
-                    { text: 'console.log("Hello")', feedback: "That is inside the body — it runs only when the function is called." }
+                    { text: 'console.log("Hello")', feedback: "That is inside the body: it runs only when the function is called." }
                 ],
                 confirm: "The brackets at the call are what run it.",
                 retry: {
@@ -2637,7 +2720,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                     code: "function go() {\n  console.log(1);\n}",
                     choices: [
                         { text: "the part between { and }", correct: true },
-                        { text: "function go()", feedback: "That is the header — it names the function and lists its parameters." }
+                        { text: "function go()", feedback: "That is the header: it names the function and lists its parameters." }
                     ],
                     confirm: "The braces hold the work."
                 }
@@ -2676,8 +2759,8 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 output: "Hello, Tati\nHello, Sam",
                 note: "One definition, two calls, two results. `name` stood for a different value each time.",
                 parts: [
-                    { piece: "name", means: "the parameter — a name in the definition, with no value of its own" },
-                    { piece: '"Tati"', means: "the argument — the actual value passed at the call" }
+                    { piece: "name", means: "the parameter: a name in the definition, with no value of its own" },
+                    { piece: '"Tati"', means: "the argument: the actual value passed at the call" }
                 ]
             }
         ],
@@ -2689,7 +2772,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 code: 'function greet(name) {\n  console.log(name);\n}\n\ngreet("Tati");',
                 choices: [
                     { text: '"Tati"', correct: true },
-                    { text: "name", feedback: "That is the parameter — the name inside the definition." },
+                    { text: "name", feedback: "That is the parameter: the name inside the definition." },
                     { text: "greet", feedback: "That is the function itself." }
                 ],
                 confirm: "The value at the call is the argument.",
@@ -2757,7 +2840,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 code: "function f() {\n  let x = 1;\n}\nconsole.log(f());",
                 choices: [
                     { text: "undefined", correct: true },
-                    { text: "1", feedback: "`x` was never returned — it only existed inside the function." },
+                    { text: "1", feedback: "`x` was never returned: it only existed inside the function." },
                     { text: "nothing", feedback: "console.log always prints something; what it was given here was undefined." }
                 ],
                 confirm: "No return, so undefined.",
@@ -2767,7 +2850,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                     code: 'function f() {\n  return 1;\n  console.log("after");\n}\nconsole.log(f());',
                     choices: [
                         { text: "1", correct: true },
-                        { text: "after then 1", feedback: "`return` ends the function immediately — nothing below it runs." }
+                        { text: "after then 1", feedback: "`return` ends the function immediately: nothing below it runs." }
                     ],
                     confirm: "Return ends the function there and then."
                 }
@@ -2790,7 +2873,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                     }
                 ],
                 confirm: "A call is an expression, and return is what decides its value.",
-                aside: "That is why `let x = f();` works at all — `f()` collapses to a value like any other expression."
+                aside: "That is why `let x = f();` works at all: `f()` collapses to a value like any other expression."
             }
         ]
     },
@@ -2804,7 +2887,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 output: "negative\nok",
                 note: "The first return ends the function, so the line below it only runs when the guard did not fire.",
                 parts: [
-                    { piece: "if (n < 0) { return ... }", means: "the guard — handle the exception and leave" },
+                    { piece: "if (n < 0) { return ... }", means: "the guard: handle the exception and leave" },
                     { piece: 'return "ok"', means: "the happy path, not nested inside anything" }
                 ]
             }
@@ -2861,11 +2944,11 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
             {
                 code: "const double = (n) => n * 2;\n\nconsole.log(double(4));",
                 output: "8",
-                note: "No `function`, no braces, and no `return` — with a single expression, the value comes back automatically.",
+                note: "No `function`, no braces, and no `return`, with a single expression, the value comes back automatically.",
                 parts: [
                     { piece: "(n)", means: "the parameters, exactly as before" },
                     { piece: "=>", means: "the arrow, where `function` used to be" },
-                    { piece: "n * 2", means: "the body — one expression, returned without saying so" }
+                    { piece: "n * 2", means: "the body: one expression, returned without saying so" }
                 ]
             },
             {
@@ -2882,7 +2965,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 ask: "Which of these returns a value?",
                 choices: [
                     { text: "const f = (n) => n + 1;", correct: true },
-                    { text: "const f = (n) => { n + 1; };", feedback: "Braces mean an ordinary body, and this one never says `return` — so it gives undefined." }
+                    { text: "const f = (n) => { n + 1; };", feedback: "Braces mean an ordinary body, and this one never says `return`, so it gives undefined." }
                 ],
                 confirm: "Without braces, the expression is handed back for you.",
                 retry: {
@@ -2935,7 +3018,7 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
             {
                 code: "function twice(fn) {\n  return fn() + fn();\n}\n\nfunction one() {\n  return 1;\n}\n\nconsole.log(twice(one));",
                 output: "2",
-                note: "`one` was handed over without being called. `twice` decided when to call it — and called it twice.",
+                note: "`one` was handed over without being called. `twice` decided when to call it, and called it twice.",
                 parts: [
                     { piece: "twice(one)", means: "passing the function, not its result" },
                     { piece: "fn()", means: "the receiving function choosing when to run it" }
@@ -2971,18 +3054,18 @@ export const FUNCTION_LESSONS: readonly Lesson[] = [
                 code: "function twice(fn) {\n  return fn() + fn();\n}\nfunction one() {\n  return 1;\n}\nconsole.log(twice(one()));",
                 choices: [
                     { text: "console.log(twice(one()));", correct: true },
-                    { text: "return fn() + fn();", feedback: "That is right — it calls whatever it was given, which is what twice is for." },
-                    { text: "function one() {", feedback: "The definition is fine — it returns 1, which is exactly what twice expects to receive." }
+                    { text: "return fn() + fn();", feedback: "That is right: it calls whatever it was given, which is what twice is for." },
+                    { text: "function one() {", feedback: "The definition is fine: it returns 1, which is exactly what twice expects to receive." }
                 ],
                 confirm: "`one()` passed the RESULT. `twice` needs the function itself.",
-                aside: "Dropping the brackets at the call site is the fix — `twice(one)`."
+                aside: "Dropping the brackets at the call site is the fix: `twice(one)`."
             },
             {
                 demand: "explain",
                 ask: "Why does passing a function let the receiving code decide when it runs?",
                 choices: [
                     {
-                        text: "Nothing has run yet — only the instructions were handed over",
+                        text: "Nothing has run yet, only the instructions were handed over",
                         correct: true
                     },
                     {
@@ -3019,7 +3102,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 output: "1\nthen an error",
                 note: "Inside the braces you can see out. Outside them you cannot see in.",
                 parts: [
-                    { piece: "{ }", means: "a scope — everything `let` inside it ends here" },
+                    { piece: "{ }", means: "a scope: everything `let` inside it ends here" },
                     { piece: "console.log(a)", means: "fine: `a` was declared further out" },
                     { piece: "console.log(b)", means: "an error: `b` ended at the `}`" }
                 ]
@@ -3040,7 +3123,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "a and c", correct: true },
                     { text: "a, b and c", feedback: "`b` was declared with `let` inside the braces, so it ended there." },
-                    { text: "a only", feedback: "`var c` is not stopped by braces — it is still readable." }
+                    { text: "a only", feedback: "`var c` is not stopped by braces: it is still readable." }
                 ],
                 confirm: "`let` stops at the brace; `var` does not.",
                 retry: {
@@ -3070,8 +3153,8 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 demand: "explain",
                 ask: "Why does a `let` inside `{ }` disappear at the closing brace?",
                 choices: [
-                    { text: "The block is its whole lifetime — it begins when the block runs and ends when the block does", correct: true },
-                    { text: "The braces hide it from the lines above", feedback: "Not hidden — ended. Hiding would mean it still existed somewhere." },
+                    { text: "The block is its whole lifetime: it begins when the block runs and ends when the block does", correct: true },
+                    { text: "The braces hide it from the lines above", feedback: "Not hidden: ended. Hiding would mean it still existed somewhere." },
                     { text: "A variable is removed once it has been used", feedback: "It can be read as often as you like inside the block." }
                 ],
                 confirm: "Bounded, not hidden."
@@ -3095,7 +3178,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
             {
                 code: "console.log(n);\nlet n = 5;",
                 output: "an error",
-                note: "`let` reserves the name too — it just refuses to be read before its line.",
+                note: "`let` reserves the name too: it just refuses to be read before its line.",
                 parts: [{ piece: "let n", means: "spoken for from the top, unreadable until its line: the dead zone" }]
             }
         ],
@@ -3108,7 +3191,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "undefined", correct: true },
                     { text: "5", feedback: "The value is set on the second line, which has not run yet." },
-                    { text: "an error", feedback: "With `var` the name already exists — it is just empty." }
+                    { text: "an error", feedback: "With `var` the name already exists: it is just empty." }
                 ],
                 confirm: "Name early, value late.",
                 retry: {
@@ -3129,7 +3212,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "console.log(n);", correct: true },
                     { text: "let n = 5;", feedback: "The declaration is fine. Reading it before that line is what fails." },
-                    { text: "nothing — it works", feedback: "Run it and you get an error about `n` being declared further down." }
+                    { text: "nothing: it works", feedback: "Run it and you get an error about `n` being declared further down." }
                 ],
                 confirm: "Read too early."
             },
@@ -3139,10 +3222,10 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "Both names exist from the start; `var` already holds `undefined`, and `let` refuses to be read until its line runs", correct: true },
                     { text: "`let` is not hoisted and `var` is", feedback: "`let` IS hoisted. That is why it does not fall through to an outer `n` of the same name." },
-                    { text: "`var` is older and JavaScript is more forgiving about it", feedback: "Age has nothing to do with it — the two reserve the name in different states." }
+                    { text: "`var` is older and JavaScript is more forgiving about it", feedback: "Age has nothing to do with it: the two reserve the name in different states." }
                 ],
                 confirm: "Both reserved. Only one is readable.",
-                aside: "\"let is not hoisted\" is the usual explanation and it is wrong. The name is reserved — it just will not answer yet."
+                aside: "\"let is not hoisted\" is the usual explanation and it is wrong. The name is reserved: it just will not answer yet."
             }
         ]
     },
@@ -3156,7 +3239,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 output: "inner\nouter",
                 note: "Two separate variables. The inner one wins inside `f`, and ends with it.",
                 parts: [
-                    { piece: "let name (inside)", means: "a NEW variable — not a change to the outer one" },
+                    { piece: "let name (inside)", means: "a NEW variable, not a change to the outer one" },
                     { piece: "the last line", means: "back outside, where the outer `name` was never touched" }
                 ]
             }
@@ -3179,7 +3262,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                     code: 'let name = "outer";\nfunction f() {\n  name = "inner";\n}\nf();\nconsole.log(name);',
                     choices: [
                         { text: "inner", correct: true },
-                        { text: "outer", feedback: "With no `let` there is no second variable — that line changed the outer one." }
+                        { text: "outer", feedback: "With no `let` there is no second variable: that line changed the outer one." }
                     ],
                     confirm: "No `let`, no new variable."
                 }
@@ -3191,7 +3274,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "let total = total + 1;", correct: true },
                     { text: "let total = 0;", feedback: "The outer total is fine. The problem is the line that declares a second one." },
-                    { text: "bump();", feedback: "Calling it is correct — what it does when called is not." }
+                    { text: "bump();", feedback: "Calling it is correct: what it does when called is not." }
                 ],
                 confirm: "It shadowed the variable it was trying to read.",
                 aside: "The `total` on the right of the `=` is the NEW one, which has no value yet. Dropping `let` fixes it."
@@ -3238,7 +3321,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                     code: "function adder(a) {\n  return (b) => a + b;\n}\nconst add5 = adder(5);\nconsole.log(add5(3));",
                     choices: [
                         { text: "8", correct: true },
-                        { text: "an error", feedback: "`a` is still there — the returned function captured it." }
+                        { text: "an error", feedback: "`a` is still there: the returned function captured it." }
                     ],
                     confirm: "The 5 came along with the function."
                 }
@@ -3249,7 +3332,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 code: "let n = 0;\nfunction makeCounter() {\n  return () => {\n    n = n + 1;\n    return n;\n  };\n}\nconst a = makeCounter();\nconst b = makeCounter();\nconsole.log(a());\nconsole.log(b());",
                 choices: [
                     { text: "let n = 0;", correct: true },
-                    { text: "const b = makeCounter();", feedback: "Making a second counter is the intent — the problem is what it shares." },
+                    { text: "const b = makeCounter();", feedback: "Making a second counter is the intent: the problem is what it shares." },
                     { text: "return () => {", feedback: "Returning the function is right. Where its variable lives is not." }
                 ],
                 confirm: "One `n` outside, shared by both.",
@@ -3261,7 +3344,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "It captured the variable itself, not a copy of its value", correct: true },
                     { text: "The outer function keeps running quietly in the background", feedback: "It really has finished. Nothing of it is still running." },
-                    { text: "The value was copied in when the function was made", feedback: "A copy could not change — and a counter plainly does." }
+                    { text: "The value was copied in when the function was made", feedback: "A copy could not change, and a counter plainly does." }
                 ],
                 confirm: "The variable came along, not its value."
             }
@@ -3275,7 +3358,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
             {
                 code: "let show = 0;\nfor (var i = 0; i < 3; i = i + 1) {\n  if (i === 0) {\n    show = () => i;\n  }\n}\nconsole.log(show());",
                 output: "3",
-                note: "Made on the first pass, run after the loop — and `var` gave all three passes one `i`.",
+                note: "Made on the first pass, run after the loop, and `var` gave all three passes one `i`.",
                 parts: [
                     { piece: "var i", means: "ONE variable for the whole loop" },
                     { piece: "() => i", means: "captures that one variable, not the value it held then" },
@@ -3286,7 +3369,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 code: "let show = 0;\nfor (let i = 0; i < 3; i = i + 1) {\n  if (i === 0) {\n    show = () => i;\n  }\n}\nconsole.log(show());",
                 output: "0",
                 note: "One word changed. `let` gives every pass its own `i`, so the function kept the first pass's.",
-                parts: [{ piece: "let i", means: "a fresh `i` on every pass — three in total" }]
+                parts: [{ piece: "let i", means: "a fresh `i` on every pass: three in total" }]
             }
         ],
         notice: "`var`: one variable, shared. `let`: one per pass.",
@@ -3298,7 +3381,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "3", correct: true },
                     { text: "0", feedback: "That is what `let` would give. `var` leaves one shared `i`, counted up to 3." },
-                    { text: "an error", feedback: "`i` is still perfectly readable after the loop — that is the problem." }
+                    { text: "an error", feedback: "`i` is still perfectly readable after the loop: that is the problem." }
                 ],
                 confirm: "One `i`, and the loop finished with it at 3.",
                 retry: {
@@ -3328,7 +3411,7 @@ export const SCOPE_LESSONS: readonly Lesson[] = [
                 ask: "Why does swapping `var` for `let` change what the captured function sees?",
                 choices: [
                     { text: "`let` gives each pass its own binding, so the function captured that pass's value", correct: true },
-                    { text: "`let` copies the value into the function as it is made", feedback: "No copying happens — a closure keeps the variable. There are simply more variables." },
+                    { text: "`let` copies the value into the function as it is made", feedback: "No copying happens: a closure keeps the variable. There are simply more variables." },
                     { text: "`let` stops the loop variable from changing", feedback: "It changes on every pass either way. What differs is how many of it there are." }
                 ],
                 confirm: "More variables, not different reading.",
@@ -3359,7 +3442,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 parts: [
                     { piece: "[90, 80, 70]", means: "the list, written out" },
                     { piece: "scores[0]", means: "the first item" },
-                    { piece: "scores[2]", means: "the third — and here the last" }
+                    { piece: "scores[2]", means: "the third, and here the last" }
                 ]
             },
             {
@@ -3369,7 +3452,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 parts: [{ piece: "[3]", means: "there is no fourth item, so: undefined" }]
             }
         ],
-        notice: "Counting from zero, and nothing past the end — just `undefined`.",
+        notice: "Counting from zero, and nothing past the end, just `undefined`.",
         steps: [
             {
                 demand: "recognise",
@@ -3387,7 +3470,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                     code: "let scores = [90, 80, 70];",
                     choices: [
                         { text: "scores[2]", correct: true },
-                        { text: "scores[3]", feedback: "Three items end at position 2 — `[3]` is past the end." }
+                        { text: "scores[3]", feedback: "Three items end at position 2: `[3]` is past the end." }
                     ],
                     confirm: "One less than the count."
                 }
@@ -3399,7 +3482,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "undefined", correct: true },
                     { text: "70", feedback: "70 is at position 2. There is nothing at 3." },
-                    { text: "an error", feedback: "Reaching past the end is allowed — you just get `undefined`." }
+                    { text: "an error", feedback: "Reaching past the end is allowed: you just get `undefined`." }
                 ],
                 confirm: "Nothing there, so: undefined.",
                 aside: "This is why a bad index often shows up later, somewhere else, as an odd value."
@@ -3416,8 +3499,8 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 output: "3\n6",
                 note: "`length` counts. Positions stop one short of it.",
                 parts: [
-                    { piece: ".length", means: "how many items — 3" },
-                    { piece: "[a.length - 1]", means: "the last position — 2" }
+                    { piece: ".length", means: "how many items: 3" },
+                    { piece: "[a.length - 1]", means: "the last position: 2" }
                 ]
             }
         ],
@@ -3430,7 +3513,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "3 then 6", correct: true },
                     { text: "3 then undefined", feedback: "`length - 1` is 2, and position 2 holds 6." },
-                    { text: "2 then 6", feedback: "`length` counts the items — there are three." }
+                    { text: "2 then 6", feedback: "`length` counts the items: there are three." }
                 ],
                 confirm: "Count three, last position two."
             },
@@ -3441,7 +3524,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "console.log(a[a.length]);", correct: true },
                     { text: "let a = [4, 5, 6];", feedback: "The list is fine. The index reaching into it is not." },
-                    { text: "nothing — it works", feedback: "`a[3]` is one past the end, so it gives `undefined`." }
+                    { text: "nothing: it works", feedback: "`a[3]` is one past the end, so it gives `undefined`." }
                 ],
                 confirm: "Off by exactly one.",
                 retry: {
@@ -3465,17 +3548,17 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
             {
                 code: "let a = [1, 2];\nlet b = a.push(3);\nconsole.log(b);\nconsole.log(a.length);",
                 output: "3\n3",
-                note: "`push` changed `a` — and handed back the new LENGTH, not the list.",
+                note: "`push` changed `a`, and handed back the new LENGTH, not the list.",
                 parts: [
                     { piece: "a.push(3)", means: "changes `a` in place" },
-                    { piece: "b", means: "the new length, 3 — a number, not a list" }
+                    { piece: "b", means: "the new length, 3: a number, not a list" }
                 ]
             },
             {
                 code: "let a = [1, 2, 3];\nlet b = a.slice(1);\nconsole.log(b.length);\nconsole.log(a.length);",
                 output: "2\n3",
                 note: "`slice` is the other kind: it leaves `a` alone and returns something new.",
-                parts: [{ piece: "a.slice(1)", means: "a NEW list — `a` is untouched" }]
+                parts: [{ piece: "a.slice(1)", means: "a NEW list: `a` is untouched" }]
             }
         ],
         notice: "`push` and `pop` change the list. `slice` hands back a new one.",
@@ -3487,7 +3570,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "3", correct: true },
                     { text: "[1, 2, 3]", feedback: "`push` returns the new length, not the list." },
-                    { text: "undefined", feedback: "It does return something — the count after pushing." }
+                    { text: "undefined", feedback: "It does return something: the count after pushing." }
                 ],
                 confirm: "The new length.",
                 aside: "Storing the result of `push` is a common way to end up holding a number where a list was meant to be."
@@ -3518,7 +3601,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 ask: "Why does `const` not stop an array being changed?",
                 choices: [
                     { text: "It fixes which list the name points at, not what is inside that list", correct: true },
-                    { text: "Arrays are always mutable and const only applies to numbers", feedback: "const works the same way on every value — what it guards is the name." },
+                    { text: "Arrays are always mutable and const only applies to numbers", feedback: "const works the same way on every value: what it guards is the name." },
                     { text: "push is allowed to bypass const", feedback: "Nothing bypasses it. `push` never changes where the name points." }
                 ],
                 confirm: "The name is fixed; the contents are not."
@@ -3536,13 +3619,13 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 note: "`[...a]` builds a new list holding the same items. Two lists now, not one.",
                 parts: [
                     { piece: "[...a]", means: "a new list, with a's items poured into it" },
-                    { piece: "a.length", means: "still 2 — the push went to the other one" }
+                    { piece: "a.length", means: "still 2: the push went to the other one" }
                 ]
             },
             {
                 code: "let inner = [1];\nlet a = [inner];\nlet b = [...a];\nb[0].push(2);\nconsole.log(inner.length);",
                 output: "2",
-                note: "One level only. The inner list was not copied — both still point at it.",
+                note: "One level only. The inner list was not copied: both still point at it.",
                 parts: [{ piece: "b[0]", means: "the SAME list `inner` is, so pushing reaches it" }]
             }
         ],
@@ -3554,7 +3637,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 code: "let a = [1, 2];\nlet b = [...a];\nb.push(3);\nconsole.log(a.length);",
                 choices: [
                     { text: "2", correct: true },
-                    { text: "3", feedback: "`b` is a separate list — pushing to it does not reach `a`." },
+                    { text: "3", feedback: "`b` is a separate list: pushing to it does not reach `a`." },
                     { text: "an error", feedback: "Spreading a list into brackets is ordinary JavaScript." }
                 ],
                 confirm: "Two lists, so the original is untouched.",
@@ -3574,7 +3657,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 ask: "Why is a spread copy called shallow?",
                 choices: [
                     { text: "It makes a new outer list, but anything nested inside is still the same list as before", correct: true },
-                    { text: "It copies only the first item", feedback: "Every item comes across — the question is whether the items themselves are copied." },
+                    { text: "It copies only the first item", feedback: "Every item comes across: the question is whether the items themselves are copied." },
                     { text: "The copy can be read but not changed", feedback: "It is an ordinary list and can be changed freely." }
                 ],
                 confirm: "One level deep, and no further."
@@ -3598,7 +3681,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
             {
                 code: "function count(...things) {\n  return things.length;\n}\nconsole.log(count(1, 2, 3));\nconsole.log(count());",
                 output: "3\n0",
-                note: "`...things` gathers whatever is left into a list — possibly an empty one.",
+                note: "`...things` gathers whatever is left into a list, possibly an empty one.",
                 parts: [{ piece: "...things", means: "a list of every remaining argument" }]
             }
         ],
@@ -3705,7 +3788,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "false", correct: true },
                     { text: "true", feedback: "They hold the same numbers, but they are two separate lists." },
-                    { text: "an error", feedback: "Comparing lists is allowed — it just asks a different question than you might think." }
+                    { text: "an error", feedback: "Comparing lists is allowed: it just asks a different question than you might think." }
                 ],
                 confirm: "Two lists, so not the same one.",
                 retry: {
@@ -3714,7 +3797,7 @@ export const ARRAY_LESSONS: readonly Lesson[] = [
                     code: "let a = [1, 2];\nlet b = a;\nconsole.log(a === b);",
                     choices: [
                         { text: "true", correct: true },
-                        { text: "false", feedback: "`b` was never a new list — it is the same one under another name." }
+                        { text: "false", feedback: "`b` was never a new list: it is the same one under another name." }
                     ],
                     confirm: "One list, two names."
                 }
@@ -3754,13 +3837,13 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 parts: [
                     { piece: "(n) => n * 2", means: "runs once per item; what it RETURNS goes in the new list" },
                     { piece: "doubled", means: "the new list" },
-                    { piece: "a", means: "unchanged — map never writes back" }
+                    { piece: "a", means: "unchanged: map never writes back" }
                 ]
             },
             {
                 code: "let a = [1, 2, 3];\nconsole.log(a.map((n) => { n * 2; }));",
                 output: "[undefined, undefined, undefined]",
-                note: "Braces make a body, and a body with no `return` gives undefined — once per item.",
+                note: "Braces make a body, and a body with no `return` gives undefined: once per item.",
                 parts: [{ piece: "{ n * 2; }", means: "computes, returns nothing, collects nothing" }]
             }
         ],
@@ -3814,8 +3897,8 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 code: "let a = [1, 2, 3];\nlet doubled = a.map((n) => { n * 2; });\nconsole.log(doubled);",
                 choices: [
                     { text: "let doubled = a.map((n) => { n * 2; });", correct: true },
-                    { text: "console.log(doubled);", feedback: "Printing it is fine — the trouble is what is in it." },
-                    { text: "let a = [1, 2, 3];", feedback: "The list is exactly what was wanted — the trouble is further down." }
+                    { text: "console.log(doubled);", feedback: "Printing it is fine: the trouble is what is in it." },
+                    { text: "let a = [1, 2, 3];", feedback: "The list is exactly what was wanted: the trouble is further down." }
                 ],
                 confirm: "A body with no return gives undefined."
             }
@@ -3830,7 +3913,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 code: 'let names = ["Tati", "Sam"];\nnames.forEach((n) => {\n  console.log(n);\n});',
                 output: "Tati\nSam",
                 note: "Runs the function once per item. That is all it does.",
-                parts: [{ piece: "forEach", means: "for the effect — printing here — not for a result" }]
+                parts: [{ piece: "forEach", means: "for the effect, printing here, not for a result" }]
             },
             {
                 code: "let a = [1, 2];\nlet out = a.forEach((n) => n * 2);\nconsole.log(out);",
@@ -3888,7 +3971,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 ask: "Why can another method not be chained onto forEach?",
                 choices: [
                     { text: "It hands back undefined, so there is nothing for the next method to be called on", correct: true },
-                    { text: "forEach has to be last in a chain by rule", feedback: "There is no such rule — it is simply what it returns." },
+                    { text: "forEach has to be last in a chain by rule", feedback: "There is no such rule: it is simply what it returns." },
                     { text: "forEach changes the original list", feedback: "It changes nothing; it just runs your function." }
                 ],
                 confirm: "Chaining needs a result."
@@ -3905,7 +3988,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 output: "[3, 4]",
                 note: "Your function answers yes or no. The yeses are collected.",
                 parts: [
-                    { piece: "(n) => n > 2", means: "a test — it should give true or false" },
+                    { piece: "(n) => n > 2", means: "a test: it should give true or false" },
                     { piece: "[3, 4]", means: "a new list, possibly shorter, possibly empty" }
                 ]
             },
@@ -3913,7 +3996,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 code: 'let names = ["Tati", "Al"];\nconsole.log(names.filter((n) => n.length));',
                 output: '["Tati", "Al"]',
                 note: "A number is not a test. 4 and 2 are both truthy, so both were kept.",
-                parts: [{ piece: "n.length", means: "truthy whenever it is not 0 — so almost always" }]
+                parts: [{ piece: "n.length", means: "truthy whenever it is not 0, so almost always" }]
             }
         ],
         notice: "filter asks whether your answer is TRUTHY, not whether it is big.",
@@ -3944,7 +4027,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                     code: "let a = [1, 2];\nconsole.log(a.filter((n) => n > 9).length);",
                     choices: [
                         { text: "0", correct: true },
-                        { text: "undefined", feedback: "You still get a list — an empty one." }
+                        { text: "undefined", feedback: "You still get a list: an empty one." }
                     ],
                     confirm: "An empty list, not nothing."
                 }
@@ -4003,7 +4086,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 code: "let a = [1, 2, 3];\nconsole.log(a.find((n) => n > 5));\nconsole.log(a.some((n) => n > 5));",
                 choices: [
                     { text: "undefined then false", correct: true },
-                    { text: "false then false", feedback: "`find` has no item to give, so it gives undefined — not false." },
+                    { text: "false then false", feedback: "`find` has no item to give, so it gives undefined, not false." },
                     { text: "undefined then undefined", feedback: "`some` is a yes-or-no question and always answers one." }
                 ],
                 confirm: "Different questions, different answers.",
@@ -4023,7 +4106,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 ask: "Why does every() hand back true for an empty list?",
                 choices: [
                     { text: "There is no item that fails the test, and not failing is all every checks for", correct: true },
-                    { text: "An empty list counts as holding one invisible item", feedback: "It holds nothing at all — that is the point." },
+                    { text: "An empty list counts as holding one invisible item", feedback: "It holds nothing at all: that is the point." },
                     { text: "An empty list is itself truthy", feedback: "True, but unrelated: `every` never looks at the list's truthiness." }
                 ],
                 confirm: "Nothing to fail, so nothing failed.",
@@ -4034,7 +4117,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
     {
         concept: "reduce",
         title: "A whole list into one value",
-        why: "Totals, maximums, counts — anything that comes out of a list as a single answer.",
+        why: "Totals, maximums, counts: anything that comes out of a list as a single answer.",
         teach: [
             {
                 code: "let a = [1, 2, 3];\nconsole.log(a.reduce((total, n) => total + n, 0));",
@@ -4043,13 +4126,13 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 parts: [
                     { piece: "total", means: "the running answer so far" },
                     { piece: "n", means: "the item being folded in" },
-                    { piece: ", 0", means: "the starting value — easy to forget, and it matters" }
+                    { piece: ", 0", means: "the starting value: easy to forget, and it matters" }
                 ]
             },
             {
                 code: 'let a = [1, 2, 3];\nconsole.log(a.reduce((sum, n) => sum + n, ""));',
                 output: "123",
-                note: "Start from text and the first `+` joins instead of adding — and then everything does.",
+                note: "Start from text and the first `+` joins instead of adding, and then everything does.",
                 parts: [{ piece: '""', means: "a starting value of the wrong type changes what `+` means" }]
             }
         ],
@@ -4083,7 +4166,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: 'let total = a.reduce((sum, n) => sum + n, "");', correct: true },
                     { text: "console.log(total);", feedback: "It printed exactly what it was given." },
-                    { text: "let a = [1, 2, 3];", feedback: "The numbers are fine — what they are added to is not." }
+                    { text: "let a = [1, 2, 3];", feedback: "The numbers are fine: what they are added to is not." }
                 ],
                 confirm: "A text starting value makes `+` join."
             },
@@ -4117,7 +4200,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 code: "let a = [10, 9, 1];\na.sort((x, y) => x - y);\nconsole.log(a);",
                 output: "[1, 9, 10]",
                 note: "A comparator says how two items compare: negative, zero, positive.",
-                parts: [{ piece: "(x, y) => x - y", means: "negative puts x first — exactly what numbers need" }]
+                parts: [{ piece: "(x, y) => x - y", means: "negative puts x first: exactly what numbers need" }]
             }
         ],
         notice: "sort changes the original AND returns it. `a.sort() === a` is true.",
@@ -4129,7 +4212,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "[1, 10, 9]", correct: true },
                     { text: "[1, 9, 10]", feedback: "That needs a comparator. Without one these are compared as text." },
-                    { text: "[10, 9, 1]", feedback: "It did sort — just not numerically." }
+                    { text: "[10, 9, 1]", feedback: "It did sort, just not numerically." }
                 ],
                 confirm: "Text order, not number order.",
                 retry: {
@@ -4159,7 +4242,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 ask: "Why does sorting change the original rather than returning a sorted copy?",
                 choices: [
                     { text: "sort rearranges the very list it was called on, and hands that same list back", correct: true },
-                    { text: "sort returns a new list and the old one is thrown away", feedback: "Nothing is thrown away — the original is the one that changed." },
+                    { text: "sort returns a new list and the old one is thrown away", feedback: "Nothing is thrown away: the original is the one that changed." },
                     { text: "A copy would lose the comparator", feedback: "The comparator is only used while sorting." }
                 ],
                 confirm: "It mutates, and returns itself.",
@@ -4191,7 +4274,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "[1, 2, [3]]", correct: true },
                     { text: "[1, 2, 3]", feedback: "That is `flat(2)`. One level leaves the inner list intact." },
-                    { text: "[1, [2, [3]]]", feedback: "One level did come up — the 2 is no longer nested." }
+                    { text: "[1, [2, [3]]]", feedback: "One level did come up: the 2 is no longer nested." }
                 ],
                 confirm: "One level, and the deeper one stays.",
                 retry: {
@@ -4232,7 +4315,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 ]
             }
         ],
-        notice: "Each method starts where the one before it finished — so order changes the answer.",
+        notice: "Each method starts where the one before it finished, so order changes the answer.",
         steps: [
             {
                 demand: "predict",
@@ -4241,7 +4324,7 @@ export const ARRAY_METHOD_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "[20, 30, 40]", correct: true },
                     { text: "[10, 20, 30, 40]", feedback: "The 1 was filtered out before map ever saw it." },
-                    { text: "[2, 3, 4]", feedback: "That is the halfway point — map still has to run." }
+                    { text: "[2, 3, 4]", feedback: "That is the halfway point: map still has to run." }
                 ],
                 confirm: "Filter first, then map what survived.",
                 retry: {
@@ -4286,7 +4369,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 code: 'let u = { city: "Brooklyn" };\nlet k = "city";\nconsole.log(u[k]);\nconsole.log(u.k);',
                 output: "Brooklyn\nundefined",
                 note: "`u.k` looks for a property actually called k. Only brackets work out what the key is.",
-                parts: [{ piece: "u.k", means: "the literal name k — not what k holds" }]
+                parts: [{ piece: "u.k", means: "the literal name k, not what k holds" }]
             }
         ],
         notice: "A dot takes the name as written. Brackets evaluate what is inside them.",
@@ -4366,7 +4449,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 code: "let p = { a: 1, b: 2 };\np.b = undefined;\nconsole.log(p);",
                 choices: [
                     { text: "p.b = undefined;", correct: true },
-                    { text: "console.log(p);", feedback: "It printed honestly — the key really is still there." },
+                    { text: "console.log(p);", feedback: "It printed honestly: the key really is still there." },
                     { text: "let p = { a: 1, b: 2 };", feedback: "The object is fine to start with." }
                 ],
                 confirm: "Emptied, not removed.",
@@ -4401,7 +4484,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 code: 'let u = { home: { city: "Brooklyn" } };\nconsole.log(u.work.city);',
                 output: "an error",
                 note: "`u.work` is undefined, and reading `.city` from nothing is where it stops.",
-                parts: [{ piece: "u.work", means: "missing — so there is nothing to read .city from" }]
+                parts: [{ piece: "u.work", means: "missing, so there is nothing to read .city from" }]
             }
         ],
         notice: "One missing property is quiet. Reaching THROUGH one is not.",
@@ -4454,13 +4537,13 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
             {
                 code: 'for (const i in ["a", "b"]) {\n  console.log(i);\n}',
                 output: "0\n1",
-                note: "`in` walks the KEYS — and a list's keys are its positions, as text.",
+                note: "`in` walks the KEYS, and a list's keys are its positions, as text.",
                 parts: [{ piece: "in", means: "the keys: 0 and 1, not \"a\" and \"b\"" }]
             },
             {
                 code: "let p = { a: 1, b: 2 };\nfor (const k in p) {\n  console.log(k);\n}",
                 output: "a\nb",
-                note: "On an object, keys are what you usually want — which is what `in` is for.",
+                note: "On an object, keys are what you usually want, which is what `in` is for.",
                 parts: [{ piece: "in on an object", means: "its property names" }]
             }
         ],
@@ -4505,7 +4588,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "for (const n in names) {", correct: true },
                     { text: "console.log(n);", feedback: "It printed exactly what the loop handed it." },
-                    { text: 'let names = ["Tati", "Sam"];', feedback: "The list itself is right — it is the loop form above that is not." }
+                    { text: 'let names = ["Tati", "Sam"];', feedback: "The list itself is right: it is the loop form above that is not." }
                 ],
                 confirm: "`in` where `of` was meant."
             }
@@ -4526,7 +4609,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 code: 'let u = { name: "Tati" };\nconsole.log(u.home.city);',
                 output: "an error",
                 note: "Without it, the same line fails.",
-                parts: [{ piece: ".city", means: "read from nothing — which is where it stops" }]
+                parts: [{ piece: ".city", means: "read from nothing, which is where it stops" }]
             }
         ],
         notice: "`?.` has to sit at the step that might be missing.",
@@ -4537,7 +4620,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 code: 'let u = { name: "Tati" };',
                 choices: [
                     { text: "u.home?.city", correct: true },
-                    { text: "u.home.city", feedback: "That is the version that fails — there is no guard anywhere." },
+                    { text: "u.home.city", feedback: "That is the version that fails: there is no guard anywhere." },
                     { text: "u?.home.city", feedback: "That guards `u`, which is present. `.city` still falls over." }
                 ],
                 confirm: "Guard the step that might be missing.",
@@ -4568,7 +4651,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 ask: "Why does `a?.b.c` not fail at `.c` when `a` is missing?",
                 choices: [
                     { text: "The ?. stops the whole rest of the chain, not only the step it is written on", correct: true },
-                    { text: "undefined quietly answers any property with undefined", feedback: "It does not — reading a property of undefined is an error." },
+                    { text: "undefined quietly answers any property with undefined", feedback: "It does not: reading a property of undefined is an error." },
                     { text: "The chain is read from right to left", feedback: "It is read left to right, one step at a time." }
                 ],
                 confirm: "One question mark guards everything after it."
@@ -4662,7 +4745,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "9", correct: true },
                     { text: "1", feedback: "There is only one object, and it was changed." },
-                    { text: "an error", feedback: "Nothing here is invalid — it just does more than it looks like." }
+                    { text: "an error", feedback: "Nothing here is invalid: it just does more than it looks like." }
                 ],
                 confirm: "One object, two names.",
                 retry: {
@@ -4692,7 +4775,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 ask: "Why does assigning an object to a second name not copy it?",
                 choices: [
                     { text: "The name holds a reference to the object, and assigning copies the reference rather than the contents", correct: true },
-                    { text: "Objects are too large to copy automatically", feedback: "Size has nothing to do with it — a one-property object behaves the same way." },
+                    { text: "Objects are too large to copy automatically", feedback: "Size has nothing to do with it: a one-property object behaves the same way." },
                     { text: "Only arrays are copied when assigned", feedback: "Arrays behave exactly like this too." }
                 ],
                 confirm: "The reference is what gets copied."
@@ -4702,7 +4785,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
     {
         concept: "json-shape",
         title: "An object as text",
-        why: "Anything that leaves your program — saved, sent, stored — leaves as text.",
+        why: "Anything that leaves your program, saved, sent, stored, leaves as text.",
         teach: [
             {
                 code: 'let p = { name: "Tati", age: 3 };\nlet text = JSON.stringify(p);\nconsole.log(text);\nconsole.log(JSON.parse(text).name);',
@@ -4717,7 +4800,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 code: "let p = { a: 1, f: () => 1 };\nconsole.log(JSON.stringify(p));",
                 output: '{"a":1}',
                 note: "JSON carries data, not behaviour. The function was dropped without a word.",
-                parts: [{ piece: "f: () => 1", means: "gone — and so would undefined be" }]
+                parts: [{ piece: "f: () => 1", means: "gone, and so would undefined be" }]
             }
         ],
         notice: "A round trip can quietly give back less than you put in.",
@@ -4728,7 +4811,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "JSON.stringify(p)", correct: true },
                     { text: "JSON.parse(p)", feedback: "That goes the other way: text into an object." },
-                    { text: "p.toText()", feedback: "There is no such method — the conversion lives on JSON, not on the object." }
+                    { text: "p.toText()", feedback: "There is no such method: the conversion lives on JSON, not on the object." }
                 ],
                 confirm: "stringify goes out, parse comes back."
             },
@@ -4739,7 +4822,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: '{"a":1}', correct: true },
                     { text: '{"a":1,"f":null}', feedback: "In an object the key is dropped entirely. In a LIST it would become null." },
-                    { text: "an error", feedback: "It does not complain — which is what makes it worth knowing." }
+                    { text: "an error", feedback: "It does not complain, which is what makes it worth knowing." }
                 ],
                 confirm: "Functions do not survive.",
                 retry: {
@@ -4815,7 +4898,7 @@ export const OBJECT_LESSONS: readonly Lesson[] = [
                     code: "let nums = [1, 1, 2, 2, 3];\nconsole.log(nums.length);",
                     choices: [
                         { text: "5", correct: true },
-                        { text: "3", feedback: "The list still holds everything — only the Set dropped repeats." }
+                        { text: "3", feedback: "The list still holds everything, only the Set dropped repeats." }
                     ],
                     confirm: "Which is the whole difference."
                 }
@@ -4843,7 +4926,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 note: "`user.profile` is undefined, and reading `.name` from nothing is a TypeError.",
                 parts: [
                     { piece: "TypeError", means: "a value was used as a kind of thing it is not" },
-                    { piece: "user.profile", means: "undefined — there is nothing to read from" }
+                    { piece: "user.profile", means: "undefined: there is nothing to read from" }
                 ]
             },
             {
@@ -4861,7 +4944,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "TypeError", correct: true },
                     { text: "ReferenceError", feedback: "That one means the NAME does not exist at all." },
-                    { text: "RangeError", feedback: "That one is about running away — too deep, or too long." }
+                    { text: "RangeError", feedback: "That one is about running away: too deep, or too long." }
                 ],
                 confirm: "About the value, not the name."
             },
@@ -4872,7 +4955,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "TypeError", correct: true },
                     { text: "ReferenceError", feedback: "`user` was declared on the line above, so the name exists." },
-                    { text: "SyntaxError", feedback: "The code is written correctly — it fails while running, not while being read." }
+                    { text: "SyntaxError", feedback: "The code is written correctly: it fails while running, not while being read." }
                 ],
                 confirm: "Reading from nothing.",
                 retry: {
@@ -4881,7 +4964,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                     code: "console.log(total);",
                     choices: [
                         { text: "ReferenceError", correct: true },
-                        { text: "TypeError", feedback: "There is no value involved — the name itself was never declared." }
+                        { text: "TypeError", feedback: "There is no value involved: the name itself was never declared." }
                     ],
                     confirm: "No such name."
                 }
@@ -4905,7 +4988,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
             {
                 code: 'function check(n) {\n  if (n < 0) {\n    throw new Error("negative");\n  }\n  return n;\n}\nconsole.log(check(5));\nconsole.log(check(-1));',
                 output: "5\nthen the program stops",
-                note: "Nothing caught it, so the second log never ran — and nor would anything after it.",
+                note: "Nothing caught it, so the second log never ran, and nor would anything after it.",
                 parts: [{ piece: "check(-1)", means: "threw, and stopped everything" }]
             }
         ],
@@ -4928,7 +5011,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 code: 'function check(n) {\n  if (n < 0) {\n    throw new Error("negative");\n  }\n  return n;\n}\nconsole.log(check(5));\nconsole.log(check(-1));',
                 choices: [
                     { text: "5, and then the program stops with an error", correct: true },
-                    { text: "5 then -1", feedback: "The second call never returned — it threw." },
+                    { text: "5 then -1", feedback: "The second call never returned: it threw." },
                     { text: "5 then negative", feedback: "The message is not printed; it travels with the error." }
                 ],
                 confirm: "One good call, then a stop.",
@@ -4948,7 +5031,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
     {
         concept: "try-catch",
         title: "Deciding what happens next",
-        why: "A failure you expected is not an emergency — it is a branch you have not written yet.",
+        why: "A failure you expected is not an emergency: it is a branch you have not written yet.",
         teach: [
             {
                 code: 'try {\n  throw new Error("x");\n} catch (e) {\n  console.log("caught");\n} finally {\n  console.log("always");\n}\nconsole.log("after");',
@@ -4975,7 +5058,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 code: 'try {\n  throw new Error("x");\n} catch (e) {\n  console.log("caught");\n} finally {\n  console.log("always");\n}\nconsole.log("after");',
                 choices: [
                     { text: "caught, always, after", correct: true },
-                    { text: "caught, after", feedback: "`finally` runs too — that is what makes it finally." },
+                    { text: "caught, after", feedback: "`finally` runs too: that is what makes it finally." },
                     { text: "caught, always", feedback: "Catching it means the program was not stopped, so `after` ran." }
                 ],
                 confirm: "All three, in that order.",
@@ -4987,7 +5070,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                         { text: "fine, always", correct: true },
                         { text: "fine, caught, always", feedback: "`catch` only runs when something was thrown." }
                     ],
-                    confirm: "No failure, no catch — but still finally."
+                    confirm: "No failure, no catch, but still finally."
                 }
             },
             {
@@ -4996,7 +5079,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "finally is for work that has to happen either way, so it is not tied to whether anything failed", correct: true },
                     { text: "catch has not finished handling the error until finally runs", feedback: "`catch` is finished when its block ends; `finally` is a separate promise." },
-                    { text: "finally always runs before catch", feedback: "It runs after — you can see the order in the output." }
+                    { text: "finally always runs before catch", feedback: "It runs after: you can see the order in the output." }
                 ],
                 confirm: "Tidying up, either way."
             }
@@ -5012,7 +5095,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 output: "TypeError\n    at format\n    at render",
                 note: "Most recent first. `format` was running; `render` was waiting for it.",
                 parts: [
-                    { piece: "at format", means: "the top — where it actually failed" },
+                    { piece: "at format", means: "the top: where it actually failed" },
                     { piece: "at render", means: "the call that was still waiting" }
                 ]
             }
@@ -5035,7 +5118,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                     code: "    at inner      <- ?\n    at middle\n    at outer      <- ?",
                     choices: [
                         { text: "the top", correct: true },
-                        { text: "the bottom", feedback: "The bottom is where it all started — the first call, not the failing one." }
+                        { text: "the bottom", feedback: "The bottom is where it all started: the first call, not the failing one." }
                     ],
                     confirm: "Most recent first."
                 }
@@ -5058,7 +5141,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "It is where execution actually was when it failed, and the lines below are calls still waiting", correct: true },
                     { text: "It is the first function the program ran", feedback: "That would be the BOTTOM of the trace, not the top." },
-                    { text: "The lines below belong to the language rather than to your program", feedback: "They are your functions too — just paused ones." }
+                    { text: "The lines below belong to the language rather than to your program", feedback: "They are your functions too, just paused ones." }
                 ],
                 confirm: "Top of the pile is what was running."
             }
@@ -5092,7 +5175,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 ask: "Data is right going into a long function and wrong coming out. What is the most useful next check?",
                 choices: [
                     { text: "A value halfway through, to halve what is left to search", correct: true },
-                    { text: "The data source again, to be certain", feedback: "You already know it is right there — the check would tell you nothing new." },
+                    { text: "The data source again, to be certain", feedback: "You already know it is right there: the check would tell you nothing new." },
                     { text: "Every line from the top, in order", feedback: "That works eventually, and halving gets there in far fewer steps." }
                 ],
                 confirm: "Halve the range.",
@@ -5112,7 +5195,7 @@ export const ERROR_LESSONS: readonly Lesson[] = [
                 ask: "Why is changing one thing at a time faster, even though it means more runs?",
                 choices: [
                     { text: "Each run answers one question, so the result rules something in or out", correct: true },
-                    { text: "Several changes take longer to type", feedback: "Typing is not what costs you — not knowing which change mattered is." },
+                    { text: "Several changes take longer to type", feedback: "Typing is not what costs you, not knowing which change mattered is." },
                     { text: "JavaScript only applies the first change it finds", feedback: "It applies all of them, which is precisely the problem." }
                 ],
                 confirm: "Information per attempt.",
@@ -5143,13 +5226,13 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 parts: [
                     { piece: "querySelectorAll", means: "every match, as a list" },
                     { piece: "querySelector", means: "the first match, or null" },
-                    { piece: '".item"', means: "a class — `#` would be an id, a bare word a tag" }
+                    { piece: '".item"', means: "a class: `#` would be an id, a bare word a tag" }
                 ]
             },
             {
                 code: 'console.log(document.querySelector("#nope"));',
                 output: "null",
-                note: "Nothing found is `null`, not an error — so the failure usually appears a line later.",
+                note: "Nothing found is `null`, not an error, so the failure usually appears a line later.",
                 parts: [{ piece: "null", means: "no match; reading a property of it is what fails" }]
             }
         ],
@@ -5182,7 +5265,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 code: 'console.log(document.querySelectorAll(".item").length);\nconsole.log(document.querySelector("#nope"));',
                 choices: [
                     { text: "2 then null", correct: true },
-                    { text: "2 then undefined", feedback: "A missing element is `null` — `undefined` is what a missing PROPERTY gives." },
+                    { text: "2 then undefined", feedback: "A missing element is `null`: `undefined` is what a missing PROPERTY gives." },
                     { text: "2 then an error", feedback: "Not finding something is allowed; using what you did not find is what fails." }
                 ],
                 confirm: "Two found, one not.",
@@ -5214,7 +5297,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "Totals then H2", correct: true },
                     { text: "Scores then H2", feedback: "The line above replaced the text, and reading it back gives the new one." },
-                    { text: "Totals then h2", feedback: "`tagName` comes back in capitals — worth knowing before comparing it." }
+                    { text: "Totals then h2", feedback: "`tagName` comes back in capitals: worth knowing before comparing it." }
                 ],
                 confirm: "Changed, and in capitals.",
                 retry: {
@@ -5234,7 +5317,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "The element you are holding is the page itself, not a copy of it", correct: true },
                     { text: "The browser re-reads the HTML file after every change", feedback: "The HTML file is never read again after the page loads." },
-                    { text: "querySelector returns a copy that is kept in step", feedback: "There is no copy to keep in step — it is the same object." }
+                    { text: "querySelector returns a copy that is kept in step", feedback: "There is no copy to keep in step: it is the same object." }
                 ],
                 confirm: "One object, not two."
             }
@@ -5257,7 +5340,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
             {
                 code: 'function handle() {\n  console.log("clicked");\n}\nt.addEventListener("click", handle());',
                 output: "clicked, and then a failure",
-                note: "The brackets called it NOW and registered its result — undefined — as the listener.",
+                note: "The brackets called it NOW and registered its result, undefined, as the listener.",
                 parts: [{ piece: "handle()", means: "the result, not the function" }]
             }
         ],
@@ -5280,7 +5363,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "set up then clicked", correct: true },
                     { text: "clicked then set up", feedback: "The listener waited for the click, which happens on the last line." },
-                    { text: "set up only", feedback: "`t.click()` is the click — the listener ran." }
+                    { text: "set up only", feedback: "`t.click()` is the click: the listener ran." }
                 ],
                 confirm: "Registered first, run later.",
                 retry: {
@@ -5300,7 +5383,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 code: 'let t = document.querySelector(".title");\nfunction handle() {\n  console.log("clicked");\n}\nt.addEventListener("click", handle());\nt.click();',
                 choices: [
                     { text: 't.addEventListener("click", handle());', correct: true },
-                    { text: "function handle() {", feedback: "The function is fine — it is how it is handed over that is not." },
+                    { text: "function handle() {", feedback: "The function is fine: it is how it is handed over that is not." },
                     { text: "t.click();", feedback: "Clicking is what was meant to work; it fails because nothing useful was registered." }
                 ],
                 confirm: "Brackets called it too early."
@@ -5310,15 +5393,15 @@ export const DOM_LESSONS: readonly Lesson[] = [
     {
         concept: "event-order",
         title: "An event is a journey",
-        why: "A click is not one moment on one element — it passes through everything containing it.",
+        why: "A click is not one moment on one element: it passes through everything containing it.",
         teach: [
             {
                 code: '<div id="panel"><h2 class="title">Scores</h2></div>\n\nlet outer = document.querySelector("#panel");\nlet inner = document.querySelector(".title");\nouter.addEventListener("click", () => { console.log("outer"); });\ninner.addEventListener("click", () => { console.log("inner"); });\ninner.click();',
                 output: "inner\nouter",
                 note: "The click reached the title, then travelled back up through the panel.",
                 parts: [
-                    { piece: "inner", means: "the target — reached first" },
-                    { piece: "outer", means: "an ancestor — reached on the way back up" }
+                    { piece: "inner", means: "the target: reached first" },
+                    { piece: "outer", means: "an ancestor: reached on the way back up" }
                 ]
             },
             {
@@ -5356,7 +5439,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 ask: "Why does clicking a child also run a listener on its parent?",
                 choices: [
                     { text: "The event travels back up through the ancestors after reaching the target", correct: true },
-                    { text: "The parent's listener is copied onto each child", feedback: "Nothing is copied — there is one listener, and the event comes to it." },
+                    { text: "The parent's listener is copied onto each child", feedback: "Nothing is copied: there is one listener, and the event comes to it." },
                     { text: "Listeners always run in the order they were added", feedback: "Order here is decided by the journey, not by when you called addEventListener." }
                 ],
                 confirm: "It passes through on the way up.",
@@ -5387,7 +5470,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 code: '<div id="panel"><h2 class="title">Scores</h2></div>',
                 choices: [
                     { text: "title.parentElement", correct: true },
-                    { text: "title.parent", feedback: "Not a property an element has — the full name is `parentElement`." },
+                    { text: "title.parent", feedback: "Not a property an element has: the full name is `parentElement`." },
                     { text: "title.children[0]", feedback: "That goes down, into the title, rather than up out of it." }
                 ],
                 confirm: "One step up.",
@@ -5407,7 +5490,7 @@ export const DOM_LESSONS: readonly Lesson[] = [
                 ask: "Why can the whole page be reached from any single element?",
                 choices: [
                     { text: "Every element knows its parent and its children, so the tree can be walked either way from anywhere", correct: true },
-                    { text: "Each element holds a list of every other element", feedback: "It only knows its immediate neighbours — that is enough." },
+                    { text: "Each element holds a list of every other element", feedback: "It only knows its immediate neighbours: that is enough." },
                     { text: "The elements are really stored in one flat list", feedback: "They are a tree; the nesting in the HTML is the shape." }
                 ],
                 confirm: "Links up and links down."
@@ -5457,8 +5540,8 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                     ask: "Simpler: does handing a function over run it?",
                     code: "later(() => { console.log(\"ran\"); });",
                     choices: [
-                        { text: "no — it runs later", correct: true },
-                        { text: "yes — immediately", feedback: "The brackets that would run it are not there." }
+                        { text: "no: it runs later", correct: true },
+                        { text: "yes: immediately", feedback: "The brackets that would run it are not there." }
                     ],
                     confirm: "Handed over, not called."
                 }
@@ -5469,7 +5552,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 code: 'function later(fn) {\n  setTimeout(fn, 0);\n}\nfunction hi() {\n  console.log("hi");\n}\nlater(hi());',
                 choices: [
                     { text: "later(hi());", correct: true },
-                    { text: "setTimeout(fn, 0);", feedback: "That is fine — it is what it was given that is wrong." },
+                    { text: "setTimeout(fn, 0);", feedback: "That is fine: it is what it was given that is wrong." },
                     { text: "function hi() {", feedback: "The function itself is correct." }
                 ],
                 confirm: "Brackets called it too early."
@@ -5486,7 +5569,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 output: "Promise { pending }",
                 note: "Printed before the timer finished, so it has not settled yet.",
                 parts: [
-                    { piece: "pending", means: "not settled — no value yet" },
+                    { piece: "pending", means: "not settled: no value yet" },
                     { piece: "resolve(\"done\")", means: "settles it, once and for good" }
                 ]
             },
@@ -5494,7 +5577,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 code: 'console.log(Promise.resolve(2));\nconsole.log(Promise.reject("no"));',
                 output: 'Promise { 2 }\nPromise { rejected: no }',
                 note: "The two ways it can settle: fulfilled with a value, or rejected with a reason.",
-                parts: [{ piece: "settled", means: "fixed — it will never change again" }]
+                parts: [{ piece: "settled", means: "fixed: it will never change again" }]
             }
         ],
         notice: "Pending, then fulfilled or rejected. Once settled, never again.",
@@ -5525,7 +5608,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                     code: "console.log(Promise.resolve(2));",
                     choices: [
                         { text: "Promise { 2 }", correct: true },
-                        { text: "2", feedback: "It is still a promise — printing it shows the promise, not the value." }
+                        { text: "2", feedback: "It is still a promise: printing it shows the promise, not the value." }
                     ],
                     confirm: "A handle on the value, not the value."
                 }
@@ -5535,7 +5618,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 ask: "Why can a `.then` be attached to a promise that has already settled?",
                 choices: [
                     { text: "a settled promise keeps its result, so a handler added later still receives it", correct: true },
-                    { text: "the promise waits a moment in case anything attaches", feedback: "It does not wait — the result is simply kept." },
+                    { text: "the promise waits a moment in case anything attaches", feedback: "It does not wait: the result is simply kept." },
                     { text: "attaching a handler puts it back into pending", feedback: "Settling is permanent; nothing moves it back." }
                 ],
                 confirm: "The result is kept."
@@ -5552,9 +5635,9 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 output: "1\n2\n3\n4",
                 note: "Ordinary lines first, then promise work, then timers.",
                 parts: [
-                    { piece: "1 and 2", means: "ordinary code — runs to the end first" },
-                    { piece: "3", means: "promise work — next in line" },
-                    { piece: "4", means: "a timer — last, even at 0" }
+                    { piece: "1 and 2", means: "ordinary code: runs to the end first" },
+                    { piece: "3", means: "promise work: next in line" },
+                    { piece: "4", means: "a timer: last, even at 0" }
                 ]
             }
         ],
@@ -5605,7 +5688,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 parts: [
                     { piece: "async", means: "this function may wait, and hands back a promise" },
                     { piece: "await", means: "pause HERE until the promise settles" },
-                    { piece: "b", means: "runs while go is paused — the page is not frozen" }
+                    { piece: "b", means: "runs while go is paused: the page is not frozen" }
                 ]
             }
         ],
@@ -5627,7 +5710,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 code: 'async function go() {\n  console.log("a");\n  const v = await Promise.resolve(1);\n  console.log(v);\n}\ngo();\nconsole.log("b");',
                 choices: [
                     { text: "a, b, 1", correct: true },
-                    { text: "a, 1, b", feedback: "At the await, `go` hands control back — so `b` goes next." },
+                    { text: "a, 1, b", feedback: "At the await, `go` hands control back, so `b` goes next." },
                     { text: "b, a, 1", feedback: "`go()` is called first and runs normally until the await." }
                 ],
                 confirm: "The caller carries on.",
@@ -5637,7 +5720,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                     code: "go();\nconsole.log(\"b\");",
                     choices: [
                         { text: "the line after the call", correct: true },
-                        { text: "nothing — everything waits", feedback: "Only the async function pauses." }
+                        { text: "nothing: everything waits", feedback: "Only the async function pauses." }
                     ],
                     confirm: "One function waits; the rest carries on."
                 }
@@ -5648,7 +5731,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 code: 'async function total() {\n  const a = await Promise.resolve(2);\n  return a + 1;\n}\nconsole.log(total());',
                 choices: [
                     { text: "console.log(total());", correct: true },
-                    { text: "return a + 1;", feedback: "Returning 3 is right — it is how the result is collected that is not." },
+                    { text: "return a + 1;", feedback: "Returning 3 is right: it is how the result is collected that is not." },
                     { text: "async function total() {", feedback: "Marking it async is correct; that is why it waits." }
                 ],
                 confirm: "An async function always hands back a promise."
@@ -5695,7 +5778,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "caught boom, then after", correct: true },
                     { text: "caught boom only", feedback: "It was handled, so the function carried on to the next line." },
-                    { text: "nothing — it fails", feedback: "The try is exactly what stops it failing." }
+                    { text: "nothing: it fails", feedback: "The try is exactly what stops it failing." }
                 ],
                 confirm: "Caught, then onwards.",
                 retry: {
@@ -5715,8 +5798,8 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 code: 'async function go() {\n  await Promise.reject("boom");\n}\ngo();',
                 choices: [
                     { text: "go();", correct: true },
-                    { text: 'await Promise.reject("boom");', feedback: "That is the failure itself — the question is where it was meant to land." },
-                    { text: "async function go() {", feedback: "The function itself is correct — it is how it is handed over that is not." }
+                    { text: 'await Promise.reject("boom");', feedback: "That is the failure itself: the question is where it was meant to land." },
+                    { text: "async function go() {", feedback: "The function itself is correct: it is how it is handed over that is not." }
                 ],
                 confirm: "Nothing was listening."
             },
@@ -5725,7 +5808,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 ask: "Why does a plain try around `go()` not catch a rejection from inside it?",
                 choices: [
                     { text: "the call itself succeeds and hands back a promise; the failure arrives afterwards", correct: true },
-                    { text: "try and catch only works on throw", feedback: "It catches rejected awaits too — but only if the await is inside it." },
+                    { text: "try and catch only works on throw", feedback: "It catches rejected awaits too, but only if the await is inside it." },
                     { text: "async functions hide their failures", feedback: "Nothing is hidden; it simply arrives after the try has finished." }
                 ],
                 confirm: "The try is over before it fails."
@@ -5740,7 +5823,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
             {
                 code: 'Promise.all([Promise.resolve(1), Promise.resolve(2)]).then((vs) => {\n  console.log(vs);\n});',
                 output: "[1, 2]",
-                note: "One handler, once, with every value — in the order they were GIVEN.",
+                note: "One handler, once, with every value: in the order they were GIVEN.",
                 parts: [
                     { piece: "[p1, p2]", means: "a list of promises" },
                     { piece: "vs", means: "a list of values, in the same order" }
@@ -5761,7 +5844,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 code: 'Promise.all([Promise.resolve(1), Promise.resolve(2)]).then((vs) => {\n  console.log(vs);\n});',
                 choices: [
                     { text: "[1, 2]", correct: true },
-                    { text: "1 then 2", feedback: "The handler is called once, with a list — not once per promise." },
+                    { text: "1 then 2", feedback: "The handler is called once, with a list, not once per promise." },
                     { text: "Promise { pending }", feedback: "`.then` receives the settled values, not the promise." }
                 ],
                 confirm: "One list, in order.",
@@ -5771,7 +5854,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                     code: 'Promise.all([Promise.resolve(1), Promise.reject("no")]).catch((e) => { console.log("caught " + e); });',
                     choices: [
                         { text: "caught no", correct: true },
-                        { text: "[1]", feedback: "It does not hand back the ones that worked — one failure fails the lot." }
+                        { text: "[1]", feedback: "It does not hand back the ones that worked: one failure fails the lot." }
                     ],
                     confirm: "All or nothing."
                 }
@@ -5781,7 +5864,7 @@ export const ASYNC_LESSONS: readonly Lesson[] = [
                 ask: "Why is `Promise.all` usually faster than awaiting each one in turn?",
                 choices: [
                     { text: "all of them are already running, so the wait is the longest one rather than the sum", correct: true },
-                    { text: "it runs them on several threads at once", feedback: "There is still one thread — the waiting is what overlaps." },
+                    { text: "it runs them on several threads at once", feedback: "There is still one thread: the waiting is what overlaps." },
                     { text: "it skips any that take too long", feedback: "It waits for every single one." }
                 ],
                 confirm: "They overlap."
@@ -5808,7 +5891,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 output: "3\n2\n1\nliftoff",
                 note: "Each call does its bit, then asks a smaller version of itself.",
                 parts: [
-                    { piece: "if (n === 0)", means: "the case that stops — an answer, not another question" },
+                    { piece: "if (n === 0)", means: "the case that stops: an answer, not another question" },
                     { piece: "down(n - 1)", means: "the same problem, one step smaller" },
                     { piece: "liftoff", means: "travels back out through every waiting call" }
                 ]
@@ -5843,7 +5926,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 code: "function down(n) {\n  console.log(n);\n  return down(n - 1);\n}\ndown(3);",
                 choices: [
                     { text: "there is no line that stops it", correct: true },
-                    { text: "return down(n - 1);", feedback: "Getting smaller is right — what is missing is somewhere to stop." },
+                    { text: "return down(n - 1);", feedback: "Getting smaller is right: what is missing is somewhere to stop." },
                     { text: "down(3);", feedback: "Starting at 3 is fine; it would run away from any number." }
                 ],
                 confirm: "Something is missing, not wrong."
@@ -5867,7 +5950,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
             {
                 code: "function total(n) {\n  if (n === 0) {\n    return 0;\n  }\n  return n + total(n + 1);\n}\nconsole.log(total(4));",
                 output: "it never finishes",
-                note: "The base case is fine. Nothing ever reaches it — each call asks about a bigger number.",
+                note: "The base case is fine. Nothing ever reaches it: each call asks about a bigger number.",
                 parts: [{ piece: "n + 1", means: "moving away from 0 instead of towards it" }]
             }
         ],
@@ -5879,8 +5962,8 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 code: "function total(n) {\n  if (n === 0) {\n    return 0;\n  }\n  return n + total(n + 1);\n}\nconsole.log(total(4));",
                 choices: [
                     { text: "return n + total(n + 1);", correct: true },
-                    { text: "if (n === 0) {", feedback: "The stopping point is right — nothing ever gets to it." },
-                    { text: "console.log(total(4));", feedback: "Starting at 4 is fine — it is the direction of travel that is not." }
+                    { text: "if (n === 0) {", feedback: "The stopping point is right: nothing ever gets to it." },
+                    { text: "console.log(total(4));", feedback: "Starting at 4 is fine: it is the direction of travel that is not." }
                 ],
                 confirm: "It moves the wrong way.",
                 retry: {
@@ -5889,7 +5972,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                     code: "// total(4) ... which call gets closer to 0?",
                     choices: [
                         { text: "total(n - 1)", correct: true },
-                        { text: "total(n + 1)", feedback: "That goes 5, 6, 7 — away from 0." }
+                        { text: "total(n + 1)", feedback: "That goes 5, 6, 7: away from 0." }
                     ],
                     confirm: "Towards the stop."
                 }
@@ -5921,7 +6004,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 ]
             }
         ],
-        notice: "Halving only works if the list is sorted — that is what one comparison buys you.",
+        notice: "Halving only works if the list is sorted: that is what one comparison buys you.",
         steps: [
             {
                 demand: "predict",
@@ -5930,7 +6013,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "3", correct: true },
                     { text: "8", feedback: "That is checking every item, one at a time." },
-                    { text: "4", feedback: "8, 4, 2, 1 — the halvings are the three steps between them." }
+                    { text: "4", feedback: "8, 4, 2, 1: the halvings are the three steps between them." }
                 ],
                 confirm: "Three halvings.",
                 retry: {
@@ -5939,7 +6022,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                     code: "let left = 4;\nlet checks = 0;\nwhile (left > 1) {\n  left = left / 2;\n  checks = checks + 1;\n}\nconsole.log(checks);",
                     choices: [
                         { text: "2", correct: true },
-                        { text: "4", feedback: "4 to 2, then 2 to 1 — that is two halvings, not four." }
+                        { text: "4", feedback: "4 to 2, then 2 to 1: that is two halvings, not four." }
                     ],
                     confirm: "Doubling the list adds one step."
                 }
@@ -5950,7 +6033,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "in a sorted list one comparison tells you which half the answer is in", correct: true },
                     { text: "a sorted list is stored differently, so the middle is faster to reach", feedback: "Reaching the middle costs the same either way." },
-                    { text: "halving works on any list but only answers correctly when sorted", feedback: "There is nothing to halve — one comparison rules out one item." }
+                    { text: "halving works on any list but only answers correctly when sorted", feedback: "There is nothing to halve: one comparison rules out one item." }
                 ],
                 confirm: "One comparison, half the list."
             }
@@ -5980,7 +6063,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 code: "let a = [4, 3, 2, 1];\nfor (let i = 0; i < a.length - 1; i = i + 1) {\n  if (a[i] > a[i + 1]) {\n    let t = a[i];\n    a[i] = a[i + 1];\n    a[i + 1] = t;\n  }\n}\nconsole.log(a);",
                 choices: [
                     { text: "[3, 2, 1, 4]", correct: true },
-                    { text: "[1, 2, 3, 4]", feedback: "That would take several passes — this is one." },
+                    { text: "[1, 2, 3, 4]", feedback: "That would take several passes: this is one." },
                     { text: "[4, 3, 2, 1]", feedback: "Swaps did happen; the biggest moved all the way along." }
                 ],
                 confirm: "The largest reached the end.",
@@ -6000,8 +6083,8 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 ask: "Why does a simple sort need several passes rather than one?",
                 choices: [
                     { text: "one pass only settles the largest item; the rest are still out of order", correct: true },
-                    { text: "each pass may make only a single swap", feedback: "A pass can swap many times — it did three times here." },
-                    { text: "the first pass compares and a later one moves", feedback: "Each pass does both — it compares and swaps as it goes." }
+                    { text: "each pass may make only a single swap", feedback: "A pass can swap many times: it did three times here." },
+                    { text: "the first pass compares and a later one moves", feedback: "Each pass does both: it compares and swaps as it goes." }
                 ],
                 confirm: "One item settled per pass."
             }
@@ -6030,7 +6113,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 ask: "Checking every item in a list of n items. How does the work grow as n grows?",
                 choices: [
                     { text: "in step with n", correct: true },
-                    { text: "with the square of n", feedback: "That is a loop inside a loop — this is one pass." },
+                    { text: "with the square of n", feedback: "That is a loop inside a loop: this is one pass." },
                     { text: "not at all", feedback: "A longer list plainly means more checks." }
                 ],
                 confirm: "One check per item.",
@@ -6050,7 +6133,7 @@ export const ALGORITHM_LESSONS: readonly Lesson[] = [
                 ask: "Why does complexity describe how work grows rather than how long it takes?",
                 choices: [
                     { text: "the same code runs at different speeds on different machines, but grows the same way", correct: true },
-                    { text: "measuring time accurately is too difficult to bother with", feedback: "Timing is easy — it just does not transfer between machines." },
+                    { text: "measuring time accurately is too difficult to bother with", feedback: "Timing is easy: it just does not transfer between machines." },
                     { text: "how long it takes depends mostly on the language", feedback: "That changes the speed, not how the work scales." }
                 ],
                 confirm: "Growth is what transfers."
@@ -6107,7 +6190,7 @@ export const TOPIC_CHALLENGES: readonly Lesson[] = [
                 confirm: "That is the whole of Values in one line.",
                 retry: {
                     demand: "predict",
-                    ask: "One more — what does this print?",
+                    ask: "One more: what does this print?",
                     code: 'console.log("7" === 7);',
                     choices: [
                         { text: "false", correct: true },
@@ -6138,7 +6221,7 @@ export const TOPIC_CHALLENGES: readonly Lesson[] = [
                             "The first log runs before the reassignment. At that line score still holds 10."
                     }
                 ],
-                confirm: "Top to bottom — the change has not happened yet."
+                confirm: "Top to bottom: the change has not happened yet."
             },
             {
                 demand: "predict",
@@ -6160,7 +6243,7 @@ export const TOPIC_CHALLENGES: readonly Lesson[] = [
                     {
                         text: "5",
                         feedback:
-                            "The third line works out total + 3 — that is 5 + 3 — and stores the 8 back into total."
+                            "The third line works out total + 3, that is 5 + 3, and stores the 8 back into total."
                     },
                     {
                         text: "undefined",
@@ -6168,10 +6251,10 @@ export const TOPIC_CHALLENGES: readonly Lesson[] = [
                             "total was undefined after the first line only. The lines after it put values in."
                     }
                 ],
-                confirm: "Declared, assigned, read and reassigned — all four in four lines.",
+                confirm: "Declared, assigned, read and reassigned: all four in four lines.",
                 retry: {
                     demand: "predict",
-                    ask: "One more — what does this print?",
+                    ask: "One more: what does this print?",
                     code: "let n = 2;\nn = n + n;\nconsole.log(n);",
                     choices: [
                         { text: "4", correct: true },
@@ -6214,7 +6297,7 @@ export const TOPIC_CHALLENGES: readonly Lesson[] = [
                     {
                         text: "false",
                         feedback:
-                            "total is 8. Both sides hold — 8 === 8 and 8 > 5 — and && needs both, which it has."
+                            "total is 8. Both sides hold, 8 === 8 and 8 > 5, and && needs both, which it has."
                     }
                 ],
                 confirm: "Both sides true, so && is true."
@@ -6228,17 +6311,17 @@ export const TOPIC_CHALLENGES: readonly Lesson[] = [
                     {
                         text: "false",
                         feedback:
-                            'The first side is false — a string is not a number. But the second side compares "8" with "8", which matches, and || needs only one.'
+                            'The first side is false: a string is not a number. But the second side compares "8" with "8", which matches, and || needs only one.'
                     }
                 ],
                 confirm: "One true side is enough, and the type distinction decided which one.",
                 retry: {
                     demand: "predict",
-                    ask: "One more — what does this print?",
+                    ask: "One more: what does this print?",
                     code: "console.log(3 + 3 === 6 && 1 > 2);",
                     choices: [
                         { text: "false", correct: true },
-                        { text: "true", feedback: "The first half holds, but 1 > 2 does not — and && needs both." }
+                        { text: "true", feedback: "The first half holds, but 1 > 2 does not, and && needs both." }
                     ],
                     confirm: "Right."
                 }
@@ -6280,7 +6363,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
             {
                 code: 'const other = { name: "Sam", greet: person.greet };\n\nother.greet();',
                 output: "Sam",
-                note: "The SAME function. Nothing about it changed — only who called it.",
+                note: "The SAME function. Nothing about it changed, only who called it.",
                 parts: [
                     { piece: "greet: person.greet", means: "the very same function, stored on a second object" },
                     { piece: "other.greet()", means: "called on other, so now `this` is other" }
@@ -6288,7 +6371,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
             },
             {
                 code: "const loose = person.greet;\n\nloose();",
-                note: "Taken off the object, there is no object left to be `this` — so this fails.",
+                note: "Taken off the object, there is no object left to be `this`, so this fails.",
                 parts: [
                     { piece: "const loose = person.greet", means: "the function, without the object it came from" },
                     { piece: "loose()", means: "called on nothing, so `this` is nothing" }
@@ -6306,7 +6389,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     {
                         text: "undefined",
                         feedback:
-                            "`this` is not empty here — `dog.bark()` has `dog` in front of the dot, so `this` is `dog`."
+                            "`this` is not empty here: `dog.bark()` has `dog` in front of the dot, so `this` is `dog`."
                     },
                     { text: "name", feedback: "`this.name` reads the value stored at `name`, not the word itself." },
                     { text: "this.name", feedback: "The code runs rather than being printed as text." }
@@ -6337,7 +6420,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     },
                     { text: "undefined", feedback: "There is an object in front of the dot, so `this` is that object." }
                 ],
-                confirm: "One function, two objects, two answers — chosen entirely by the call.",
+                confirm: "One function, two objects, two answers: chosen entirely by the call.",
                 aside: "This is the sentence worth keeping: `this` is about HOW a function is called."
             },
             {
@@ -6346,7 +6429,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 code: 'const timer = {\n  label: "tick",\n  show() { console.log(this.label); }\n};\n\nconst run = timer.show;\nrun();',
                 choices: [
                     { text: "const run = timer.show;", correct: true },
-                    { text: "show() { console.log(this.label); }", feedback: "The method is fine — it works when called as `timer.show()`." },
+                    { text: "show() { console.log(this.label); }", feedback: "The method is fine: it works when called as `timer.show()`." },
                     { text: 'label: "tick",', feedback: "The data is there. The problem is that the call cannot reach it." },
                     { text: "run();", feedback: "This line only runs what the line above handed it, already detached." }
                 ],
@@ -6366,7 +6449,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     {
                         text: "Change `this.label` to `label`",
                         feedback:
-                            "`label` on its own is not a variable anywhere — it is a property, and `this` is how a method reaches it."
+                            "`label` on its own is not a variable anywhere: it is a property, and `this` is how a method reaches it."
                     },
                     {
                         text: "Add quotes: `console.log(\"this.label\")`",
@@ -6383,7 +6466,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: "`this` is whatever object was in front of the dot at the call", correct: true },
                     { text: "the function is copied separately onto each object", feedback: "There is one function. Both names point at it." },
-                    { text: "objects remember which function was written first", feedback: "Nothing is remembered — the call decides each time." }
+                    { text: "objects remember which function was written first", feedback: "Nothing is remembered: the call decides each time." }
                 ],
                 confirm: "The call site decides. That is the whole rule.",
                 aside: "Worth trying in Experiment: add a third object and predict the answer before running it."
@@ -6411,7 +6494,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 parts: [{ piece: "this.describe()", means: "the object calling its own other method" }]
             }
         ],
-        notice: "A method is just a function stored on an object — `this` is how it reaches the rest of that object.",
+        notice: "A method is just a function stored on an object: `this` is how it reaches the rest of that object.",
         steps: [
             {
                 demand: "recognise",
@@ -6422,7 +6505,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     { text: "function greet() {} on its own", feedback: "A function on its own is not attached to any object." }
                 ],
                 confirm: "A function stored on an object is a method.",
-                aside: "It is written without the word `function` inside an object — just the name and brackets."
+                aside: "It is written without the word `function` inside an object, just the name and brackets."
             },
             {
                 demand: "predict",
@@ -6435,7 +6518,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     { text: "undefined", feedback: "The method returns a value, and that value is printed." }
                 ],
                 confirm: "A method can take arguments like any function AND reach its object through `this`.",
-                aside: "That mix — its own data plus what you pass in — is most of what methods are for.",
+                aside: "That mix, its own data plus what you pass in, is most of what methods are for.",
                 retry: {
                     demand: "predict",
                     ask: "And this one?",
@@ -6459,7 +6542,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 output: "Rex says woof",
                 note: "A class is a description. `new` builds one actual object from it.",
                 parts: [
-                    { piece: "class Dog {", means: "describes how to build dogs — it is not a dog itself" },
+                    { piece: "class Dog {", means: "describes how to build dogs: it is not a dog itself" },
                     { piece: "constructor(name)", means: "runs once per new dog, to set it up" },
                     { piece: "this.name = name", means: "stores the given name on the dog being built" },
                     { piece: 'new Dog("Rex")', means: "builds one, running the constructor against it" }
@@ -6481,7 +6564,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 choices: [
                     { text: 'const d = new Dog("Rex");', correct: true },
                     { text: "class Dog { ... }", feedback: "That describes how to build one. Nothing is built until `new` runs." },
-                    { text: "constructor(name) { ... }", feedback: "The constructor runs during building — it does not start it." },
+                    { text: "constructor(name) { ... }", feedback: "The constructor runs during building: it does not start it." },
                     { text: "Dog(\"Rex\");", feedback: "Without `new`, nothing is built." }
                 ],
                 confirm: "`new` is what turns the description into an actual object.",
@@ -6501,7 +6584,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     { text: "1 and 1", feedback: "`a.add()` ran twice, so `a.n` reached 2." },
                     { text: "0 and 0", feedback: "`add` changes the counter it was called on." }
                 ],
-                confirm: "Shared behaviour, separate data — that is what building two instances means.",
+                confirm: "Shared behaviour, separate data: that is what building two instances means.",
                 aside: "If they shared `n`, a class would be no better than one object.",
                 retry: {
                     demand: "predict",
@@ -6523,7 +6606,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
         teach: [
             {
                 code: 'class Dog {\n  constructor(name) { this.name = name; }\n  speak() { return "woof"; }\n}\n\nconst rex = new Dog("Rex");',
-                note: "`rex` holds `name`. It does NOT hold `speak` — the class does.",
+                note: "`rex` holds `name`. It does NOT hold `speak`: the class does.",
                 parts: [
                     { piece: "this.name = name", means: "put on the dog itself, one copy per dog" },
                     { piece: "speak() { ... }", means: "stored once on the class, shared by every dog" }
@@ -6535,7 +6618,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 parts: [{ piece: "rex -> Dog", means: "the lookup walks outward until it finds a match, or runs out" }]
             }
         ],
-        notice: "A method call looks at the object first and the class second — that order is the whole mechanism.",
+        notice: "A method call looks at the object first and the class second: that order is the whole mechanism.",
         steps: [
             {
                 demand: "recognise",
@@ -6547,7 +6630,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     { text: "nowhere until it is called", feedback: "It is stored when the class is defined." }
                 ],
                 confirm: "Written once on the class, found by every instance that needs it.",
-                aside: "`name` is the opposite — each dog has its own.",
+                aside: "`name` is the opposite: each dog has its own.",
                 retry: {
                     demand: "recognise",
                     ask: "And where does `name` live?",
@@ -6564,7 +6647,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                 code: 'class Tag {\n  constructor() { this.label = "own"; }\n  label() { return "method"; }\n}\n\nconsole.log(new Tag().label);',
                 choices: [
                     { text: "the object's own property is found before the class is looked at", correct: true },
-                    { text: "a constructor always wins over a method", feedback: "Nothing about constructors wins — it is the ORDER of the search." },
+                    { text: "a constructor always wins over a method", feedback: "Nothing about constructors wins: it is the ORDER of the search." },
                     { text: "methods cannot be named the same as properties", feedback: "They can. One simply hides the other." }
                 ],
                 confirm: "Own properties first, class second. The search stops at the first match.",
@@ -6604,7 +6687,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     { text: "some sound", feedback: "Dog has its own `speak`, and the search finds that one first." },
                     { text: "some sound woof", feedback: "Only one runs. Dog's version replaced Animal's unless it calls `super`." }
                 ],
-                confirm: "Dog's own version was found before Animal's — the same order as always.",
+                confirm: "Dog's own version was found before Animal's: the same order as always.",
                 aside: "Replacing a parent's method like this is called overriding.",
                 retry: {
                     demand: "predict",
@@ -6612,7 +6695,7 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
                     code: 'class Animal {\n  speak() { return "some sound"; }\n}\nclass Dog extends Animal {}\n\nconsole.log(new Dog().speak());',
                     choices: [
                         { text: "some sound", correct: true },
-                        { text: "nothing — Dog is empty", feedback: "Dog has no `speak` of its own, so the search carries on into Animal." }
+                        { text: "nothing. Dog is empty", feedback: "Dog has no `speak` of its own, so the search carries on into Animal." }
                     ],
                     confirm: "Nothing of its own means everything from the parent."
                 }
@@ -6620,11 +6703,11 @@ const THIS_AND_CLASS_LESSONS: readonly Lesson[] = [
             {
                 demand: "explain",
                 ask: "Why does `super.speak()` matter here?",
-                code: 'class Dog extends Animal {\n  speak() { return super.speak() + " — a bark"; }\n}',
+                code: 'class Dog extends Animal {\n  speak() { return super.speak() + ", specifically a bark"; }\n}',
                 choices: [
                     { text: "it runs the parent's version so this one can add to it rather than replace it", correct: true },
                     { text: "it is required in every subclass method", feedback: "Only needed when you want the parent's version as well." },
-                    { text: "it makes the method run twice", feedback: "Two different methods run once each — the parent's, then the rest of this one." }
+                    { text: "it makes the method run twice", feedback: "Two different methods run once each: the parent's, then the rest of this one." }
                 ],
                 confirm: "Extending behaviour instead of replacing it is exactly what `super` is for.",
                 aside: "Without it, the parent's work is simply gone."
@@ -6656,6 +6739,16 @@ export const ALL_LESSONS: readonly Lesson[] = [
 
 export function lessonFor(concept: string | null): Lesson | null {
     return concept ? (ALL_LESSONS.find((l) => l.concept === concept) ?? null) : null;
+}
+
+/**
+ * A concept's key idea in the learner's words: the lesson's "notice" where one
+ * is written, otherwise the curriculum's one-line meaning. The meaning is a
+ * definition and can use terms the learner has not met yet ("writes its
+ * arguments to the output"); the notice was written for this point.
+ */
+export function plainIdea(concept: string | null, meaning: string): string {
+    return lessonFor(concept)?.notice ?? meaning;
 }
 
 /** The cumulative challenge that closes a topic, if one is authored. */

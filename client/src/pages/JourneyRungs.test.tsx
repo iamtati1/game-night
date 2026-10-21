@@ -61,7 +61,7 @@ function show(path: JourneyPathResponse) {
         })) as typeof fetch;
 
     render(
-        <MemoryRouter>
+        <MemoryRouter initialEntries={["/journey?view=map"]}>
             <JourneyPage />
         </MemoryRouter>
     );

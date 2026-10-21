@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { play } from "../games/sound.js";
 import { useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { activeGameFrom } from "../api/types.js";
@@ -16,6 +17,10 @@ import { RoundProgress } from "../components/RoundProgress.js";
 import { REACTION, gameBySlug } from "../games/catalog.js";
 import { DEADLINE_MS } from "../games/reactionTiming.js";
 
+import { usePageTitle } from "../usePageTitle.js";
+import { GameIntro } from "../components/GameIntro.js";
+import { startGame } from "../vocabulary.js";
+import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
 /**
  * The wait before the signal.
  *
@@ -60,6 +65,7 @@ interface RoundOutcome {
 }
 
 export function ReactionPage() {
+    usePageTitle("Reaction");
     const navigate = useNavigate();
     const game = gameBySlug(REACTION);
 
@@ -101,6 +107,10 @@ export function ReactionPage() {
         timers.current = [];
     }, []);
 
+
+    // Leaving mid-run pauses it, so the clock stops and the run waits for
+    // Resume -- see usePauseOnLeave.
+    usePauseOnLeave(REACTION, sessionId !== null && !paused && !resuming && phase !== "loading" && phase !== "intro");
     useEffect(() => () => clearTimers(), [clearTimers]);
 
     // Arrive: resume, show the paused screen, or offer the intro.
@@ -159,6 +169,9 @@ export function ReactionPage() {
                 // performance.now() rather than Date.now(): monotonic, sub-
                 // millisecond, and immune to the clock being adjusted mid-round.
                 signalAt.current = performance.now();
+                // The timing cue, at the same instant as the visual signal. The
+                // clock was read first, so sound can never shift the measurement.
+                play("signal");
                 setPhase("signal");
             }, delay);
         },
@@ -233,9 +246,11 @@ export function ReactionPage() {
             setScore(res.scoreSoFar);
             setOutcome({ reactionMs: res.reactionMs, tier: res.tier, points: res.pointsAwarded });
             setPhase(phaseFor[outcome]);
+            if (outcome === "false_start") play("early");
 
             later(() => {
                 if (res.complete && res.session) {
+                    play("complete", res.session.id);
                     navigate(`/reaction/results/${res.session.id}`, { replace: true });
                     return;
                 }
@@ -378,34 +393,30 @@ export function ReactionPage() {
 
     if (phase === "intro") {
         return (
-            <section className="game reaction rx-intro">
-                <p className="rx-eyebrow">Reaction</p>
-                <h1 className="rx-title">Test your reflexes.</h1>
-
-                <p className="rx-lede">
-                    Wait for the signal, then hit it as fast as you can.
-                    <br />
-                    Move early and the round is gone.
-                </p>
-
-                {/* Ambient, and the only decoration on this screen: it shows what
-                    the thing you are about to watch for looks like. */}
-                <div className="rx-orb" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                </div>
-
-                <p className="rx-shape">5 rounds</p>
-
-                <button
-                    className="button primary big"
-                    onClick={() => void start(true)}
-                    disabled={busy}
-                >
-                    {busy ? "Starting…" : "Start"}
-                </button>
-            </section>
+            /* The shared intro, as Code Blitz and Flush use it: same order,
+               same type, same button. The wrapper keeps Reaction's accent. */
+            <div className="game reaction">
+                <GameIntro
+                    eyebrow="Reaction"
+                    title="Test your reflexes."
+                    // Reaction records XP and no learning evidence: never a step.
+                    counts="fun"
+                    lede="Wait for the signal, then hit it as fast as you can. Move early and the round is gone."
+                    // Ambient, and the only decoration: what the thing you are
+                    // about to watch for looks like.
+                    preview={
+                        <div className="rx-orb">
+                            <span />
+                            <span />
+                            <span />
+                        </div>
+                    }
+                    shape="5 rounds"
+                    busy={busy}
+                    onStart={() => void start(true)}
+                    startLabel={startGame("Reaction")}
+                />
+            </div>
         );
     }
 
@@ -485,14 +496,14 @@ export function ReactionPage() {
                 {phase === "falseStart" && (
                     <>
                         <span className="rx-state rx-early">Too early</span>
-                        <span className="rx-hint">You jumped the signal — next one counts.</span>
+                        <span className="rx-hint">You jumped the signal: next one counts.</span>
                     </>
                 )}
 
                 {phase === "timedOut" && (
                     <>
                         <span className="rx-state rx-early">Too slow</span>
-                        <span className="rx-hint">That one got away — next one counts.</span>
+                        <span className="rx-hint">That one got away: next one counts.</span>
                     </>
                 )}
             </button>

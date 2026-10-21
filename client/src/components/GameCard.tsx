@@ -147,13 +147,33 @@ function Preview({ motif }: { motif: GameEntry["motif"] }) {
     return null;
 }
 
+/**
+ * Whether the learner can play this game now, and whether it counts.
+ *
+ *   ready     can be started now
+ *   needs     cannot yet; `text` names what opens it
+ *
+ * `counts` is separate from readiness on purpose: Reaction and Memory are
+ * ready to play and simply do not count toward the course, which is not the
+ * same thing as being locked.
+ */
+export interface GameStatus {
+    kind: "ready" | "needs";
+    text: string;
+    counts: boolean;
+}
+
 interface GameCardProps {
     game: GameEntry;
     /** Real in-flight session, if the player has one. Drives "Continue". */
     resumable?: { unitsDone: number; unitsTotal: number; score: number } | null;
+    /** Absent when nothing is known yet (signed out, or still loading). */
+    status?: GameStatus | null;
 }
 
-export function GameCard({ game, resumable }: GameCardProps) {
+export function GameCard({ game, resumable, status }: GameCardProps) {
+    const blocked = status?.kind === "needs" && !resumable;
+
     const inner = (
         <>
             <div className="card-top">
@@ -173,12 +193,23 @@ export function GameCard({ game, resumable }: GameCardProps) {
             <div className="card-foot">
                 <span className="card-shape">{game.shape}</span>
                 <span className="card-play">
-                    {resumable ? "Continue" : "Play"}
+                    {resumable ? "Continue" : blocked ? "How to open" : "Play"}
                     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
                         <path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </span>
             </div>
+
+            {/* Said in words, not by colour or an icon alone. The game page
+                itself gives the full explanation and links. */}
+            {status && (
+                <p className={`card-status is-${status.kind}`}>
+                    <span className="card-status-main">{status.text}</span>{" "}
+                    <span className="card-status-counts">
+                        {status.counts ? "Counts toward your journey." : "Just for fun: doesn’t count toward your course."}
+                    </span>
+                </p>
+            )}
 
             {/* Real progress from the player's live session -- never a placeholder. */}
             {resumable && (
@@ -196,7 +227,11 @@ export function GameCard({ game, resumable }: GameCardProps) {
     // screen reader over.
     return (
         <li className="game-card" style={{ ["--card-accent" as string]: game.accent }}>
-            <Link className="card-body" to={game.path} aria-label={`Play ${game.name}`}>
+            <Link
+                className="card-body"
+                to={game.path}
+                aria-label={blocked ? `${game.name}: how to open` : `Play ${game.name}`}
+            >
                 {inner}
             </Link>
         </li>

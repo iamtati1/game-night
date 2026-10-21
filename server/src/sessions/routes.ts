@@ -6,6 +6,7 @@ import {
     listResumableSessions,
     pauseActiveSession
 } from "./queries.js";
+import { isRelaxed } from "./relaxedRuns.js";
 
 export const sessionsRouter = Router();
 
@@ -50,7 +51,9 @@ function gameSlugOf(req: Request, res: Response): string | null {
  * game slug.
  */
 sessionsRouter.get("/resumable", requireAuth, async (req: Request, res: Response) => {
-    const sessions = await listResumableSessions(req.user!.id);
+    // A relaxed Code Blitz run's score has no speed bonus; the paused card
+    // must show the same number the run itself does.
+    const sessions = await listResumableSessions(req.user!.id, (id) => isRelaxed(req, id));
 
     res.status(200).json({
         sessions: sessions.map((s) => ({

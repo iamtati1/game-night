@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 :root {
     --bg: #08090d;
@@ -7,7 +7,7 @@
     --border: #2a2e3a;
 
     --text: #e7e9ef;
-    --muted: #98a2b6;
+    --muted: #c2b8aa;
     --accent: #8b5cf6;
     --accent-soft: #8b5cf633;
 
@@ -106,11 +106,14 @@
     /* Text tones. --text and --muted covered two levels; the sheet had quietly
        grown four, spelled as raw hex in a dozen places. Naming the other two
        gives tertiary information somewhere to sit without inventing a colour. */
-    --muted-2: #6b7492;
-    --faint: #4b5470;
+    --muted-2: #b3a898;
+    --faint: #a99e8e;
 
     color-scheme: dark;
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Inter was named here and never loaded by anything, so this has always
+       resolved to system-ui. Named honestly rather than requesting a font the
+       app does not ship. */
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     line-height: 1.5;
 }
 
@@ -133,9 +136,14 @@ body {
 
 .app {
     position: relative;
-    max-width: 820px;
+    /* THE SHELL. 820px capped every page including the header, so a 1920px
+       screen showed a 780px column adrift in the middle and .world's own 62rem
+       was never reachable. The width and the gutter are tokens now, and the
+       header reads the same two -- see world.css. Reading columns keep their
+       own measures: widening the shell must not widen a paragraph. */
+    max-width: var(--shell, 90rem);
     margin: 0 auto;
-    padding: 0 1.25rem 2rem;
+    padding: 0 var(--gutter, 1.25rem) 2rem;
 }
 
 /* ---------- Jolt: spatial atmosphere ---------- */
@@ -169,7 +177,7 @@ html {
        shows through as the single source of the black. */
     background-color: var(--bg);
     background-image: radial-gradient(1100px 500px at 50% -10%,
-            #1b1533 0%,
+            #211c18 0%,
             transparent 60%);
     background-repeat: no-repeat;
 }
@@ -206,6 +214,8 @@ body {
 
 body::before,
 body::after {
+    /* Off since the readability pass: they were coloured glows behind text. */
+    display: none;
     content: "";
     position: fixed;
     pointer-events: none;
@@ -257,6 +267,7 @@ body::after {
 
 /* A very subtle "table lighting" effect. */
 .bh-incident::after {
+    display: none;
     content: "";
     position: absolute;
     inset: 0;
@@ -280,7 +291,7 @@ body::after {
 /* Code becomes the centerpiece sitting on the surface. */
 .bh-code {
     border-color: color-mix(in srgb, var(--border) 85%, var(--accent));
-    background: #0b0e17;
+    background: #141210;
 
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.03) inset,
@@ -378,6 +389,7 @@ body::after {
 /* A subtle central atmosphere behind gameplay. */
 
 .app::before {
+    display: none;
     content: "";
     position: absolute;
     top: 4rem;
@@ -404,6 +416,7 @@ body::after {
 
 .bh-incident::before,
 .bh-results::before {
+    display: none;
     content: "";
     position: absolute;
     inset: -2rem -3rem;
@@ -495,7 +508,7 @@ body::after {
    and the nav it sits in is the evidence that the player is still signed in. */
 .logout-error {
     color: #fca5a5;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     white-space: nowrap;
 }
 
@@ -543,7 +556,7 @@ body::after {
     border-radius: 8px;
     background: var(--accent);
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 700;
 }
 
@@ -551,7 +564,7 @@ body::after {
     display: flex;
     align-items: center;
     gap: 0.85rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 /* ---------- type ---------- */
@@ -571,7 +584,7 @@ h2 {
 .eyebrow {
     margin: 0 0 0.6rem;
     color: var(--accent);
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 650;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -594,7 +607,7 @@ h2 {
 .hint {
     margin: -0.4rem 0 0.9rem;
     color: var(--muted);
-    font-size: 0.82rem;
+    font-size: 0.875rem;
 }
 
 a {
@@ -620,7 +633,11 @@ a {
     transition: background 0.15s, border-color 0.15s, transform 0.05s;
 }
 
-.button:hover:not(:disabled) {
+/* Not on primary buttons. This rule outranks `.button.primary` (0,3,0 against
+   0,2,0), so it replaced the sand gradient with this dark fill on hover --
+   leaving the primary's dark ink on a dark button, unreadable, on every
+   primary in the app. Primaries have their own hover (brightness and halo). */
+.button:not(.primary):hover:not(:disabled) {
     background: #262c3c;
 }
 
@@ -667,7 +684,7 @@ a {
 
 .button.small {
     padding: 0.4rem 0.75rem;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
 }
 
 .button.full {
@@ -713,7 +730,7 @@ a {
 .feature-grid p {
     margin: 0;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 /* ---------- panels / forms ---------- */
@@ -738,7 +755,7 @@ a {
 label {
     display: block;
     margin: 0 0 0.35rem;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     font-weight: 550;
 }
 
@@ -772,7 +789,7 @@ input:focus:not(:focus-visible) {
     border-radius: 9px;
     background: #7f1d1d33;
     color: #fca5a5;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 /* ---------- game ---------- */
@@ -782,7 +799,7 @@ input:focus:not(:focus-visible) {
     align-items: baseline;
     justify-content: space-between;
     margin-bottom: 0.75rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .progress {
@@ -842,7 +859,7 @@ input:focus:not(:focus-visible) {
     right: 0;
     bottom: 100%;
     color: var(--correct);
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     font-variant-numeric: tabular-nums;
     font-weight: 650;
     white-space: nowrap;
@@ -940,7 +957,7 @@ input:focus:not(:focus-visible) {
 .prompt.small {
     margin-bottom: 0.6rem;
     padding: 0.8rem 0.95rem;
-    font-size: 0.82rem;
+    font-size: 0.875rem;
 }
 
 .options {
@@ -963,7 +980,7 @@ input:focus:not(:focus-visible) {
     color: var(--text);
     font: inherit;
     font-family: var(--mono);
-    font-size: 0.98rem;
+    font-size: 1rem;
     text-align: left;
     cursor: pointer;
     /* Layer 3: transform and shadow join the transition. This control had only
@@ -1016,7 +1033,7 @@ input:focus:not(:focus-visible) {
    as text, which is why this is aria-hidden. */
 .option-glyph {
     flex: 0 0 auto;
-    font-size: 0.95rem;
+    font-size: 1rem;
     line-height: 1;
 }
 
@@ -1030,7 +1047,7 @@ input:focus:not(:focus-visible) {
     background: var(--surface-2);
     color: var(--muted);
     font-family: inherit;
-    font-size: 0.74rem;
+    font-size: 0.8125rem;
 }
 
 /* Four states, not two. `chosen-correct` and `revealed` are both "this is the
@@ -1126,7 +1143,9 @@ input:focus:not(:focus-visible) {
 /* Options that took no part. Dimming them is what makes the two that matter
    legible at a glance. */
 .option.muted {
-    opacity: 0.4;
+    /* 0.4 put the unpicked answers near 4:1. They are still worth reading
+       after the reveal, so they stay above AA while stepping back. */
+    opacity: 0.62;
     transition: opacity 200ms ease-out;
 }
 
@@ -1142,14 +1161,14 @@ input:focus:not(:focus-visible) {
     animation: feedback-in 200ms ease-out both;
 }
 
+/* Movement only: text a learner must read never starts invisible, so a
+   paused or skipped animation cannot hide it. Same rule as `arrive`. */
 @keyframes feedback-in {
     from {
-        opacity: 0;
         transform: translateY(3px);
     }
 
     to {
-        opacity: 1;
         transform: translateY(0);
     }
 }
@@ -1188,8 +1207,24 @@ input:focus:not(:focus-visible) {
 .feedback {
     display: flex;
     align-items: center;
+    /* Wraps, rather than squeezing. The verdict, the reason and the Next
+       button shared one row and shrank to fit it: at 375px the button was 76px
+       wide around 103px of content, and .button.primary's overflow: hidden (for
+       its sheen) let it shrink below its own text, so "Next" was cut off. */
+    flex-wrap: wrap;
+    column-gap: 0.75rem;
     min-height: 2.75rem;
     margin-top: 0.9rem;
+}
+
+/* A button in the feedback row keeps its full width; the row wraps instead. */
+.feedback > .button {
+    flex: none;
+}
+
+/* The reason takes the remaining width, and its own line when that is narrow. */
+.feedback > .feedback-why {
+    flex: 1 1 16rem;
 }
 
 .tag {
@@ -1197,7 +1232,7 @@ input:focus:not(:focus-visible) {
     margin: 0;
     padding: 0.3rem 0.65rem;
     border-radius: 999px;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     font-weight: 550;
 }
 
@@ -1234,7 +1269,7 @@ input:focus:not(:focus-visible) {
 
 .stat-row dt {
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -1263,7 +1298,7 @@ input:focus:not(:focus-visible) {
     align-items: center;
     gap: 0.3rem;
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .answer-line .points {
@@ -1274,12 +1309,12 @@ input:focus:not(:focus-visible) {
 
 @media (max-width: 560px) {
     .app {
-        padding: 0 1rem 3rem;
+        padding: 0 var(--gutter, 1rem) 3rem;
     }
 
     .prompt {
         padding: 1rem;
-        font-size: 0.87rem;
+        font-size: 0.9375rem;
     }
 }
 
@@ -1313,14 +1348,14 @@ input:focus:not(:focus-visible) {
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .history-stats {
     display: flex;
     align-items: center;
     gap: 0.9rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
 
@@ -1350,7 +1385,7 @@ input:focus:not(:focus-visible) {
     border-radius: 999px;
     color: var(--game-accent, var(--muted));
     font-family: var(--mono);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
@@ -1407,7 +1442,7 @@ input:focus:not(:focus-visible) {
     border-left: 3px solid var(--accent);
     border-radius: 10px;
     background: var(--surface);
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
 }
 
 .stake-safe {
@@ -1441,7 +1476,7 @@ input:focus:not(:focus-visible) {
 .sequences>div>span {
     display: block;
     margin-bottom: 0.4rem;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.07em;
 }
@@ -1450,7 +1485,7 @@ input:focus:not(:focus-visible) {
     margin: 0;
     padding-left: 1.2rem;
     font-family: var(--mono);
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     line-height: 1.7;
 }
 
@@ -1493,15 +1528,10 @@ input:focus:not(:focus-visible) {
    Reaction both put the challenge inside a bounded, slightly raised area, and
    that is most of why they read as games rather than pages. Same treatment here,
    no DOM change. */
+/* No panel since the readability pass: the code box and the answer buttons are
+   already surfaces, and a card around them made three nested boxes. */
 .play-stage {
-    padding: 1.5rem;
-    border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
-    border-radius: 18px;
-    background:
-        linear-gradient(180deg,
-            color-mix(in srgb, var(--surface) 70%, transparent),
-            color-mix(in srgb, var(--bg) 90%, var(--surface)));
-    box-shadow: var(--lift), var(--shadow-2);
+    padding: 0.25rem 0 0;
     animation: stage-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1571,7 +1601,7 @@ input:focus:not(:focus-visible) {
    with, because nothing else on screen explains why the question vanished. */
 .lapsed-tag {
     padding: 0.4rem 0.9rem;
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 650;
     letter-spacing: 0.02em;
 }
@@ -1615,19 +1645,15 @@ input:focus:not(:focus-visible) {
 }
 
 .hud-title {
-    font-size: 0.8rem;
+    font-size: 1rem;
     font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
     color: var(--accent);
     white-space: nowrap;
 }
 
 .hud-label {
-    font-size: 0.68rem;
+    font-size: 0.875rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
     color: var(--muted);
 }
 
@@ -1648,10 +1674,8 @@ input:focus:not(:focus-visible) {
     align-items: baseline;
     gap: 0.4rem;
     margin: 0;
-    font-size: 0.82rem;
-    font-weight: 650;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 1rem;
+    font-weight: 600;
     color: var(--muted);
 }
 
@@ -1663,7 +1687,7 @@ input:focus:not(:focus-visible) {
 }
 
 .round-of {
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
 }
 
 .pips {
@@ -1713,12 +1737,12 @@ input:focus:not(:focus-visible) {
     }
 
     .game.blitz .prompt {
-        font-size: 0.92rem;
+        font-size: 1rem;
     }
 
     /* Ten pips at 7px plus gaps is fine; the label is what gives way first. */
     .round-label {
-        font-size: 0.74rem;
+        font-size: 0.8125rem;
     }
 }
 
@@ -1819,7 +1843,7 @@ input:focus:not(:focus-visible) {
     justify-content: space-between;
     gap: 0.5rem;
     margin-bottom: 0.4rem;
-    font-size: 0.68rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1863,7 +1887,7 @@ input:focus:not(:focus-visible) {
     padding: 0.3rem 0.5rem;
     border-radius: 7px;
     font-family: var(--mono);
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
     transition: background 180ms ease-out, color 180ms ease-out;
 }
 
@@ -1878,7 +1902,7 @@ input:focus:not(:focus-visible) {
     flex: 0 0 auto;
     width: 1.4rem;
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
@@ -1945,7 +1969,7 @@ input:focus:not(:focus-visible) {
     color: var(--text);
     font: inherit;
     font-family: var(--mono);
-    font-size: 0.9rem;
+    font-size: 1rem;
     /* Comfortably past the 44px tap target once padding and line-height are in. */
     min-height: 2.75rem;
     cursor: pointer;
@@ -2016,11 +2040,11 @@ input:focus:not(:focus-visible) {
     }
 
     .console-line {
-        font-size: 0.82rem;
+        font-size: 0.875rem;
     }
 
     .tile {
-        font-size: 0.85rem;
+        font-size: 0.9375rem;
     }
 }
 
@@ -2331,9 +2355,9 @@ a.card-body:focus-visible .card-play {
 
 .card-category {
     color: var(--card-accent);
-    font-size: 0.66rem;
+    font-size: var(--t-micro);
     font-weight: 700;
-    letter-spacing: 0.16em;
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
 }
 
@@ -2364,7 +2388,7 @@ a.card-body:focus-visible .card-play {
 .card-hook {
     margin: 0;
     color: var(--muted);
-    font-size: 0.92rem;
+    font-size: 1rem;
 }
 
 .card-foot {
@@ -2380,7 +2404,7 @@ a.card-body:focus-visible .card-play {
    the Play affordance beside it. Dropped a tone so the accent wins the corner. */
 .card-shape {
     color: var(--muted-2);
-    font-size: 0.78rem;
+    font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
 }
 
@@ -2389,7 +2413,7 @@ a.card-body:focus-visible .card-play {
     align-items: center;
     gap: 0.35rem;
     color: var(--card-accent);
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
     font-weight: 700;
 }
 
@@ -2401,10 +2425,19 @@ a.card-body:hover .card-play svg {
     transition: transform 180ms ease-out;
 }
 
+.card-status {
+    margin: 0;
+    font-size: var(--t-small);
+    line-height: 1.45;
+    color: var(--text-2);
+}
+
+.card-status-main { color: var(--text); font-weight: 600; }
+
 .card-resume {
     margin: 0;
     color: var(--card-accent);
-    font-size: 0.78rem;
+    font-size: var(--t-small);
     font-variant-numeric: tabular-nums;
 }
 
@@ -2632,7 +2665,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .auth-brand p {
     margin: 0;
     color: var(--muted);
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
 }
 
 .auth h1 {
@@ -2645,7 +2678,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .auth-sub {
     margin: 0 0 1.4rem;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .auth .button.primary {
@@ -2655,7 +2688,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .auth-alt {
     margin: 1.1rem 0 0;
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
     text-align: center;
 }
 
@@ -2664,7 +2697,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .run-eyebrow {
     margin: 0 0 0.4rem;
     color: var(--accent);
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -2689,7 +2722,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .run-score span {
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -2717,7 +2750,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
    .prompt small and stays monospace. */
 .review-ask {
     margin: 0 0 0.5rem;
-    font-size: 0.98rem;
+    font-size: 1rem;
     font-weight: 650;
 }
 
@@ -2746,7 +2779,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .paused-eyebrow {
     margin: 0 0 0.35rem;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -2772,7 +2805,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     border-radius: 10px;
     background: var(--bg);
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -2796,7 +2829,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .paused-note {
     margin: 0 0 1.5rem;
     color: var(--muted);
-    font-size: 0.92rem;
+    font-size: 1rem;
 }
 
 .paused-actions {
@@ -2809,7 +2842,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .paused-confirm p {
     margin: 0 0 1rem;
     color: var(--text);
-    font-size: 0.92rem;
+    font-size: 1rem;
 }
 
 /* Red only at the point of no return. Using it on the first Quit button would
@@ -2873,7 +2906,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
        object; this is supporting information about the room. */
     margin: 1.5rem 0 0;
     color: var(--muted);
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
 }
 
 .masthead-stats strong {
@@ -2943,7 +2976,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .verdict {
     margin: -1.1rem 0 1.5rem;
     color: var(--accent);
-    font-size: 0.82rem;
+    font-size: 0.875rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -2977,7 +3010,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .run-figures dt {
     color: var(--muted);
-    font-size: 0.64rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -3005,7 +3038,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .review-head {
     margin: 0 0 0.9rem;
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -3030,7 +3063,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .review-n {
     margin: 0 0 0.35rem;
     color: var(--muted);
-    font-size: 0.68rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     font-variant-numeric: tabular-nums;
@@ -3050,7 +3083,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     border-radius: 999px;
     background: var(--accent-soft);
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -3084,7 +3117,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .resume-label {
     margin: 0;
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -3142,7 +3175,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .rx-eyebrow {
     margin: 0 0 0.5rem;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -3208,7 +3241,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .rx-shape {
     margin: 0 0 1.5rem;
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -3250,7 +3283,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .rx-hint {
     color: var(--muted);
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
 }
 
 /* Waiting: calm. Deliberately not a red alert state -- anticipation, not threat. */
@@ -3317,7 +3350,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 }
 
 .rx-ms i {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-style: normal;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -3339,7 +3372,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .rx-tier,
 .rx-verdict {
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -3414,7 +3447,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .rx-strip-n {
     color: var(--muted);
-    font-size: 0.6rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
 }
@@ -3431,7 +3464,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 
 .rx-strip li.early .rx-strip-v {
     color: var(--warn);
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
 }
 
 .rx-strip li.unplayed {
@@ -3441,7 +3474,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .run-figures .unit {
     margin-left: 0.15rem;
     color: var(--muted);
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -3466,7 +3499,7 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
 .bh-incident .button.primary:disabled {
     background: color-mix(in srgb, var(--accent) 32%, transparent);
     border-color: transparent;
-    color: #c9cee0;
+    color: #e0d8cc;
     opacity: 1;
 }
 
@@ -3558,7 +3591,7 @@ a.card-body:focus-visible .preview-dot {
 .mem-eyebrow {
     margin: 0 0 0.5rem;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -3622,7 +3655,7 @@ a.card-body:focus-visible .preview-dot {
 .mem-shape {
     margin: 0 0 1.5rem;
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -3646,7 +3679,7 @@ a.card-body:focus-visible .preview-dot {
 .mem-state {
     margin: 0;
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -3729,7 +3762,7 @@ a.card-body:focus-visible .preview-dot {
 
 .mem-slot-n {
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
@@ -3835,7 +3868,7 @@ a.card-body:focus-visible .preview-dot {
 
 .mem-compare-label {
     color: var(--muted);
-    font-size: 0.62rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -4002,7 +4035,7 @@ a.card-body:focus-visible .preview-chip {
     border-radius: 999px;
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -4057,7 +4090,7 @@ a.card-body:focus-visible .preview-chip {
 
 .bh-brief-stats dt {
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
@@ -4076,7 +4109,7 @@ a.card-body:focus-visible .preview-chip {
     list-style: none;
     text-align: left;
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: 1rem;
     line-height: 1.7;
 }
 
@@ -4095,7 +4128,7 @@ a.card-body:focus-visible .preview-chip {
     border-radius: 50%;
     background: color-mix(in srgb, var(--accent) 18%, transparent);
     color: var(--accent);
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     text-align: center;
     line-height: 1.4rem;
@@ -4133,7 +4166,7 @@ a.card-body:focus-visible .preview-chip {
     gap: 0.5rem;
     margin: 0;
     color: var(--accent);
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -4154,7 +4187,7 @@ a.card-body:focus-visible .preview-chip {
 
 .bh-streak {
     color: var(--accent);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 700;
 }
 
@@ -4167,7 +4200,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-integrity-track {
     height: 5px;
     border-radius: 999px;
-    background: #1e2334;
+    background: #29241f;
     overflow: hidden;
 }
 
@@ -4191,7 +4224,7 @@ a.card-body:focus-visible .preview-chip {
     justify-content: space-between;
     gap: 0.5rem;
     margin: 0.3rem 0 0;
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -4221,7 +4254,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-theme {
     margin: 0;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -4246,7 +4279,7 @@ a.card-body:focus-visible .preview-chip {
     border-radius: 0 8px 8px 0;
     background: #7f1d1d1f;
     color: #fca5a5;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     overflow-x: auto;
 }
 
@@ -4262,23 +4295,23 @@ a.card-body:focus-visible .preview-chip {
     margin: 0;
     padding: 0.6rem 0;
     list-style: none;
-    border: 1px solid #232a3d;
+    border: 1px solid #2e2823;
     border-radius: 12px;
-    background: #0f1320;
+    background: #1a1714;
     overflow-x: auto;
 }
 
 .bh-code.readonly {
     padding: 0.9rem 1rem;
     white-space: pre;
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.65;
 }
 
 .bh-line {
     display: flex;
     align-items: stretch;
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.7;
 }
 
@@ -4286,7 +4319,7 @@ a.card-body:focus-visible .preview-chip {
     flex: none;
     width: 2.6rem;
     padding-right: 0.8rem;
-    color: #3f4760;
+    color: #51483f;
     text-align: right;
     font-variant-numeric: tabular-nums;
     user-select: none;
@@ -4343,7 +4376,7 @@ a.card-body:focus-visible .preview-chip {
 }
 
 .bh-line.inert .bh-line-label {
-    color: #6b7492;
+    color: #b3a898;
 }
 
 /* ---------- patches ---------- */
@@ -4360,7 +4393,7 @@ a.card-body:focus-visible .preview-chip {
     padding: 0;
     margin-bottom: 0.6rem;
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -4371,15 +4404,15 @@ a.card-body:focus-visible .preview-chip {
     align-items: flex-start;
     gap: 0.7rem;
     padding: 0.85rem 1rem;
-    border: 1px solid #232a3d;
+    border: 1px solid #2e2823;
     border-radius: 10px;
-    background: #0f1320;
+    background: #1a1714;
     cursor: pointer;
     transition: border-color 120ms ease, background 120ms ease;
 }
 
 .bh-patch code {
-    font-size: 0.87rem;
+    font-size: 0.9375rem;
     line-height: 1.55;
     white-space: pre-wrap;
     word-break: break-word;
@@ -4387,7 +4420,7 @@ a.card-body:focus-visible .preview-chip {
 
 .bh-patch:hover {
     border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-    background: #141a29;
+    background: #1f1b18;
 }
 
 .bh-patch.selected {
@@ -4421,9 +4454,9 @@ a.card-body:focus-visible .preview-chip {
     padding: 0.7rem 0.9rem;
     border-left: 3px solid color-mix(in srgb, var(--accent) 60%, transparent);
     border-radius: 0 8px 8px 0;
-    background: #141a29;
+    background: #1f1b18;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.6;
 }
 
@@ -4431,7 +4464,7 @@ a.card-body:focus-visible .preview-chip {
     display: block;
     margin-bottom: 0.2rem;
     color: var(--accent);
-    font-size: 0.66rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -4443,8 +4476,8 @@ a.card-body:focus-visible .preview-chip {
     margin: 1.25rem 0 0;
     padding: 1rem 1.1rem;
     border-radius: 12px;
-    border: 1px solid #232a3d;
-    background: #0f1320;
+    border: 1px solid #2e2823;
+    background: #1a1714;
     animation: bh-rise 220ms ease-out;
 }
 
@@ -4516,14 +4549,14 @@ a.card-body:focus-visible .preview-chip {
 .bh-attempts {
     margin: 0.5rem 0 0;
     color: #fbbf24;
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
     font-weight: 600;
 }
 
 .bh-explanation {
     margin: 0.6rem 0 0;
     color: var(--muted);
-    font-size: 0.92rem;
+    font-size: 1rem;
     line-height: 1.65;
 }
 
@@ -4574,7 +4607,7 @@ a.card-body:focus-visible .preview-chip {
     align-items: center;
     gap: 0.5rem;
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -4607,14 +4640,14 @@ a.card-body:focus-visible .preview-chip {
     gap: 1rem 1.25rem;
     margin: 2rem 0;
     padding: 1.25rem;
-    border: 1px solid #232a3d;
+    border: 1px solid #2e2823;
     border-radius: 12px;
-    background: #0f1320;
+    background: #1a1714;
 }
 
 .bh-results-stats dt {
     color: var(--muted);
-    font-size: 0.68rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
@@ -4629,7 +4662,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-results-stats .of {
     margin-left: 0.2rem;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 400;
 }
 
@@ -4643,14 +4676,14 @@ a.card-body:focus-visible .preview-chip {
     margin: 0;
     padding: 0.7rem 0.9rem;
     border-radius: 10px;
-    background: #141a29;
-    font-size: 0.92rem;
+    background: #1f1b18;
+    font-size: 1rem;
 }
 
 .bh-readout-tag {
     display: block;
     margin-bottom: 0.15rem;
-    font-size: 0.66rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -4676,10 +4709,10 @@ a.card-body:focus-visible .preview-chip {
 
 .bh-log-row {
     padding: 0.9rem 1rem;
-    border: 1px solid #232a3d;
+    border: 1px solid #2e2823;
     border-left-width: 3px;
     border-radius: 0 10px 10px 0;
-    background: #0f1320;
+    background: #1a1714;
 }
 
 .bh-log-row.resolved {
@@ -4698,8 +4731,8 @@ a.card-body:focus-visible .preview-chip {
 }
 
 .bh-log-no {
-    color: #3f4760;
-    font-size: 0.8rem;
+    color: #51483f;
+    font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
 }
 
@@ -4715,14 +4748,14 @@ a.card-body:focus-visible .preview-chip {
     border-radius: 4px;
     background: color-mix(in srgb, var(--accent) 20%, transparent);
     color: var(--accent);
-    font-size: 0.62rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
 
 .bh-log-status {
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 700;
 }
 
@@ -4744,22 +4777,22 @@ a.card-body:focus-visible .preview-chip {
 .bh-log-meta {
     margin: 0.4rem 0 0;
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
 }
 
 .bh-log-answer {
     margin: 0.6rem 0 0;
     padding: 0.5rem 0.7rem;
     border-radius: 8px;
-    background: #141a29;
-    font-size: 0.84rem;
+    background: #1f1b18;
+    font-size: 0.875rem;
     overflow-x: auto;
 }
 
 .bh-log-why {
     margin: 0.45rem 0 0;
     color: var(--muted);
-    font-size: 0.87rem;
+    font-size: 0.9375rem;
     line-height: 1.6;
 }
 
@@ -4768,12 +4801,14 @@ a.card-body:focus-visible .preview-chip {
     justify-content: center;
     gap: 1rem;
     flex-wrap: wrap;
+    /* Directly under the score now, rather than at the foot of the log. */
+    margin: 1.25rem 0 2rem;
 }
 
 .bh-replay-note {
     margin: 1rem 0 0;
     text-align: center;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
 }
 
 /* ---------- card preview ---------- */
@@ -4853,7 +4888,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-alert-kicker {
     margin: 0 0 0.9rem;
     color: var(--accent);
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 800;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -4871,7 +4906,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-alert-voice,
 .bh-feedback-voice {
     margin: 0;
-    color: #c9cee0;
+    color: #e0d8cc;
     font-size: 1rem;
     line-height: 1.6;
 }
@@ -4889,7 +4924,7 @@ a.card-body:focus-visible .preview-chip {
     border-radius: 4px;
     background: color-mix(in srgb, var(--accent) 18%, transparent);
     color: var(--accent);
-    font-size: 0.62rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -4899,7 +4934,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-recoverable {
     margin: 0.7rem 0 0;
     color: #86efac;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
 }
 
@@ -4908,9 +4943,9 @@ a.card-body:focus-visible .preview-chip {
     margin-left: 0.7rem;
     padding: 0.1rem 0.45rem;
     border-radius: 4px;
-    background: #1e2334;
-    color: #9aa3bd;
-    font-size: 0.62rem;
+    background: #29241f;
+    color: #c4bbae;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.12em;
 }
@@ -4936,7 +4971,7 @@ a.card-body:focus-visible .preview-chip {
    and the colour can never disagree. */
 .countdown-status {
     margin: 0 0 0.35rem;
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -4966,28 +5001,28 @@ a.card-body:focus-visible .preview-chip {
     gap: 0.5rem;
     margin: 0.9rem 0 0;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
 .bh-targeted-mark {
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .bh-diagnostic {
     margin: 1.25rem 0 0;
     padding: 1rem 1.1rem;
-    border: 1px solid #232a3d;
+    border: 1px solid #2e2823;
     border-radius: 12px;
-    background: #0f1320;
+    background: #1a1714;
 }
 
 .bh-diagnostic-head {
     margin: 0 0 0.7rem;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -5005,13 +5040,13 @@ a.card-body:focus-visible .preview-chip {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    color: #6b7492;
-    font-size: 0.9rem;
+    color: #b3a898;
+    font-size: 1rem;
     transition: color 160ms ease;
 }
 
 .bh-check.done {
-    color: #c9cee0;
+    color: #e0d8cc;
 }
 
 .bh-check.done .bh-check-mark {
@@ -5029,7 +5064,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-check-mark {
     width: 1ch;
     font-weight: 700;
-    color: #3f4760;
+    color: #51483f;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5053,14 +5088,14 @@ a.card-body:focus-visible .preview-chip {
     display: flex;
     align-items: center;
     gap: 0.3rem;
-    font-size: 0.62rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #4b5470;
+    color: #a99e8e;
 }
 
 .bh-service-dot {
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
 }
 
 .bh-service.restored {
@@ -5092,9 +5127,9 @@ a.card-body:focus-visible .preview-chip {
 .bh-integrity-costs div {
     display: flex;
     gap: 0.25rem;
-    font-size: 0.6rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.04em;
-    color: #4b5470;
+    color: #a99e8e;
 }
 
 .bh-integrity-costs dt {
@@ -5133,10 +5168,10 @@ a.card-body:focus-visible .preview-chip {
     margin: 0 auto 1.5rem;
     padding: 0.9rem 1rem;
     border-radius: 10px;
-    background: #141a29;
+    background: #1f1b18;
     text-align: left;
-    color: #c9cee0;
-    font-size: 0.95rem;
+    color: #e0d8cc;
+    font-size: 1rem;
     line-height: 1.6;
 }
 
@@ -5181,7 +5216,7 @@ a.card-body:focus-visible .preview-chip {
     font-size: 1.1rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    color: #9aa3bd;
+    color: #c4bbae;
     transition: color 200ms ease, transform 200ms ease;
 }
 
@@ -5197,7 +5232,7 @@ a.card-body:focus-visible .preview-chip {
 .bh-phase {
     margin: 0 0 0.2rem;
     color: var(--accent);
-    font-size: 0.62rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -5246,7 +5281,7 @@ h3 {
    was no shared piece to reach for beyond .eyebrow, which carries its own
    margin. This is the type treatment without the spacing opinion. */
 .label-caps {
-    font-size: 0.72rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -5550,7 +5585,7 @@ pre {
     width: 3px;
     height: 3px;
     border-radius: 50%;
-    background: #3f4760;
+    background: #51483f;
     transform: translateY(-50%);
 }
 
@@ -5640,12 +5675,11 @@ pre {
 }
 
 .game-intro-eyebrow {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.4rem;
     color: var(--accent);
-    font-size: 0.72rem;
+    font-size: 0.9375rem;
     font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .game-intro-title {
@@ -5656,11 +5690,28 @@ pre {
 }
 
 .game-intro-lede {
-    margin: 0 auto 1.75rem;
+    margin: 0 auto 1.5rem;
     max-width: 30rem;
-    color: var(--muted);
-    font-size: 1rem;
+    color: var(--text-2, var(--muted));
+    font-size: 1.0625rem;
     line-height: 1.6;
+}
+
+/* Whether a run counts toward the course, worded the same on all five games. */
+.game-intro-counts {
+    display: inline-block;
+    margin: 0 0 1rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--correct);
+    background: color-mix(in srgb, var(--correct) 12%, transparent);
+}
+
+.game-intro-counts.fun {
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .game-intro-preview {
@@ -5671,12 +5722,11 @@ pre {
 }
 
 .game-intro-shape {
-    margin: 0 0 1.5rem;
+    margin: 0 0 1.25rem;
     color: var(--muted-2);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 620px) {
@@ -5705,7 +5755,7 @@ pre {
     font-size: 1rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    color: #9aa3bd;
+    color: #c4bbae;
     transition: color 200ms ease;
 }
 
@@ -5767,7 +5817,7 @@ pre {
     max-width: 62ch;
     margin: 0.4rem 0 0;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.45;
 }
 
@@ -5891,17 +5941,15 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .learn-eyebrow {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 0.9375rem;
+    font-weight: 700;
     color: var(--blitz);
     margin: 0 0 0.4rem;
 }
 
 .learn-title {
     font-size: 1.7rem;
-    margin: 0 0 1.4rem;
+    margin: 0 0 0.75rem;
 }
 
 .learn-beat .learn-code {
@@ -5921,19 +5969,27 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .learn-arrow {
-    font-family: inherit;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-family: var(--ui, inherit);
+    font-size: 0.9375rem;
     color: var(--muted);
     margin-right: 0.5rem;
 }
 
 .learn-rule {
-    font-size: 1.05rem;
+    font-size: 1.125rem;
+    line-height: 1.55;
     color: var(--text);
-    margin: 0 auto 2rem;
-    max-width: 30rem;
+    margin: 0 auto 1.4rem;
+    max-width: 32rem;
+}
+
+/* What happened in the example, under its output. */
+.learn-note {
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: -0.6rem auto 1.8rem;
+    max-width: 32rem;
 }
 
 /* The advance control.
@@ -5948,7 +6004,7 @@ a.card-body:focus-visible .preview-shot img {
 
 .next-hint {
     font-family: var(--mono);
-    font-size: 0.64rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     opacity: 0.65;
@@ -5964,7 +6020,7 @@ a.card-body:focus-visible .preview-shot img {
     padding-left: 0.9rem;
     border-left: 2px solid var(--border);
     color: var(--muted);
-    font-size: 0.94rem;
+    font-size: 1rem;
     max-width: 40rem;
 }
 
@@ -5991,12 +6047,12 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .topic-tally .topic-name {
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
 }
 
 .topic-tally .topic-score {
     font-family: var(--mono);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
     color: var(--muted);
 }
@@ -6009,13 +6065,13 @@ a.card-body:focus-visible .preview-shot img {
 
 .next-up {
     margin: 1.1rem 0 0;
-    font-size: 0.98rem;
+    font-size: 1rem;
     color: var(--muted);
 }
 
 .next-label {
     font-family: var(--mono);
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--blitz);
@@ -6088,7 +6144,7 @@ a.card-body:focus-visible .preview-shot img {
     min-height: 44px;
     padding: 0 var(--space-3);
     font-family: var(--mono);
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
@@ -6110,7 +6166,7 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .assembly-token kbd {
-    font-size: 0.68rem;
+    font-size: 0.8125rem;
     opacity: 0.55;
 }
 
@@ -6138,7 +6194,7 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .verdict-label {
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
@@ -6147,7 +6203,7 @@ a.card-body:focus-visible .preview-shot img {
 
 .verdict-token {
     font-family: var(--mono);
-    font-size: 0.9rem;
+    font-size: 1rem;
     padding: 0.05rem 0.4rem;
     border-radius: var(--radius-sm);
     background: var(--surface-2);
@@ -6181,10 +6237,10 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .bh-learning-concept {
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--muted, #8b93a7);
+    color: var(--text-2);
     margin: 0;
 }
 
@@ -6230,7 +6286,7 @@ a.card-body:focus-visible .preview-shot img {
     grid-template-columns: 1.25rem 1fr;
     align-items: baseline;
     gap: 0.5rem;
-    font-size: 0.95rem;
+    font-size: 1rem;
     line-height: 1.4;
 }
 
@@ -6271,10 +6327,10 @@ a.card-body:focus-visible .preview-shot img {
 
 .journey-eyebrow,
 .lesson-eyebrow {
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--muted, #8b93a7);
+    color: var(--text-2);
     margin: 0 0 0.25rem;
 }
 
@@ -6286,7 +6342,7 @@ a.card-body:focus-visible .preview-shot img {
 
 .journey-now {
     margin: 0 0 1.5rem;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 .journey-topics,
@@ -6337,7 +6393,7 @@ a.card-body:focus-visible .preview-shot img {
     margin: 0.4rem 0 0.75rem 2.1rem;
     max-width: 46ch;
     line-height: 1.5;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 .journey-concepts {
@@ -6352,7 +6408,7 @@ a.card-body:focus-visible .preview-shot img {
     grid-template-columns: 1.25rem 1fr;
     gap: 0.5rem;
     align-items: baseline;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .journey-concept.is-demonstrated { opacity: 0.6; }
@@ -6361,10 +6417,49 @@ a.card-body:focus-visible .preview-shot img {
 
 /* ------------------------------------------------------------------ lesson */
 
+/*
+   THE LESSON IS A PAGE, NOT A PATCH OF SKY.
+
+   PROTOTYPE -- warm light reading panel, scoped to this selector alone.
+
+   The problem it answers is not the colour scheme. .lesson had no surface of
+   any kind -- no background, no border, no shadow, in either stylesheet -- so
+   explanatory prose sat directly on a fixed four-layer radial gradient with
+   nebulae and three parallax star layers drifting behind it. Fine for a line
+   you glance at; tiring for a paragraph a beginner reads twice.
+
+   WHY THE FOUR TOKENS ARE REDECLARED HERE AND NOWHERE ELSE. Descendants of
+   .lesson read --text, --text-2, --muted and --ink-soft for their own colour
+   (the eyebrow, the "why" lead, notes, the rung label, feedback body, the
+   brief). Left alone they would paint near-white text on paper. Redeclaring
+   the four INSIDE this rule re-points exactly those descendants and nothing
+   else: :root is untouched, so the map, Home and every game keep the dark
+   palette they had. Measured against #FAF7F2 -- 15.18, 9.00, 5.37, 5.37.
+
+   --ink-soft has never been defined anywhere; .lesson-aside-link has always
+   fallen through to its hard-coded #c9bfb1. Giving it a value here is what
+   makes that one link readable on paper without editing its rule.
+*/
 .lesson {
     max-width: 38rem;
-    margin: 0 auto;
-    padding: 2rem 1.25rem 4rem;
+    margin: 0 auto 4rem;
+    /* Horizontal padding shrinks with the viewport so the panel keeps its
+       gutters at 320px instead of squeezing the text. box-sizing: border-box
+       is already global (line 121), so this stays inside the 38rem. */
+    padding: 2.5rem clamp(1.25rem, 5vw, 2.25rem) 3rem;
+
+    background: #FAF7F2;
+    color: #23201C;
+    border-radius: var(--radius-lg);
+    /* Lifted off the starfield rather than outlined on it: a page on a desk
+       in a dark room. The hairline is there for the edge, not for decoration. */
+    border: 1px solid #ffffff1f;
+    box-shadow: 0 28px 64px -28px rgb(0 0 0 / 0.55);
+
+    --text: #23201C;
+    --text-2: #4A443C;
+    --muted: #6E6557;
+    --ink-soft: #6E6557;
 }
 
 .lesson-eyebrow {
@@ -6386,9 +6481,13 @@ a.card-body:focus-visible .preview-shot img {
 
 .lesson-why {
     margin: 0 0 1.75rem;
+    /* THE ONE SENTENCE THAT SAYS WHY THIS CONCEPT IS WORTH LEARNING, and it was
+       set at body size in the muted tone -- the same treatment as metadata. It
+       is the lead, so it reads as one. */
+    font-size: var(--t-lead);
     line-height: 1.55;
     max-width: 48ch;
-    color: var(--muted, #8b93a7);
+    color: var(--text-2);
 }
 
 .lesson-teach {
@@ -6410,8 +6509,8 @@ a.card-body:focus-visible .preview-shot img {
 
 .lesson-note {
     margin: 0.35rem 0 0 0.15rem;
-    font-size: 0.9rem;
-    color: var(--muted, #8b93a7);
+    font-size: 1rem;
+    color: var(--muted, #c2b8aa);
 }
 
 .lesson-notice {
@@ -6424,10 +6523,10 @@ a.card-body:focus-visible .preview-shot img {
 
 .lesson-notice-tag {
     display: block;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    opacity: 0.6;
+    opacity: 0.85;
     margin-bottom: 0.15rem;
 }
 
@@ -6517,16 +6616,16 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .lesson-output-tag {
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    opacity: 0.65;
+    opacity: 0.85;
     flex-shrink: 0;
 }
 
 .lesson-output pre {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1rem;
     line-height: 1.5;
 }
 
@@ -6546,15 +6645,15 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .lesson-part dt {
-    font-size: 0.9rem;
+    font-size: 1rem;
     opacity: 0.9;
 }
 
 .lesson-part dd {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.45;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 /* The thing worth noticing that the question did not ask about. */
@@ -6562,7 +6661,7 @@ a.card-body:focus-visible .preview-shot img {
     margin: 0.6rem 0 0;
     padding-top: 0.6rem;
     border-top: 1px solid rgba(127, 127, 127, 0.25);
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
     line-height: 1.5;
     max-width: 52ch;
 }
@@ -6627,8 +6726,8 @@ a.card-body:focus-visible .preview-shot img {
     border-radius: 8px;
     background: rgba(127, 127, 127, 0.13);
     font-family: var(--mono);
-    font-size: 1.05rem;
-    line-height: 1.6;
+    font-size: var(--t-code);
+    line-height: 1.7;
     overflow-x: auto;
     transition: box-shadow 200ms ease;
 }
@@ -6697,10 +6796,10 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .scene-console-tag {
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    opacity: 0.5;
+    opacity: 0.85;
 }
 
 .scene-console-empty {
@@ -6715,15 +6814,16 @@ a.card-body:focus-visible .preview-shot img {
 .scene-output {
     margin: 0;
     font-family: var(--mono);
-    font-size: 1.1rem;
-    line-height: 1.5;
+    font-size: var(--t-code);
+    line-height: 1.7;
     color: #6fe3a3;
     animation: scene-output-in 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes scene-output-in {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: none; }
+    /* Movement only -- the output is content (see feedback-in). */
+    from { transform: translateY(-10px); }
+    to { transform: none; }
 }
 
 .scene-run { width: 100%; }
@@ -6800,7 +6900,7 @@ a.card-body:focus-visible .preview-shot img {
     margin-top: 0.7rem;
     padding-top: 0.7rem;
     border-top: 1px solid rgba(127, 127, 127, 0.25);
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 /* ------------------------------------------------------- concept reveal */
@@ -6829,13 +6929,13 @@ a.card-body:focus-visible .preview-shot img {
 
 .scene-part dt {
     font-family: var(--mono);
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .scene-part dd {
     margin: 0;
     line-height: 1.5;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 /* The Journey's own title earns the display face — it is the one place the
@@ -6863,8 +6963,8 @@ a.card-body:focus-visible .preview-shot img {
    headline of its own. */
 .journey-earned {
     margin: 0 0 1.5rem;
-    color: var(--muted, #8b93a7);
-    font-size: 0.95rem;
+    color: var(--muted, #c2b8aa);
+    font-size: 1rem;
 }
 
 .journey-points {
@@ -6914,31 +7014,31 @@ a.card-body:focus-visible .preview-shot img {
     margin: 0 auto 2.25rem;
     max-width: 30rem;
     line-height: 1.6;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 .welcome-start { min-width: 14rem; }
 
 .welcome-note {
     margin: 1.5rem 0 0;
-    font-size: 0.9rem;
-    color: var(--muted, #8b93a7);
+    font-size: 1rem;
+    color: var(--muted, #c2b8aa);
 }
 
 /* ------------------------------------------------------------------ home */
 
 .home-greeting {
     margin: 0 0 2.5rem;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 .home-label,
 .complete-label {
     margin: 0 0 0.35rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
+    font-size: var(--t-small);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--muted-2, #6b7492);
+    color: var(--text-2);
 }
 
 .home-topic {
@@ -6953,7 +7053,7 @@ a.card-body:focus-visible .preview-shot img {
     margin: 0 auto 2rem;
     max-width: 28rem;
     line-height: 1.55;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 .home-next {
@@ -6966,8 +7066,8 @@ a.card-body:focus-visible .preview-shot img {
 .home-earned,
 .home-aside {
     margin: 1.75rem 0 0;
-    font-size: 0.92rem;
-    color: var(--muted, #8b93a7);
+    font-size: 1rem;
+    color: var(--muted, #c2b8aa);
 }
 
 .home-aside { margin-top: 0.75rem; }
@@ -6996,9 +7096,9 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 @keyframes complete-mark-in {
-    from { opacity: 0; transform: scale(0.7); }
+    from { transform: scale(0.7); }
     60% { transform: scale(1.06); }
-    to { opacity: 1; transform: scale(1); }
+    to { transform: scale(1); }
 }
 
 /* The capability, not the lesson title. "You can now run a snippet and say what
@@ -7015,7 +7115,7 @@ a.card-body:focus-visible .preview-shot img {
 
 .complete-points {
     margin: 0 0 2.25rem;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
     animation: complete-points-in 380ms 160ms ease both;
 }
 
@@ -7028,8 +7128,8 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 @keyframes complete-points-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: none; }
+    from { transform: translateY(6px); }
+    to { transform: none; }
 }
 
 .complete-next-label { margin-top: 0; }
@@ -7042,8 +7142,8 @@ a.card-body:focus-visible .preview-shot img {
 
 .complete-aside {
     margin: 1.5rem 0 0;
-    font-size: 0.9rem;
-    color: var(--muted, #8b93a7);
+    font-size: 1rem;
+    color: var(--muted, #c2b8aa);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7067,10 +7167,10 @@ a.card-body:focus-visible .preview-shot img {
 
 .scene-eyebrow {
     margin: 0 0 1.25rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--muted-2, #6b7492);
+    color: var(--text-2);
 }
 
 /* The one thing on the screen. Sized so a single sentence fills the eye and
@@ -7090,7 +7190,7 @@ a.card-body:focus-visible .preview-shot img {
     margin: 0 auto 0.6rem;
     max-width: 30ch;
     line-height: 1.6;
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
     animation: scene-moment-in 420ms 120ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
 }
 
@@ -7100,8 +7200,8 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 @keyframes scene-moment-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: none; }
+    from { transform: translateY(10px); }
+    to { transform: none; }
 }
 
 /* The code is the object of attention, so it is set larger than the prose
@@ -7163,8 +7263,8 @@ a.card-body:focus-visible .preview-shot img {
     align-items: baseline;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
+    font-size: var(--t-micro);
+    letter-spacing: 0.04em;
 }
 
 .scene-place-topic {
@@ -7178,7 +7278,7 @@ a.card-body:focus-visible .preview-shot img {
 .scene-place-sep { opacity: 0.3; }
 
 .scene-place-lesson {
-    color: var(--muted, #8b93a7);
+    color: var(--muted, #c2b8aa);
 }
 
 /* ---------------------------------------------------------- the encounter */
@@ -7192,7 +7292,7 @@ a.card-body:focus-visible .preview-shot img {
 /* What the learner is doing, in their words rather than the curriculum's. */
 .encounter-rung-label {
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: 1rem;
     margin: 0 0 1.25rem;
 }
 
@@ -7220,11 +7320,18 @@ a.card-body:focus-visible .preview-shot img {
 .encounter-rungs li[data-state="cleared"] { color: #3fae6d; }
 .encounter-rungs li[data-state="unbuilt"] { opacity: 0.55; }
 
+/* What the server said is still outstanding, when it refused to record a
+   concept. Named stops, not a shrug -- a learner can act on a name. */
+.encounter-outstanding {
+    color: var(--muted);
+    margin: 0 0 1rem;
+}
+
 
 /* The bug report on a diagnose rung: what is wrong, before the code. */
 .encounter-brief {
     border-left: 2px solid var(--accent, #6ee7d7);
-    color: var(--text, #e8ecf5);
+    color: var(--text, #f2ece3);
     margin: 0 0 1.25rem;
     padding-left: 0.9rem;
 }
@@ -7238,7 +7345,7 @@ a.card-body:focus-visible .preview-shot img {
 /* The authored repair, shown in place of the question the learner missed. */
 .remediation-label {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
     letter-spacing: 0.08em;
     margin: 0 0 0.75rem;
     text-transform: uppercase;
@@ -7258,12 +7365,17 @@ a.card-body:focus-visible .preview-shot img {
     margin: 0 0 1.6rem;
 }
 
+/* NOT A CLIPPING FIX. The route strip reports scrollWidth > clientWidth per
+   stop, but that is the ::after connector drawn deliberately half a stop wide
+   to reach the next mark -- .run-route itself measures 303 = 303 at 375px and
+   no name overflows. What was wrong here is only the size: this strip tells a
+   beginner which stop of the concept they are on, in 11.8px. */
 .run-caption {
     margin: 0 0 0.5rem;
-    font-size: 0.8rem;
+    font-size: var(--t-small);
     letter-spacing: 0.04em;
     text-transform: lowercase;
-    color: var(--ink-soft, #9aa4c4);
+    color: var(--muted);
 }
 
 .run-route {
@@ -7325,7 +7437,7 @@ a.card-body:focus-visible .preview-shot img {
     margin-left: -0.39rem;
     border-radius: 50%;
     border: 2px solid rgba(154, 164, 196, 0.4);
-    background: var(--bg-deep, #141a33);
+    background: var(--bg-deep, #1f1b18);
 }
 
 .run-stop.is-done .run-mark {
@@ -7335,14 +7447,14 @@ a.card-body:focus-visible .preview-shot img {
 
 .run-stop.is-here .run-mark {
     border-color: var(--accent, #8ab4ff);
-    background: var(--bg-deep, #141a33);
+    background: var(--bg-deep, #1f1b18);
 }
 
 .run-name {
     display: block;
-    font-size: 0.74rem;
-    line-height: 1.3;
-    color: var(--ink-soft, #9aa4c4);
+    font-size: var(--t-micro);
+    line-height: 1.35;
+    color: var(--text-2);
 }
 
 .run-stop.is-done .run-name {
@@ -7350,7 +7462,7 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .run-stop.is-here .run-name {
-    color: var(--ink, #e9ecf8);
+    color: var(--ink, #f2ece3);
     font-weight: 600;
 }
 
@@ -7382,11 +7494,16 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 /* Narrow: the names are what make the stops legible, so they stay -- the
-   route just gets tighter. */
+   route just gets tighter.
+
+   AND THEY STAY AT A READABLE SIZE. This block used to drop them to 0.66rem,
+   which computes to 10.6px -- below the 13px floor the type scale sets, and
+   applied on precisely the devices where reading is hardest. Measured at
+   10.6px on 320, 375 and 430, and correct only from 600px up. The route is
+   tightened by the gap and the mark, not by shrinking the words that say
+   which stop you are on. */
 @media (max-width: 30rem) {
-    .run-name {
-        font-size: 0.66rem;
-    }
+    .run-stop { padding-top: 1.75rem; }
 }
 
 /* ---------- the experiment playground ----------
@@ -7404,10 +7521,10 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .playground-value-tag {
-    font-size: 0.64rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--ink-soft, #9aa4c4);
+    color: var(--ink-soft, #c9bfb1);
 }
 
 .playground-value code {
@@ -7425,7 +7542,7 @@ a.card-body:focus-visible .preview-shot img {
 .playground-error-kind {
     display: inline-block;
     margin-right: 0.45rem;
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: rgba(255, 170, 170, 0.95);
 }
@@ -7433,20 +7550,20 @@ a.card-body:focus-visible .preview-shot img {
 .playground-trace {
     margin: 0.4rem 0 0;
     font-family: var(--mono, ui-monospace, monospace);
-    font-size: 0.74rem;
-    color: var(--ink-soft, #9aa4c4);
+    font-size: 0.8125rem;
+    color: var(--ink-soft, #c9bfb1);
 }
 
 .playground-back {
     margin: 1.2rem 0 0;
-    font-size: 0.86rem;
+    font-size: 0.9375rem;
 }
 
 /* An offer beside the main action, never competing with it. */
 .lesson-aside-link {
     margin: 0.9rem 0 0;
-    font-size: 0.86rem;
-    color: var(--ink-soft, #9aa4c4);
+    font-size: 0.9375rem;
+    color: var(--ink-soft, #c9bfb1);
 }
 
 /* The Log, beside the pilot: reachable without being a fourth area. */
@@ -7456,7 +7573,7 @@ a.card-body:focus-visible .preview-shot img {
     gap: 0.32rem;
     margin-right: 0.9rem;
     opacity: 0.72;
-    font-size: 0.82rem;
+    font-size: 0.875rem;
 }
 
 .nav-aside:hover,
@@ -7478,10 +7595,10 @@ a.card-body:focus-visible .preview-shot img {
 
 .play-focus-label {
     margin: 0;
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    opacity: 0.6;
+    opacity: 0.85;
 }
 
 .play-focus-concept {
@@ -7502,7 +7619,7 @@ a.card-body:focus-visible .preview-shot img {
 
 .play-focus-topic {
     margin: 0.2rem 0 0;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
     opacity: 0.65;
 }
 
@@ -7535,19 +7652,31 @@ a.card-body:focus-visible .preview-shot img {
 
 .play-focus-route-name {
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .play-focus-route-why {
-    font-size: 0.78rem;
-    opacity: 0.68;
+    font-size: var(--t-small);
+    opacity: 0.85;
 }
 
 .play-focus-none {
     margin: 0.9rem 0 0;
-    font-size: 0.88rem;
+    font-size: 0.9375rem;
     opacity: 0.75;
 }
+
+/* The band's one action, and the line saying what is left. */
+.play-focus > .button { margin-top: 1rem; }
+.play-focus > .play-focus-route-why { display: block; margin: 0.5rem 0 0; }
+
+/* The games, labelled as what they are for a signed-in learner: practice. */
+.practice-head { max-width: 52rem; margin: 0 auto 1rem; }
+.practice-head p { margin: 0.3rem 0 0; }
+/* The one line above the games on /play. */
+.practice-lede { max-width: 52rem; margin: 0 auto 1rem; text-align: center; }
+/* The course block now follows the games, so it needs room above it. */
+.game-grid + .play-focus { margin-top: 2.5rem; }
 
 @media (prefers-reduced-motion: reduce) {
     .play-focus-route {
@@ -7562,9 +7691,9 @@ a.card-body:focus-visible .preview-shot img {
     padding: 0.05rem 0.34rem;
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 999px;
-    font-size: 0.66rem;
+    font-size: var(--t-micro);
     font-variant-numeric: tabular-nums;
-    opacity: 0.72;
+    opacity: 0.85;
 }
 
 /* The reserved beat, named above the question. Quiet on purpose: it is a note
@@ -7574,16 +7703,14 @@ a.card-body:focus-visible .preview-shot img {
     align-items: center;
     gap: 0.45rem;
     margin: 0 0 0.5rem;
-    font-size: 0.74rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.9375rem;
     opacity: 0.78;
 }
 
 .ask-practising strong {
     text-transform: none;
     letter-spacing: 0;
-    font-size: 0.86rem;
+    font-size: 0.9375rem;
 }
 
 .ask-practising-dot {
@@ -7607,10 +7734,10 @@ a.card-body:focus-visible .preview-shot img {
 
 .round-learning-label {
     margin: 0;
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
+    font-size: var(--t-micro);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    opacity: 0.6;
+    opacity: 0.85;
 }
 
 .round-learning-concept {
@@ -7629,14 +7756,14 @@ a.card-body:focus-visible .preview-shot img {
 }
 
 .round-learning-earned li {
-    font-size: 0.92rem;
+    font-size: 1rem;
 }
 
 .round-learning-elsewhere,
 .round-learning-none,
 .round-learning-standing {
     opacity: 0.68;
-    font-size: 0.85rem;
+    font-size: 0.9375rem;
 }
 
 .round-learning-standing {
@@ -7657,7 +7784,7 @@ a.card-body:focus-visible .preview-shot img {
 
 .encounter-stuck-note {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 1rem;
     opacity: 0.78;
 }
 
@@ -7665,9 +7792,9 @@ a.card-body:focus-visible .preview-shot img {
    band so the question does not jump when the clock appears at beat three. */
 .untimed-note {
     margin: 0 0 0.6rem;
-    font-size: 0.8rem;
+    font-size: var(--t-small);
     letter-spacing: 0.04em;
-    opacity: 0.6;
+    opacity: 0.85;
 }
 
 /* The rule behind the order, under the two sequences on the Flush reveal.
@@ -7675,8 +7802,481 @@ a.card-body:focus-visible .preview-shot img {
 .reveal-why {
     max-width: 44rem;
     margin: 0.9rem auto 0;
-    font-size: 0.92rem;
+    font-size: 1rem;
     line-height: 1.5;
     opacity: 0.85;
     text-align: left;
+}
+
+/* ── the bridge between a lesson and the game that practises it ──────────
+   Shares the round-learning panel's material -- same hairline, same lifted
+   surface -- because it is the same conversation at the other end of the
+   round: that one says what you practised, this says what you are about to.
+   Deliberately quiet: it sits above the entrance, and anything louder would
+   compete with the button that starts the game. */
+.learning-bridge {
+    max-width: 30rem;
+    margin: 0 auto 1rem;
+}
+
+.learning-bridge-concept {
+    margin: 0;
+    font-size: 1.0625rem;
+    line-height: 1.4;
+}
+
+.learning-bridge-goal {
+    margin: 0.2rem 0 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+/* The single next action, under the rungs it was derived from. The reason sits
+   beside the button rather than inside it, so the button stays a verb. */
+.round-learning-next {
+    margin: 1rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.8rem;
+}
+
+.round-learning-because {
+    opacity: 0.68;
+    font-size: 0.9375rem;
+}
+
+/* "Level unlocked", on the arrival screen where the unlock actually happened.
+   A region on the page rather than a toast: a message that fades is a message
+   a first-time player misses, and role="status" means it is announced too. The
+   mint is the same one the map uses for a newly open world, so the two read as
+   the same event seen twice. */
+.complete-unlocked {
+    margin: 1.1rem auto 0;
+    padding: 0.7rem 1.1rem;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    border: 1px solid var(--mint);
+    border-radius: 12px;
+    background: rgba(94, 234, 212, 0.07);
+    text-align: center;
+}
+
+.complete-unlocked-label {
+    font-family: var(--ui);
+    /* "Module unlocked" is the payoff line of the whole progression and it was
+       10.6px. */
+    font-size: var(--t-small);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--mint);
+}
+
+.complete-unlocked-world {
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+/* The far commoner case: nothing opened, and here is what is left. */
+.complete-remaining {
+    margin: 1rem auto 0;
+    max-width: 24rem;
+    font-size: 0.9375rem;
+    opacity: 0.7;
+}
+
+/* ---------- reading code ----------
+
+   ONE SURFACE FOR CODE, WHEREVER IT IS READ. Every block a learner reads to
+   answer something -- a lesson step, a Code Blitz question, a Flush board, a
+   learn beat -- sits on the same warm light paper with dark ink.
+
+   What it replaces, measured: in the lesson the code was a near-black indigo
+   slab (#0a0e33) with a heavy blue shadow, set into the cream card; in Code
+   Blitz the code block had exactly the background and border of the answer
+   buttons below it (rgb(31,38,104) / rgb(74,84,173)), so the program read as
+   a fifth option. Code is now the one light, calm surface on a game screen
+   and a quiet inset on the lesson's cream -- distinct from the controls in
+   both places, with no glow and no lift.
+
+   The four token colours each clear 4.5:1 on --code-paper. Colour is an aid,
+   never the only signal: the text is unchanged.
+
+   Declared here, in the canonical sheet, with `pre.` selectors so they hold
+   over world.css's single-class rules regardless of import order. */
+:root {
+    --code-paper: #f4efe6;
+    --code-edge: #dcd3c3;
+    --code-ink: #22201c;
+    --code-keyword: #7a3e9d;
+    --code-string: #2b6b44;
+    --code-number: #9a4d00;
+    --code-comment: #6a645b;
+}
+
+pre.lesson-code,
+pre.prompt,
+pre.learn-code,
+pre.bh-code.readonly {
+    background: var(--code-paper);
+    color: var(--code-ink);
+    border: 1px solid var(--code-edge);
+    box-shadow: none;
+}
+
+pre.lesson-code {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    padding: 1rem 1.15rem;
+}
+
+pre.prompt {
+    line-height: 1.7;
+}
+
+/* Inline-code styling must not paint a chip inside a block. */
+pre.lesson-code code,
+pre.prompt code,
+pre.learn-code code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+}
+
+.tok-keyword { color: var(--code-keyword); font-weight: 600; }
+.tok-string { color: var(--code-string); }
+.tok-number { color: var(--code-number); }
+.tok-comment { color: var(--code-comment); font-style: italic; }
+
+/* The lesson card is light, but its step labels used the shell's light ink:
+   the current step ("Spot it") measured rgb(233,236,248) on rgb(250,247,242),
+   about 1.1:1 -- unreadable. Dark ink on the card, the same as its text. */
+.lesson .run-stop.is-here .run-name {
+    color: var(--code-ink);
+}
+
+.lesson .run-stop.is-done .run-name {
+    color: var(--code-string);
+}
+
+/* Code shows exactly what a learner would type. JetBrains Mono's contextual
+   ligatures drew `=>` as a single arrow (⇒) and `===` as one long bar --
+   characters a beginner cannot find on a keyboard and will not see in an
+   editor. */
+code,
+pre,
+.bh-code {
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+}
+
+/* ---------- a game's how-to, before the first round ---------- */
+
+.game-intro-howto {
+    width: min(34rem, 100%);
+    margin: 0.25rem auto 1.5rem;
+    text-align: left;
+}
+
+.game-howto {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+}
+
+.game-howto dt {
+    margin-top: 0.75rem;
+    font-size: var(--t-micro, 0.75rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+
+.game-howto dd {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.game-howto pre.prompt {
+    margin: 0.35rem 0 0.6rem;
+}
+
+/* ---------- hints on a diagnosis, inside a concept ---------- */
+
+.encounter-hints {
+    display: grid;
+    gap: 0.6rem;
+    justify-items: start;
+    margin: 0.25rem 0 1rem;
+}
+
+.encounter-hint-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    line-height: 1.55;
+}
+
+/* ---------- a section's progress on the journey map ---------- */
+
+.journey-progress {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: center;
+    margin-top: 0.35rem;
+}
+
+.journey-progress-bar {
+    display: block;
+    width: 9rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-2) 22%, transparent);
+    overflow: hidden;
+}
+
+.journey-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+}
+
+/* ---------- the course as a path (journey: Progress view) ----------
+
+   A list to scan, beside the map to explore. One column, topics in course
+   order joined by a single rule, the state of each said in a word next to an
+   icon -- never by colour alone. The topic you are in expands to its steps
+   (ConceptSteps, the same list the world page shows); every other topic is one
+   line saying where it stands or what opens it. */
+
+.journey-views {
+    display: inline-flex;
+    margin-top: 1.25rem;
+    border: 1px solid var(--hairline, color-mix(in srgb, var(--text-2) 30%, transparent));
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.journey-view {
+    min-height: 44px;
+    padding: 0.4rem 1.1rem;
+    border: 0;
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    cursor: pointer;
+}
+
+.journey-view + .journey-view {
+    border-left: 1px solid var(--hairline, color-mix(in srgb, var(--text-2) 30%, transparent));
+}
+
+.journey-view[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.journey-view:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.progress-path {
+    width: min(40rem, 100%);
+    margin: 1.5rem auto 3rem;
+    display: grid;
+    gap: 1.5rem;
+}
+
+.progress-next {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: start;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.progress-next-label {
+    margin: 0;
+    font-size: var(--t-micro, 0.75rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+
+.progress-next-name {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.progress-next-detail {
+    margin: 0;
+    color: var(--text-2);
+    line-height: 1.5;
+}
+
+.progress-next .button {
+    margin-top: 0.6rem;
+}
+
+.progress-topics {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    /* The rule that joins the topics into one route. */
+    border-left: 2px solid color-mix(in srgb, var(--text-2) 25%, transparent);
+    margin-left: 0.85rem;
+}
+
+.progress-topic {
+    position: relative;
+    padding: 0 0 1.35rem 1.6rem;
+}
+
+.progress-topic-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 0.75rem;
+}
+
+.progress-topic-mark {
+    position: absolute;
+    left: -0.95rem;
+    top: 0.1rem;
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: var(--bg-deep, #0e1240);
+    border: 2px solid color-mix(in srgb, var(--text-2) 35%, transparent);
+    color: var(--text-2);
+}
+
+.progress-topic.is-complete .progress-topic-mark { border-color: var(--mint); color: var(--mint); }
+.progress-topic.is-current .progress-topic-mark { border-color: var(--accent); color: var(--accent); }
+
+.progress-topic-name {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text);
+}
+
+.progress-topic.is-locked .progress-topic-name,
+.progress-topic.is-available .progress-topic-name {
+    color: var(--text-2);
+}
+
+.progress-topic-state {
+    font-size: var(--t-micro, 0.75rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+
+.progress-topic.is-current .progress-topic-state { color: var(--accent); }
+
+.progress-topic-count {
+    margin: 0.3rem 0 0;
+    color: var(--text-2);
+    line-height: 1.5;
+}
+
+/* The expanded topic's steps sit inside the path, full width of the column. */
+.progress-topic .steps {
+    max-width: none;
+    margin: 0.85rem 0 0;
+}
+
+/* ---------- the journey map's open world ----------
+
+   Measured in the browser QA, each fixed here:
+
+   - The open world's steps (577px tall) overran the 232px leg and covered the
+     next world's name and planet. The callout is now held to one leg (an
+     inline max-height from the same leg the stations are placed with) and
+     scrolls, with the current step scrolled into view.
+   - Later worlds painted their planets over it: the open world now stacks
+     above the others.
+   - The "2/4 stops" counter fell into the 1.1rem icon column (13px wide,
+     67px tall). Rows get a third column for it. */
+.journey-station.is-here { z-index: 6; }
+
+.journey-stops {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Scoped under the list so it outranks world.css's own .journey-stop rule,
+   which loads after this sheet. */
+.journey-stops .journey-stop {
+    grid-template-columns: 1.1rem 1fr auto;
+}
+
+.journey-stops .journey-stop-rungs {
+    white-space: nowrap;
+    align-self: start;
+}
+
+/* Narrow screens: there is no room beside a world, and under it is the
+   caption and then the next world. Rather than lay the steps over either,
+   the callout steps aside; the same steps are one tap away on the world's own
+   page ("Go down") and in the Progress view, both full width. */
+@media (max-width: 52rem) {
+    .journey-stops.opens-left,
+    .journey-stops.opens-right {
+        display: none;
+    }
+}
+
+/* ---- the lesson's answer choices, on paper ----
+   Browser QA: answer buttons were barely visible. .lesson redeclares the text
+   tokens for its #FAF7F2 sheet, but the choices kept the dark sky's fill and
+   hairline (#ffffff0d on #ffffff26), which measure 1.07:1 against the paper:
+   a choice the pointer was not over read as a line of plain text. A warm
+   border at 3.66:1 (over the 3:1 a control's edge needs) and a white fill
+   mark each one as something to press. A marked choice is left alone: the
+   right/wrong colours in world.css are the feedback, and must not be
+   repainted by this. */
+.lesson .lesson-choice:not(.is-answer, .is-right, .is-wrong) {
+    border-color: #8C7F6B;
+    background: #FFFFFF;
+}
+
+.lesson .lesson-choice:hover:not(:disabled) {
+    border-color: #23201C;
+    background: #FFFFFF;
+}
+
+/* ---------- results: the secondary detail, behind one disclosure ---------- */
+.results-details {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+}
+
+.results-details > summary {
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-2, var(--text));
+}
+
+.results-details > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
 }

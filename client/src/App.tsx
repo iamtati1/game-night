@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { SoundToggle } from "./components/SoundToggle.js";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { JoltLogo } from "./components/JoltLogo.js";
 import { Cosmos } from "./world/Cosmos.js";
 import { Icon } from "./world/Icon.js";
 import { useAuth } from "./auth/AuthContext.js";
+import { navAreaFor, type NavArea } from "./navArea.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { HomePage } from "./pages/HomePage.js";
 import { JourneyPage } from "./pages/JourneyPage.js";
@@ -28,7 +30,9 @@ import { RegisterPage } from "./pages/RegisterPage.js";
 import { ResultsPage } from "./pages/ResultsPage.js";
 
 function Header() {
-    const { user, loading, logout } = useAuth();
+    const { user, loading, unavailable, logout } = useAuth();
+    const area = navAreaFor(useLocation().pathname);
+    const current = (a: NavArea) => (area === a ? ("page" as const) : undefined);
     const [loggingOut, setLoggingOut] = useState(false);
     const [failed, setFailed] = useState(false);
 
@@ -70,9 +74,11 @@ function Header() {
                 It also left no way back in, on any page.
 
                 Held back until `loading` resolves so the first paint does not
-                flash "Log in" at a player who is already signed in.
+                flash "Log in" at a player who is already signed in. Held back
+                too while the server is unreachable: that says nothing about
+                whether they are signed in, so "Log in" would be a guess.
             */}
-            {!loading && (
+            {!loading && !unavailable && (
                 <nav>
                     {user ? (
                         <>
@@ -90,32 +96,39 @@ function Header() {
                                 A learner reading five equal words has to work
                                 out what five things are before choosing one.
 
-                                What is left is the three things a learner
-                                actually does:
+                                What is left is three places:
 
-                                  Learn        the curriculum and where you are in it
-                                  Play         the world and the games
+                                  Home         where you are, and the way to the
+                                               course, the games and the journey
+                                  Games        the five games
                                   Experiment   free JavaScript, nothing marked
 
-                                Learn points at Home rather than at the Map,
-                                because Home answers "what now" with one lit
-                                control and the Map is the whole route -- the
-                                overview is a click deeper, where it belongs
-                                for a beginner.
+                                It was labelled "Learn", which a playthrough found
+                                hid the one thing a learner looks for: a home base
+                                to come back to and choose from. The journey is a
+                                click from Home and from every lesson.
 
                                 The Log did not disappear; it moved beside the
                                 pilot below, with the account. It is a real
                                 thing to want and it is not a fourth area.
                             */}
-                            <Link to="/" aria-label="Learn">
-                                <Icon name="map" />
-                                <span className="nav-label">Learn</span>
+                            {/* "Games", not "Play": the five games are what is
+                                there, and a beginner looking for them should
+                                read the word they are looking for.
+                                aria-current marks the area you are in, for
+                                screen readers and for the visible mark. */}
+                            {/* "Home", not "Learn": the place to come back to,
+                                see where you are, and choose -- the course, the
+                                games or the journey. */}
+                            <Link to="/" aria-label="Home" aria-current={current("home")}>
+                                <Icon name="home" />
+                                <span className="nav-label">Home</span>
                             </Link>
-                            <Link to="/play" aria-label="Play">
+                            <Link to="/play" aria-label="Games" aria-current={current("games")}>
                                 <Icon name="play" />
-                                <span className="nav-label">Play</span>
+                                <span className="nav-label">Games</span>
                             </Link>
-                            <Link to="/experiment" aria-label="Experiment">
+                            <Link to="/experiment" aria-label="Experiment" aria-current={current("experiment")}>
                                 <Icon name="spark" />
                                 <span className="nav-label">Experiment</span>
                             </Link>
@@ -125,7 +138,7 @@ function Header() {
                                 navigate to. The Log sits here too -- secondary
                                 by placement rather than by being hidden. */}
                             <span className="nav-pilot">
-                                <Link className="nav-aside" to="/history" aria-label="Log">
+                                <Link className="nav-aside" to="/history" aria-label="Log" aria-current={current("log")}>
                                     <Icon name="log" size={16} />
                                     <span className="nav-label">Log</span>
                                 </Link>
@@ -134,9 +147,10 @@ function Header() {
                                 </span>
                                 <span className="nav-name">{user.username}</span>
                             </span>
+                            <SoundToggle />
                             {failed && (
                                 <span className="logout-error" role="alert">
-                                    Could not log out — still signed in.
+                                    Could not log out: still signed in.
                                 </span>
                             )}
                             <button
@@ -149,6 +163,7 @@ function Header() {
                         </>
                     ) : (
                         <>
+                            <SoundToggle />
                             <Link to="/login">Log in</Link>
                             <Link className="button primary small" to="/register">
                                 Create account

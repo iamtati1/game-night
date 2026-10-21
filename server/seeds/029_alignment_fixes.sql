@@ -84,6 +84,38 @@ BEGIN
 
     IF v_question IS NULL THEN RETURN; END IF;
 
+    /*
+     * ALREADY REWRITTEN. Nothing below changes a row that is already in the
+     * shape this seed wants, so the work is skipped rather than redone -- and
+     * redoing it is not merely wasteful, it is refused.
+     *
+     * session_questions.selected_option_fk is ON DELETE RESTRICT, so the DELETE
+     * below is rejected the moment any learner has answered this question. On a
+     * database with play history that aborted 029 and every seed after it:
+     *
+     *   seed FAILED: 029_alignment_fixes.sql
+     *   update or delete on table "question_options" violates RESTRICT setting
+     *   of foreign key constraint "session_questions_selected_option_fk"
+     *
+     * A fresh database has no answers and never saw it, which is why the test
+     * fixture did not. The README promises `npm run seed` is safe to re-run;
+     * this is what makes that true once somebody has actually played.
+     *
+     * Matched on the prompt and the correct option together: the prompt alone
+     * would skip a question whose code was right and whose options were not.
+     */
+    IF EXISTS (
+        SELECT 1 FROM questions q
+        WHERE q.id = v_question
+          AND q.prompt = p_prompt
+          AND EXISTS (
+              SELECT 1 FROM question_options o
+              WHERE o.question_id = q.id AND o.is_correct AND o.option_text = p_correct
+          )
+    ) THEN
+        RETURN;
+    END IF;
+
     UPDATE questions SET prompt = p_prompt, explanation = p_why WHERE id = v_question;
     DELETE FROM question_options WHERE question_id = v_question;
 
@@ -165,6 +197,18 @@ crew = 6%', 'let-vs-const',
 -- booleans lost its three comparison questions, so it gets one that is actually
 -- about boolean VALUES -- which is what the concept claims at this point in the
 -- path, before comparison has been met.
+--
+-- Adopted first, like every seed function: a database seeded before names
+-- existed holds this question unnamed, and the name guard below cannot see it.
+UPDATE questions SET external_ref = 'booleans-predict-true-01'
+WHERE id = (SELECT id FROM questions
+            WHERE source = 'jolt-booleans-predict' AND external_ref IS NULL
+              AND prompt = E'What does this log?\n\nconsole.log(true);'
+            ORDER BY id LIMIT 1)
+  AND NOT EXISTS (SELECT 1 FROM questions
+                  WHERE source = 'jolt-booleans-predict'
+                    AND external_ref = 'booleans-predict-true-01');
+
 INSERT INTO challenges (concept_id, demand_id, role, difficulty)
 SELECT c.id, d.id, 'practise', 1 FROM concepts c, demands d
 WHERE c.slug = 'booleans' AND d.slug = 'predict'
@@ -173,13 +217,21 @@ WHERE c.slug = 'booleans' AND d.slug = 'predict'
       WHERE ch.concept_id = c.id AND ch.demand_id = d.id
         AND q.prompt LIKE '%console.log(true);%');
 
-INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
+-- Named, like every other seeded question, so the row is identified by what it
+-- IS rather than by how it currently reads. The NOT EXISTS below guards on the
+-- name; questions_external_ref_idx is what enforces it.
+INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation,
+                       external_ref)
 SELECT E'What does this log?\n\nconsole.log(true);', 1, 'values', 'predict-output', ch.id,
        'jolt-booleans-predict',
-       'true is a value in its own right, like a number or a piece of text. It is displayed without quotes because it is not text.'
+       'true is a value in its own right, like a number or a piece of text. It is displayed without quotes because it is not text.',
+       'booleans-predict-true-01'
 FROM challenges ch JOIN concepts c ON c.id = ch.concept_id JOIN demands d ON d.id = ch.demand_id
 WHERE c.slug = 'booleans' AND d.slug = 'predict' AND ch.role = 'practise'
   AND NOT EXISTS (SELECT 1 FROM questions q WHERE q.challenge_id = ch.id)
+  AND NOT EXISTS (
+      SELECT 1 FROM questions q
+      WHERE q.source = 'jolt-booleans-predict' AND q.external_ref = 'booleans-predict-true-01')
 LIMIT 1;
 
 INSERT INTO question_options (question_id, option_text, display_order, is_correct)

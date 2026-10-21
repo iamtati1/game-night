@@ -45,14 +45,38 @@ $$;
 -- value, that reassignment adds rather than replaces, that quotes survive.
 
 CREATE OR REPLACE FUNCTION seed_practice(
-    p_prompt TEXT, p_concept TEXT, p_demand TEXT, p_correct TEXT, p_wrong TEXT[]
+    p_ref TEXT, p_prompt TEXT, p_concept TEXT, p_demand TEXT, p_correct TEXT, p_wrong TEXT[]
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE
     v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    -- IDENTITY FIRST, WORDING SECOND. p_ref names this question: authored
+    -- once, never derived from its content, never edited afterwards, and
+    -- namespaced by `source` -- questions_external_ref_idx is UNIQUE on
+    -- (source, external_ref) and is what actually enforces one row per name.
+    -- This replaces `WHERE prompt = p_prompt`, which five later seeds broke by
+    -- rewriting stored prompts, so the guard stopped matching and every seed
+    -- run inserted another copy.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-variables-practice' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    -- ADOPTION for rows seeded before names existed: give the existing row the
+    -- name rather than inserting beside it. Only rows with no name yet, so this
+    -- can never take a question that already belongs to another.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-variables-practice' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     INSERT INTO challenges (concept_id, demand_id, role, difficulty)
     SELECT c.id, d.id, 'practise', curriculum_difficulty(p_concept, p_demand)
@@ -60,9 +84,9 @@ BEGIN
     WHERE c.slug = p_concept AND d.slug = p_demand
     RETURNING id INTO v_challenge;
 
-    INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source)
+    INSERT INTO questions (prompt, difficulty, topic, challenge_type, challenge_id, source, external_ref)
     VALUES (p_prompt, curriculum_difficulty(p_concept, p_demand), 'variables',
-            'predict-output', v_challenge, 'jolt-variables-practice')
+            'predict-output', v_challenge, 'jolt-variables-practice', p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -78,43 +102,53 @@ $$;
 
 -- Reading a name gives you its value.
 SELECT seed_practice(
+    'vars-001',
     E'What does this log?\n\nlet score = 10;\nconsole.log(score);',
     'reading-variables', 'predict', '10', ARRAY['score', '"10"', 'nothing']);
 
 SELECT seed_practice(
+    'vars-002',
     E'What does this log?\n\nlet name = "Tati";\nconsole.log(name);',
     'reading-variables', 'predict', 'Tati', ARRAY['name', '"Tati"', 'nothing']);
 
 SELECT seed_practice(
+    'vars-003',
     E'What does this log?\n\nlet a = 5;\nlet b = a;\nconsole.log(b);',
     'reading-variables', 'predict', '5', ARRAY['a', 'b', 'nothing']);
 
 -- Reassignment replaces; it does not accumulate.
 SELECT seed_practice(
+    'vars-004',
     E'What does this log?\n\nlet score = 10;\nscore = 20;\nconsole.log(score);',
     'reassignment', 'predict', '20', ARRAY['10', '30', '"20"']);
 
 SELECT seed_practice(
+    'vars-005',
     E'What does this log?\n\nlet fuel = 100;\nfuel = 80;\nconsole.log(fuel);',
     'reassignment', 'predict', '80', ARRAY['100', '180', '20']);
 
 SELECT seed_practice(
+    'vars-006',
     E'What does this log?\n\nlet city = "Lagos";\ncity = "Accra";\nconsole.log(city);',
     'reassignment', 'predict', 'Accra', ARRAY['Lagos', 'LagosAccra', 'city']);
 
 -- The right-hand side is worked out first, then stored.
 SELECT seed_practice(
+    'vars-007',
     E'What does this log?\n\nlet total = 5;\ntotal = total + 3;\nconsole.log(total);',
     'assignment', 'predict', '8', ARRAY['5', '3', '53']);
 
 SELECT seed_practice(
+    'vars-008',
     E'What does this log?\n\nlet count = 2;\ncount = count * 3;\nconsole.log(count);',
     'assignment', 'predict', '6', ARRAY['2', '3', '23']);
 
 -- Declaring and using in the same breath.
+-- Content as 029 rewrote it, so a re-run and a database seeded earlier agree.
 SELECT seed_practice(
-    E'What does this log?\n\nlet crew = 3;\nconsole.log("Crew: " + crew);',
-    'initialization', 'predict', 'Crew: 3', ARRAY['Crew: crew', '"Crew: 3"', 'Crew: + 3']);
+    'vars-009',
+    E'What does this log?\n\nlet crew = 3;\nconsole.log(crew);',
+    'initialization', 'predict', '3', ARRAY['crew', 'undefined', 'nothing']);
 
 -- ═══════════════════════════════════════════════ BUG HUNT · diagnose ═══
 --
@@ -288,8 +322,8 @@ SELECT seed_bug_hunt_incident(
     1,
     '[{"text": "consol.log(\"Hello\");", "line": 1, "correct": true,
        "explanation": "It is console, with an e. JavaScript has never heard of consol, so it stops before printing anything."},
-      {"text": "The sum 5 + 3 is wrong", "line": 1, "correct": false,
-       "explanation": "5 + 3 really is 8. The trouble is that JavaScript was never asked to work it out."}]'::JSONB);
+      {"text": "The quotation marks around Hello", "line": 1, "correct": false,
+       "explanation": "The quotes are right: they mark Hello as text, and console.log prints text without them. The error names consol, the word before the dot."}]'::JSONB);
 
 SELECT attach_incident('console-misspelt', 'console-output', 'diagnose');
 
@@ -355,7 +389,7 @@ SELECT attach_incident('joined-without-space', 'expressions-produce-values', 'di
 
 DROP FUNCTION attach_incident(TEXT, TEXT, TEXT);
 DROP FUNCTION seed_bug_hunt_incident(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], INTEGER, JSONB);
-DROP FUNCTION seed_practice(TEXT, TEXT, TEXT, TEXT, TEXT[]);
+DROP FUNCTION seed_practice(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[]);
 DROP FUNCTION curriculum_difficulty(TEXT, TEXT);
 
 COMMIT;

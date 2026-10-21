@@ -195,7 +195,7 @@ export const CONSOLE_OUTPUT: SceneLesson = {
         },
         {
             kind: "moment",
-            eyebrow: "01 — the idea",
+            eyebrow: "01: the idea",
             headline: "Code is a list of instructions.",
             lines: [
                 "You write an instruction. The computer follows it.",
@@ -212,7 +212,7 @@ export const CONSOLE_OUTPUT: SceneLesson = {
         },
         {
             kind: "moment",
-            eyebrow: "02 — what just happened",
+            eyebrow: "02: what just happened",
             headline: "You made something happen.",
             lines: [
                 "You gave JavaScript an instruction.",
@@ -230,7 +230,7 @@ export const CONSOLE_OUTPUT: SceneLesson = {
         },
         {
             kind: "moment",
-            eyebrow: "03 — the connection",
+            eyebrow: "03: the connection",
             headline: "Whatever goes in the brackets comes out.",
             lines: [
                 "Change what is inside, and what appears changes with it.",
@@ -254,7 +254,7 @@ export const CONSOLE_OUTPUT: SceneLesson = {
                 {
                     text: '"Jolt"',
                     feedback:
-                        "Look back at your own run — you typed a word and it appeared without quote marks around it. The quotes tell JavaScript where the word starts and stops, then they step out of the way."
+                        "Look back at your own run: you typed a word and it appeared without quote marks around it. The quotes tell JavaScript where the word starts and stops, then they step out of the way."
                 },
                 {
                     text: "console.log",
@@ -300,7 +300,7 @@ export const CONSOLE_OUTPUT: SceneLesson = {
             ],
             confirm: "Top to bottom, one line each.",
             retry: {
-                ask: "Nearly — try this one.",
+                ask: "Nearly: try this one.",
                 code: "console.log(1)\nconsole.log(2)",
                 choices: [
                     { text: "1\n2", correct: true },
@@ -322,7 +322,7 @@ export const CONSOLE_OUTPUT: SceneLesson = {
         },
         {
             kind: "moment",
-            eyebrow: "04 — you can now",
+            eyebrow: "04: you can now",
             headline: "Write a program that shows something.",
             lines: [
                 "You wrote one, changed it, and ran it yourself.",

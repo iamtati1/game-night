@@ -23,14 +23,50 @@
 BEGIN;
 
 CREATE OR REPLACE FUNCTION seed_cf(
-    p_concept TEXT, p_demand TEXT, p_prompt TEXT,
+    p_ref TEXT, p_concept TEXT, p_demand TEXT, p_prompt TEXT,
     p_correct TEXT, p_wrong TEXT[], p_why TEXT
 )
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE v_question BIGINT; v_challenge BIGINT; v_wrong TEXT; v_order INT := 1; v_type TEXT;
 BEGIN
-    SELECT id INTO v_question FROM questions WHERE prompt = p_prompt;
+    /*
+     * IDENTITY FIRST, WORDING SECOND.
+     *
+     * p_ref is this question's name: authored once, never derived from its
+     * content, and never edited afterwards. It is namespaced by `source`, and
+     * questions_external_ref_idx -- UNIQUE on (source, external_ref) -- is what
+     * actually enforces one row per name. The guard below is the fast path, not
+     * the protection.
+     *
+     * THE DEFECT THIS REPLACES. This used to read `WHERE prompt = p_prompt`.
+     * Five later seeds rewrite prompts -- 059 and 060 reorder the blocks, 029
+     * rewrites wording outright -- so the stored text stopped matching the
+     * authored text, the guard stopped matching anything, and EVERY subsequent
+     * `npm run seed` inserted another copy. 41 questions had reached three
+     * copies each. A name cannot drift that way; wording can.
+     */
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-control-flow-completion' AND external_ref = p_ref;
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    /*
+     * ADOPTION, for rows seeded before names existed. They carry the right
+     * content and no name, so the first run after this change gives them one
+     * rather than inserting beside them. Restricted to rows that have no name
+     * yet, so it can never steal a question that already belongs to another.
+     */
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = p_prompt AND source = 'jolt-control-flow-completion' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = p_ref WHERE id = v_question;
+        RETURN;
+    END IF;
 
     v_type := CASE WHEN p_demand IN ('recognise', 'recall', 'explain')
                    THEN 'match-concept' ELSE 'predict-output' END;
@@ -44,9 +80,9 @@ BEGIN
     RETURNING id INTO v_challenge;
 
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation, external_ref)
     VALUES (p_prompt, 2, 'control-flow', v_type, v_challenge,
-            'jolt-control-flow-completion', p_why)
+            'jolt-control-flow-completion', p_why, p_ref)
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct)
@@ -62,57 +98,75 @@ $$;
 
 /* ── 1 · if-else ────────────────────────────────────────────────────────── */
 
-SELECT seed_cf('if-else', 'recognise',
+SELECT seed_cf(
+    'if-else-recognise-01',
+    'if-else', 'recognise',
     E'Which part decides whether the block runs?\n\nif (crew > 3) {\n  console.log("Full");\n}',
     'crew > 3', ARRAY['if', 'console.log("Full")', 'the braces'],
     'The condition is the expression inside the brackets -- it produces true or false. `if` is the instruction to ask it, and the braces hold what runs afterwards.');
 
-SELECT seed_cf('if-else', 'predict',
+SELECT seed_cf(
+    'if-else-predict-01',
+    'if-else', 'predict',
     E'What does this log?\n\nlet fuel = 20;\nif (fuel > 50) {\n  console.log("Plenty");\n} else {\n  console.log("Low");\n}',
     'Low', ARRAY['Plenty', 'Plenty then Low', 'nothing'],
     '20 is not greater than 50, so the condition was false and the else block ran. Exactly one of the two blocks runs -- never both, and never neither once there is an else.');
 
 /* ── 2 · else-if-chains ─────────────────────────────────────────────────── */
 
-SELECT seed_cf('else-if-chains', 'predict',
+SELECT seed_cf(
+    'else-if-chains-predict-01',
+    'else-if-chains', 'predict',
     E'What does this log?\n\nlet n = 100;\nif (n > 10) {\n  console.log("big");\n} else if (n > 50) {\n  console.log("huge");\n}',
     'big', ARRAY['huge', 'big then huge', 'nothing'],
     'Both conditions are true, but a chain stops at the first match and never asks the rest. This is why the narrowest condition usually has to go first.');
 
-SELECT seed_cf('else-if-chains', 'diagnose',
-    E'This is meant to print "huge" for very large numbers, but never does.\n\nlet n = 100;\nif (n > 10) {\n  console.log("big");\n} else if (n > 50) {\n  console.log("huge");\n}\n\nWhich line is the cause?',
+SELECT seed_cf(
+    'else-if-chains-diagnose-01',
+    'else-if-chains', 'diagnose',
+    E'This is meant to print "huge" for very large numbers, but never does. Which line is the cause?\n\nlet n = 100;\nif (n > 10) {\n  console.log("big");\n} else if (n > 50) {\n  console.log("huge");\n}',
     'if (n > 10) {',
     ARRAY['else if (n > 50) {', 'console.log("huge");', 'let n = 100;'],
     'The fault is the ORDER, and it belongs to the first condition. `n > 10` catches everything `n > 50` would have caught, so the second branch is unreachable for any value. The second branch itself is written correctly.');
 
 /* ── 3 · compound-conditions ────────────────────────────────────────────── */
 
-SELECT seed_cf('compound-conditions', 'predict',
+SELECT seed_cf(
+    'compound-conditions-predict-01',
+    'compound-conditions', 'predict',
     E'What does this log?\n\nlet ready = false;\nlet fuelled = true;\nif (ready && fuelled) {\n  console.log("Go");\n} else {\n  console.log("Hold");\n}',
     'Hold', ARRAY['Go', 'true', 'nothing'],
     '`&&` needs both sides true. The left side settled it as false, so the right side was never even looked at and the else block ran.');
 
-SELECT seed_cf('compound-conditions', 'diagnose',
-    E'Launch should need BOTH checks, but it clears with only one.\n\nlet fuel = 80;\nlet crew = 1;\nif (fuel > 50 || crew > 2) {\n  console.log("Cleared");\n}\n\nWhich line is the cause?',
+SELECT seed_cf(
+    'compound-conditions-diagnose-01',
+    'compound-conditions', 'diagnose',
+    E'Launch should need BOTH checks, but it clears with only one. Which line is the cause?\n\nlet fuel = 80;\nlet crew = 1;\nif (fuel > 50 || crew > 2) {\n  console.log("Cleared");\n}',
     'if (fuel > 50 || crew > 2) {',
     ARRAY['let fuel = 80;', 'let crew = 1;', 'console.log("Cleared");'],
     'The operator is wrong, not the values. `||` clears as soon as either side is true, so a full tank alone is enough. Requiring both means `&&`.');
 
 /* ── 4 · nested-conditions ──────────────────────────────────────────────── */
 
-SELECT seed_cf('nested-conditions', 'predict',
+SELECT seed_cf(
+    'nested-conditions-predict-01',
+    'nested-conditions', 'predict',
     E'What does this log?\n\nlet docked = false;\nlet fuel = 80;\nif (docked) {\n  if (fuel > 50) {\n    console.log("Launch");\n  }\n}\nconsole.log("Done");',
     'Done', ARRAY['Launch then Done', 'Launch', 'nothing'],
     '`fuel > 50` is true, but it is never asked -- the outer condition was false, so nothing inside it is reached. The last line sits outside both blocks, so it always runs.');
 
-SELECT seed_cf('nested-conditions', 'diagnose',
-    E'The refuel warning never appears, whatever the fuel level.\n\nlet docked = false;\nlet fuel = 10;\nif (docked) {\n  if (fuel < 50) {\n    console.log("Refuel");\n  }\n}\n\nWhich line is the cause?',
+SELECT seed_cf(
+    'nested-conditions-diagnose-01',
+    'nested-conditions', 'diagnose',
+    E'The refuel warning never appears, whatever the fuel level. Which line is the cause?\n\nlet docked = false;\nlet fuel = 10;\nif (docked) {\n  if (fuel < 50) {\n    console.log("Refuel");\n  }\n}',
     'if (docked) {',
     ARRAY['if (fuel < 50) {', 'console.log("Refuel");', 'let fuel = 10;'],
     'The inner check is correct and unreachable. An outer condition that is false makes every branch inside it dead, however right those branches are -- which is the thing nesting does that a chain does not.');
 
-SELECT seed_cf('nested-conditions', 'repair',
-    E'let docked = false;\nlet fuel = 10;\nif (docked) {\n  if (fuel < 50) {\n    console.log("Refuel");\n  }\n}\n\nThe warning should appear whenever fuel is low, docked or not. Which change does that?',
+SELECT seed_cf(
+    'nested-conditions-repair-01',
+    'nested-conditions', 'repair',
+    E'The warning should appear whenever fuel is low, docked or not. Which change does that?\n\nlet docked = false;\nlet fuel = 10;\nif (docked) {\n  if (fuel < 50) {\n    console.log("Refuel");\n  }\n}',
     'Take the fuel check out of the docked block, so it stands on its own',
     ARRAY['Change the inner condition to fuel > 50',
           'Add an else to the inner if',
@@ -121,17 +175,21 @@ SELECT seed_cf('nested-conditions', 'repair',
 
 /* ── 5 · ternary ────────────────────────────────────────────────────────── */
 
-SELECT seed_cf('ternary', 'recognise',
+SELECT seed_cf(
+    'ternary-recognise-01',
+    'ternary', 'recognise',
     E'Which of these produces a value you could store in a variable?',
     'n > 0 ? "up" : "down"',
     ARRAY['if (n > 0) { "up" }', 'if (n > 0) { return "up" }', 'console.log(n > 0)'],
     'A ternary is an expression: it collapses to one value, so it can sit on the right of an `=`. An `if` is a statement -- it runs code and hands nothing back, so there is nothing to store.');
 
-SELECT seed_cf('ternary', 'predict',
+SELECT seed_cf(
+    'ternary-predict-01',
+    'ternary', 'predict',
     E'What does this log?\n\nlet crew = 1;\nlet label = crew > 2 ? "Full" : "Short";\nconsole.log(label);',
     'Short', ARRAY['Full', 'true', 'false'],
     '1 is not greater than 2, so the value after the colon was chosen. The condition produces true or false, but the ternary hands back one of the two VALUES rather than the answer to the condition.');
 
-DROP FUNCTION seed_cf(TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
+DROP FUNCTION seed_cf(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT[], TEXT);
 
 COMMIT;

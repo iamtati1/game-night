@@ -4,7 +4,9 @@ import { ApiError } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.js";
 import { JoltLogo } from "../components/JoltLogo.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 export function RegisterPage() {
+    usePageTitle("Create account");
     const { register } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState("");

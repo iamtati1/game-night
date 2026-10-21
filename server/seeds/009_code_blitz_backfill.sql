@@ -85,8 +85,10 @@ SELECT retire_question(E'What does this log?\n\nconsole.log(0.1 + 0.2 === 0.3);'
 -- ---------------------------------------------------------------------------
 -- TIER 1 -- fundamentals
 
-SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof null);', 1, 'variables',
-    'A bug preserved from 1995 for backwards compatibility. Use `value === null` to test for null -- typeof cannot.');
+-- Authored as 032 corrected it. This call re-applies on every seed run and 032's
+-- correction does not, so the old text here used to undo it on the second run.
+SELECT backfill_question(E'What does this log?\n\nconsole.log(typeof null);', 1, 'values',
+    'JavaScript''s most famous mistake, kept on purpose. null is not an object, but typeof has answered "object" for it since 1995, and correcting it now would break too much existing code. undefined reports its own name; null does not.');
 
 SELECT backfill_question(E'What does this log?\n\nconst nums = [2, 4, 6];\nconsole.log(nums.map(n => n * 2));', 1, 'array-methods',
     'map() builds a new array by running the function on each item. The original is left alone.');

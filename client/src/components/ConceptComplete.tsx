@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { play } from "../games/sound.js";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
 import { Planet } from "../world/Planet.js";
 import { Ship } from "../world/Ship.js";
 import type { JourneyPathResponse } from "../api/types.js";
+import { ACTION } from "../vocabulary.js";
+import { currentWorldStanding, worldJustUnlocked } from "../games/progression.js";
 
 /**
  * The moment after a concept is demonstrated.
@@ -25,6 +28,12 @@ import type { JourneyPathResponse } from "../api/types.js";
  */
 export function ConceptComplete({ concept }: { concept: string }) {
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
+
+    // Something opened. Keyed, so StrictMode's double effect or a re-render
+    // cannot play it twice; the page says the same thing in words.
+    useEffect(() => {
+        play("milestone", `concept:${concept}`);
+    }, [concept]);
 
     useEffect(() => {
         let active = true;
@@ -55,15 +64,55 @@ export function ConceptComplete({ concept }: { concept: string }) {
     const challenge = path?.topics.find((t) => t.challenge?.state === "current") ?? null;
     const next = path?.current ?? null;
 
-    const action = challenge
+    /*
+     * THE UNLOCK, DETECTED WHERE IT ACTUALLY HAPPENS.
+     *
+     * This screen is the arrival for BOTH writes that can complete a topic --
+     * demonstrating its last concept, and passing its checkpoint -- and it
+     * already re-reads /api/curriculum/path after the write, so the state here
+     * is the server's, taken after the fact. It simply never looked to see
+     * whether a world had opened, which is why the unlock was invisible: the
+     * learner was told "Next: <some concept>" and left to notice for
+     * themselves that it lived somewhere new.
+     *
+     * See games/progression.ts for why this cannot fire for a world that was
+     * already open, and why a refresh cannot replay it.
+     */
+    const unlocked = path ? worldJustUnlocked(path.topics, concept) : null;
+    const standing = path ? currentWorldStanding(path.topics) : null;
+
+    const action = unlocked
         ? {
-              label: "Take the checkpoint",
-              to: `/challenge/${challenge.slug}`,
-              name: `${challenge.name} checkpoint`
+              label: `Continue to ${unlocked.name}`,
+              to: unlocked.concepts[0] ? `/concept/${unlocked.concepts[0].slug}` : "/journey",
+              name: null
           }
-        : next
-          ? { label: "Continue", to: `/concept/${next.slug}`, name: next.name }
-          : { label: "Back to the map", to: "/journey", name: null };
+        : challenge
+          ? {
+                label: ACTION.takeCheckpoint,
+                to: `/challenge/${challenge.slug}`,
+                name: `${challenge.name} checkpoint`
+            }
+          : next
+            ? { label: ACTION.continueLearning, to: `/concept/${next.slug}`, name: next.name }
+            : { label: ACTION.seeJourney, to: "/journey", name: null };
+
+    /*
+     * What is left here, when nothing opened. The learner has just finished
+     * something and the honest answer to "am I nearly there?" is a count, not
+     * silence. Suppressed on the unlock branch, where the answer is the banner.
+     */
+    const remainingHere =
+        !unlocked && standing && standing.world.slug === world?.slug
+            ? [
+                  standing.remaining.concepts > 0
+                      ? `${standing.remaining.concepts} ${
+                            standing.remaining.concepts === 1 ? "concept" : "concepts"
+                        }`
+                      : null,
+                  standing.remaining.checkpoint ? "the checkpoint" : null
+              ].filter(Boolean)
+            : [];
 
     return (
         <section className="complete">
@@ -85,6 +134,28 @@ export function ConceptComplete({ concept }: { concept: string }) {
                 <span className="complete-plus">+25</span> points
             </p>
 
+            {/* THE UNLOCK, SAID OUT LOUD.
+                role="status" so it is announced rather than only drawn, and
+                it is a persistent region on the page rather than a toast --
+                a celebration that has faded by the time a first-time player
+                looks up has told them nothing. */}
+            {unlocked && (
+                <p className="complete-unlocked" role="status">
+                    <span className="complete-unlocked-label">Level unlocked</span>
+                    <span className="complete-unlocked-world">{unlocked.name}</span>
+                </p>
+            )}
+
+            {/* The other branch, and the one that runs far more often: no
+                claim of an unlock, just what is actually left in this world,
+                counted from the same state the map counts. */}
+            {!unlocked && remainingHere.length > 0 && world && (
+                <p className="complete-remaining">
+                    {standing?.done} of {standing?.total} concepts done in {world.name}, with{" "}
+                    {remainingHere.join(" and ")} to go
+                </p>
+            )}
+
             {action.name && (
                 <>
                     <p className="complete-label complete-next-label">Next</p>
@@ -96,8 +167,12 @@ export function ConceptComplete({ concept }: { concept: string }) {
                 {action.label}
             </Link>
 
+            {/* The way back to the bigger picture, and the way into practice:
+                quiet, beside the one primary action. The journey link is left
+                out when the primary action already goes there. */}
             <p className="complete-aside">
-                <Link to="/journey">See the whole map</Link>
+                {action.to !== "/journey" && <Link to="/journey">{ACTION.seeJourney}</Link>}
+                <Link to="/play">{ACTION.playGame}</Link>
             </p>
         </section>
     );

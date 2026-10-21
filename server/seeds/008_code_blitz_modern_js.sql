@@ -264,11 +264,13 @@ SELECT seed_js_question(
       {"text": "{ city: \"London\" }", "correct": false}
     ]$j$::JSONB);
 
+-- Explanation as 029 realigned it: this call re-applies on every seed run and
+-- 029's correction does not, so the old text here used to undo it.
 SELECT seed_js_question(
     E'What does this log?\n\nconsole.log(typeof "5", typeof 5);',
     1,
     'variables',
-    'typeof returns a string naming the type. Quotes make it a string no matter what is inside them.',
+    'typeof reports a value''s type as a string. The quotes around 5 make it text, so the two report different types even though they look alike.',
     $j$[
       {"text": "\"string\" \"number\"", "correct": true},
       {"text": "\"number\" \"number\"", "correct": false},

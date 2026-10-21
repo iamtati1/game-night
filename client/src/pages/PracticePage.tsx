@@ -5,6 +5,7 @@ import { MissionScene } from "../components/MissionScene.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
 import { practiceFor } from "../games/practice.js";
 
+import { ACTION } from "../vocabulary.js";
 /**
  * Write the thing you were just shown.
  *
@@ -60,7 +61,7 @@ export function PracticePage() {
             <section className="panel narrow">
                 <p className="muted">There is nothing to practise there yet.</p>
                 <Link className="button primary" to="/journey">
-                    Back to the map
+                    {ACTION.seeJourney}
                 </Link>
             </section>
         );

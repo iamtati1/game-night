@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { toFieldErrors } from "../auth/schemas.js";
+import { isActiveSessionConflict, resolveSessionRace } from "../game/conflicts.js";
 import { MEMORY } from "../games/constants.js";
 import { findActiveSession, findResumableSession, resumePausedSession } from "../sessions/queries.js";
 import { wantsFreshSession } from "../sessions/schemas.js";
@@ -173,7 +174,48 @@ memoryRouter.post("/sessions", requireAuth, async (req: Request, res: Response) 
         }
     }
 
-    const session = await db.createSessionWithRounds(userId);
+    let session: db.MemorySessionRow;
+
+    try {
+        session = await db.createSessionWithRounds(userId);
+    } catch (err) {
+        // The check at the top of this route and this INSERT are not atomic. Two
+        // starts in flight at once -- a double-fired countdown, a double click,
+        // a second tab -- and the second INSERT is rejected by the one-active-
+        // session index. That reached the error handler as a 500, and the page
+        // showed "Internal Server Error" over a game the first request had
+        // started fine. Same three outcomes as Flush and Code Blitz.
+        if (!isActiveSessionConflict(err)) {
+            throw err;
+        }
+
+        const winner = await findActiveSession(userId);
+
+        switch (resolveSessionRace(winner, MEMORY)) {
+            case "conflict":
+                res.status(409).json(conflictBody(winner!));
+                return;
+
+            case "retry":
+                res.status(409).json({
+                    error: "Could not start the game",
+                    details: [
+                        {
+                            field: "game",
+                            message:
+                                "Another game was still finishing when this one tried to start. Try again."
+                        }
+                    ]
+                });
+                return;
+
+            case "resume":
+                // Our own Memory game won: serve it, exactly as a resume would.
+                await respondResumed(res, winner!.id);
+                return;
+        }
+    }
+
     const round = await db.findNextPendingRound(session.id);
 
     res.status(201).json({

@@ -19,8 +19,24 @@ DECLARE v_question BIGINT; v_challenge BIGINT; v_prompt TEXT;
 BEGIN
     v_prompt := 'Why does `const total = 10; total = total + 1;` fail, when the same lines with `let` do not?';
 
-    SELECT id INTO v_question FROM questions WHERE prompt = v_prompt;
+    -- Named, so a later rewrite of the wording cannot make this insert again.
+    -- See the identity note in 033_operators_completion.sql.
+    SELECT id INTO v_question
+    FROM questions
+    WHERE source = 'jolt-variables-completion' AND external_ref = 'let-vs-const-explain-01';
+
     IF v_question IS NOT NULL THEN RETURN; END IF;
+
+    SELECT id INTO v_question
+    FROM questions
+    WHERE prompt = v_prompt AND source = 'jolt-variables-completion' AND external_ref IS NULL
+    ORDER BY id  -- the oldest copy: the one learners have answered
+    LIMIT 1;
+
+    IF v_question IS NOT NULL THEN
+        UPDATE questions SET external_ref = 'let-vs-const-explain-01' WHERE id = v_question;
+        RETURN;
+    END IF;
 
     INSERT INTO challenges (concept_id, demand_id, role, difficulty)
     SELECT c.id, d.id, 'practise', 2
@@ -29,9 +45,11 @@ BEGIN
     RETURNING id INTO v_challenge;
 
     INSERT INTO questions
-        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation)
+        (prompt, difficulty, topic, challenge_type, challenge_id, source, explanation,
+         external_ref)
     VALUES (v_prompt, 2, 'variables', 'match-concept', v_challenge, 'jolt-variables-completion',
-            '`const` guards the NAME, not the value. `total + 1` works out a new number, and the line then tries to point `total` at it — which is the one thing const refuses. `let` allows the name to be pointed somewhere new, so the same two lines are fine.')
+            '`const` guards the NAME, not the value. `total + 1` works out a new number, and the line then tries to point `total` at it — which is the one thing const refuses. `let` allows the name to be pointed somewhere new, so the same two lines are fine.',
+            'let-vs-const-explain-01')
     RETURNING id INTO v_question;
 
     INSERT INTO question_options (question_id, option_text, display_order, is_correct) VALUES

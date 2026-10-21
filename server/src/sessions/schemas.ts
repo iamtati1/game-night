@@ -60,7 +60,14 @@ export const startSessionSchema = z.object({
      * reinforcement slot. A hint for one deal, never persisted -- the questions
      * it produces are stored, the request that shaped them is not.
      */
-    focusTopic: z.enum(TOPICS).optional()
+    focusTopic: z.enum(TOPICS).optional(),
+    /**
+     * Play this run without a clock: no deadline, nothing times out, and no
+     * speed bonus. Correctness, XP, rounds and progression are unchanged.
+     * Honoured by the curriculum games (Code Blitz, Flush, Bug Hunt); Reaction
+     * is a speed game and ignores it.
+     */
+    relaxed: z.boolean().optional()
 });
 
 /** Absent, empty and malformed bodies all mean "resume if you can". */
@@ -71,4 +78,9 @@ export function wantsFreshSession(body: unknown): boolean {
 /** The requested focus topic, or null when absent or not a known unit. */
 export function requestedFocusTopic(body: unknown): string | null {
     return startSessionSchema.safeParse(body ?? {}).data?.focusTopic ?? null;
+}
+
+/** Whether the start request asked for a relaxed (untimed) run. */
+export function wantsRelaxedRun(body: unknown): boolean {
+    return startSessionSchema.safeParse(body ?? {}).data?.relaxed === true;
 }

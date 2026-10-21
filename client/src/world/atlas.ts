@@ -105,7 +105,16 @@ export function worldFor(slug: string): World {
  */
 export const LEG = 232;
 
-export function stationAt(index: number): { x: number; y: number } {
+/**
+ * The leg on a narrow screen. A world's caption wraps to several lines there
+ * and sits under the world rather than beside it, so at 232px the current
+ * world's caption ran into the next world's planet (measured at 375px: caption
+ * to 254px below centre, next planet from 180px). Every geometry function takes
+ * the leg so the road, the stations and the map height stay in step.
+ */
+export const NARROW_LEG = 330;
+
+export function stationAt(index: number, leg: number = LEG): { x: number; y: number } {
     // Sides alternate EXPLICITLY rather than falling out of a sine. A sine with
     // a fixed step lands two consecutive worlds on nearly the same x wherever it
     // crosses a peak, and two worlds at the same x one leg apart collide -- the
@@ -123,7 +132,7 @@ export function stationAt(index: number): { x: number; y: number } {
 
     return {
         x: 50 + side * amplitude * ramp,
-        y: 96 + index * LEG
+        y: 96 + index * leg
     };
 }
 
@@ -135,15 +144,15 @@ export function stationAt(index: number): { x: number; y: number } {
  * and the joins are invisible. Quadratics were tried first and kink visibly at
  * each stop.
  */
-export function routeSegment(from: number, to: number): string {
+export function routeSegment(from: number, to: number, leg: number = LEG): string {
     if (to <= from) return "";
 
-    const start = stationAt(from);
+    const start = stationAt(from, leg);
     let d = `M ${start.x} ${start.y}`;
 
     for (let i = from + 1; i <= to; i += 1) {
-        const a = stationAt(i - 1);
-        const b = stationAt(i);
+        const a = stationAt(i - 1, leg);
+        const b = stationAt(i, leg);
         const bend = (b.y - a.y) * 0.5;
 
         d += ` C ${a.x} ${a.y + bend}, ${b.x} ${b.y - bend}, ${b.x} ${b.y}`;
@@ -153,15 +162,15 @@ export function routeSegment(from: number, to: number): string {
 }
 
 /** The whole route, start to finish. */
-export function routePath(count: number): string {
+export function routePath(count: number, leg: number = LEG): string {
     if (count === 0) return "";
 
-    const first = stationAt(0);
+    const first = stationAt(0, leg);
     let d = `M ${first.x} ${first.y}`;
 
     for (let i = 1; i < count; i += 1) {
-        const from = stationAt(i - 1);
-        const to = stationAt(i);
+        const from = stationAt(i - 1, leg);
+        const to = stationAt(i, leg);
         const bend = (to.y - from.y) * 0.5;
 
         d += ` C ${from.x} ${from.y + bend}, ${to.x} ${to.y - bend}, ${to.x} ${to.y}`;

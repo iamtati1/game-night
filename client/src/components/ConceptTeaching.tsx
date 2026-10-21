@@ -1,4 +1,5 @@
 import type { TeachBlock } from "../games/lessons.js";
+import { HighlightedCode } from "./HighlightedCode.js";
 
 /**
  * The worked examples, shown before anything is asked.
@@ -27,7 +28,7 @@ export function ConceptTeaching({
                 {teach.map((block) => (
                     <div className="lesson-example" key={block.code}>
                         <pre className="lesson-code">
-                            <code>{block.code}</code>
+                            <code><HighlightedCode code={block.code} /></code>
                         </pre>
 
                         {block.output !== undefined && (
