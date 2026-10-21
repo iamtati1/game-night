@@ -20,7 +20,7 @@ services:
     # --include=dev on the server because TypeScript is a devDependency and npm
     # omits those when NODE_ENV=production, which it is below.
     buildCommand: >-
-      npm ci --prefix client &&
+      npm ci --include=dev --prefix client &&
       npm run build --prefix client &&
       npm ci --include=dev --prefix server &&
       npm run build --prefix server
