@@ -4,6 +4,7 @@ import { api } from "../api/client.js";
 import type { JourneyPathResponse } from "../api/types.js";
 import { nextAction } from "../games/progression.js";
 import { ACTION, continueTo } from "../vocabulary.js";
+import { recapLabel, runTone, toneLine } from "../games/runTone.js";
 
 /**
  * The end of a game: back to the course, or play again.
@@ -32,10 +33,19 @@ import { ACTION, continueTo } from "../vocabulary.js";
  */
 export function NextStepActions({
     replay,
-    className = "cta-row"
+    className = "cta-row",
+    outcome
 }: {
     replay: (className: string) => ReactNode;
     className?: string;
+    /**
+     * How the run went, for a game that counts toward the course (Flush,
+     * Bug Hunt). After a tough run the primary is worded as a look back at the
+     * lesson -- the same destination -- with one supportive line; after a
+     * strong run, one line saying so (games/runTone.ts). Omitted for the
+     * just-for-fun games, which teach nothing to recap.
+     */
+    outcome?: { hit: number; total: number; unit: string };
 }) {
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
     const [failed, setFailed] = useState(false);
@@ -69,19 +79,29 @@ export function NextStepActions({
     }
 
     const step = nextAction(path);
+    const tone = outcome ? runTone(outcome.hit, outcome.total) : null;
+    const line = outcome ? toneLine(tone, outcome.hit, outcome.total, outcome.unit) : null;
     const primary = step
         ? {
               to: step.href,
-              label: step.kind === "checkpoint" ? `Take the ${step.name}` : continueTo(step.name)
+              label:
+                  step.kind === "checkpoint"
+                      ? `Take the ${step.name}`
+                      : tone === "tough"
+                        ? recapLabel(step.name)
+                        : continueTo(step.name)
           }
         : { to: "/journey", label: ACTION.seeJourney };
 
     return (
-        <div className={className}>
-            <Link className="button primary" to={primary.to}>
-                {primary.label}
-            </Link>
-            {replay("button ghost")}
-        </div>
+        <>
+            {line && <p className={`run-tone is-${tone}`}>{line}</p>}
+            <div className={className}>
+                <Link className="button primary" to={primary.to}>
+                    {primary.label}
+                </Link>
+                {replay("button ghost")}
+            </div>
+        </>
     );
 }

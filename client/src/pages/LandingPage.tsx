@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
 import type { JourneyPathResponse, ResumableResponse, ResumableSession } from "../api/types.js";
-import type { Encounter } from "../api/encounter.js";
 import { useAuth } from "../auth/AuthContext.js";
-import { GameCard } from "../components/GameCard.js";
+import { IslandMap } from "../components/IslandMap.js";
+import { islandsFor } from "../games/islands.js";
 import { JoltLogo } from "../components/JoltLogo.js";
 import { LIVE_GAMES } from "../games/catalog.js";
-import { PlayFocus } from "../components/PlayFocus.js";
+import { MissionPanel } from "../components/MissionPanel.js";
 import { gameStatuses, type BugHuntReadiness, type FlushReadiness } from "../games/gameStatus.js";
 
 import { usePageTitle } from "../usePageTitle.js";
@@ -38,7 +38,6 @@ export function LandingPage() {
     /* The curriculum half. Both reset to null when the user changes, so one
        learner's position can never be shown to the next one. */
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
-    const [encounter, setEncounter] = useState<Encounter | null>(null);
     /* What the two gated games would say if started now -- read-only, from
        the same function their start routes refuse on. Null until loaded, and
        left null on failure: a card says nothing rather than guess. */
@@ -52,7 +51,6 @@ export function LandingPage() {
             setResumable([]);
             setStats(null);
             setPath(null);
-            setEncounter(null);
             setFlushReady(null);
             setHuntReady(null);
             return;
@@ -80,28 +78,12 @@ export function LandingPage() {
             .then((d) => active && setStats(d))
             .catch(() => undefined);
 
-        /* The current concept, then what can actually play it. Sequential
-           because the second request is addressed by the first's answer --
-           there is no endpoint that returns both, and inventing one would be a
-           second way to ask a question the curriculum already answers. */
+        /* The learner's next step, for the mission panel under the games. The
+           path already carries the concept's stop counts, so no second request
+           for its encounter is needed. */
         void api
             .get<JourneyPathResponse>("/api/curriculum/path")
-            .then(async (data) => {
-                if (!active) return;
-
-                setPath(data);
-
-                if (!data.current) {
-                    setEncounter(null);
-                    return;
-                }
-
-                const view = await api.get<Encounter>(
-                    `/api/curriculum/concepts/${data.current.slug}/encounter`
-                );
-
-                if (active) setEncounter(view);
-            })
+            .then((data) => active && setPath(data))
             .catch(() => undefined);
 
         return () => {
@@ -146,30 +128,22 @@ export function LandingPage() {
                 )}
             </header>
 
-            {/* WHAT THE GAMES ARE FOR, in one line, then the games themselves
-                -- first, so all five are found before anything else. Each card
-                says whether it can be played now and whether it counts. */}
+            {/* WHAT THE GAMES ARE FOR, in one line, then the islands. */}
             {user && (
                 <p className="practice-lede muted">
-                    None of these is required. Each one says whether you can play it now, and whether it
-                    counts toward your journey.
+                    Five islands, five games. None is required: pick one to see whether it is open and
+                    whether it counts toward your journey.
                 </p>
             )}
 
-            <ul className="game-grid" id="games" aria-labelledby="games-heading">
-                {LIVE_GAMES.map((game) => (
-                    <GameCard
-                        key={game.slug}
-                        game={game}
-                        resumable={resumeFor(game.slug)}
-                        status={statuses?.[game.slug] ?? null}
-                    />
-                ))}
-            </ul>
+            {/* The five games as islands. Availability and the recommendation
+                come from each game's real readiness (games/islands.ts); picking
+                an island opens its panel with one action. */}
+            <IslandMap islands={islandsFor({ games: LIVE_GAMES, statuses, resumeFor })} />
 
             {/* The course, after the games: on this page the games are what
                 was asked for, and Home already leads with the next lesson. */}
-            {user && <PlayFocus path={path} encounter={encounter} />}
+            {user && path && <MissionPanel path={path} className="play-mission" quiet />}
         </div>
     );
 }

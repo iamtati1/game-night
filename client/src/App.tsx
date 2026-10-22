@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { SoundToggle } from "./components/SoundToggle.js";
+import { ThemeToggle } from "./components/ThemeToggle.js";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { JoltLogo } from "./components/JoltLogo.js";
 import { Cosmos } from "./world/Cosmos.js";
 import { Icon } from "./world/Icon.js";
 import { useAuth } from "./auth/AuthContext.js";
-import { navAreaFor, type NavArea } from "./navArea.js";
+import { navAreaFor, PRIMARY_NAV, type NavArea } from "./navArea.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { HomePage } from "./pages/HomePage.js";
 import { JourneyPage } from "./pages/JourneyPage.js";
+import { SkillsPage } from "./pages/SkillsPage.js";
 import { PlaygroundPage } from "./pages/PlaygroundPage.js";
 import { WorldPage } from "./pages/WorldPage.js";
 import { PracticePage } from "./pages/PracticePage.js";
@@ -82,62 +84,51 @@ function Header() {
                 <nav>
                     {user ? (
                         <>
-                            {/* First in the nav on purpose: the journey is the
-                                product, and the games are how it is practiced. */}
                             {/*
-                                THREE AREAS, NOT FIVE DESTINATIONS.
-                                
-                                It was Home, Map, Play, Experiment and Log, all
-                                at equal weight -- and three of those answered
-                                the same question. Home is "where am I and what
-                                is next", the Map is the same path drawn out,
-                                and Home linked to both of the others, so the
-                                navigation competed with the page it landed on.
-                                A learner reading five equal words has to work
-                                out what five things are before choosing one.
+                                FOUR PLACES: Home, Learn, Games, Skills.
 
-                                What is left is three places:
+                                Read from PRIMARY_NAV (navArea.ts), the same list
+                                the phone's bottom bar uses. Home is where you
+                                are and your next mission; Learn is the guided
+                                topic journey; Games are the five games; Skills
+                                is what you can do. On a phone these move to
+                                the bottom bar and this group is hidden, which
+                                is what gives the top bar room again.
 
-                                  Home         where you are, and the way to the
-                                               course, the games and the journey
-                                  Games        the five games
-                                  Experiment   free JavaScript, nothing marked
-
-                                It was labelled "Learn", which a playthrough found
-                                hid the one thing a learner looks for: a home base
-                                to come back to and choose from. The journey is a
-                                click from Home and from every lesson.
-
-                                The Log did not disappear; it moved beside the
-                                pilot below, with the account. It is a real
-                                thing to want and it is not a fourth area.
-                            */}
-                            {/* "Games", not "Play": the five games are what is
-                                there, and a beginner looking for them should
-                                read the word they are looking for.
                                 aria-current marks the area you are in, for
-                                screen readers and for the visible mark. */}
-                            {/* "Home", not "Learn": the place to come back to,
-                                see where you are, and choose -- the course, the
-                                games or the journey. */}
-                            <Link to="/" aria-label="Home" aria-current={current("home")}>
-                                <Icon name="home" />
-                                <span className="nav-label">Home</span>
-                            </Link>
-                            <Link to="/play" aria-label="Games" aria-current={current("games")}>
-                                <Icon name="play" />
-                                <span className="nav-label">Games</span>
-                            </Link>
-                            <Link to="/experiment" aria-label="Experiment" aria-current={current("experiment")}>
-                                <Icon name="spark" />
-                                <span className="nav-label">Experiment</span>
-                            </Link>
+                                screen readers and for the visible mark.
+                            */}
+                            <span className="nav-primary">
+                                {PRIMARY_NAV.map((item) => (
+                                    <Link
+                                        key={item.to}
+                                        to={item.to}
+                                        aria-label={item.label}
+                                        aria-current={current(item.area)}
+                                    >
+                                        <Icon name={item.icon} />
+                                        <span className="nav-label">{item.label}</span>
+                                    </Link>
+                                ))}
+                            </span>
 
                             {/* The pilot, set apart from the three areas by a
                                 hairline: an identity is not somewhere you can
                                 navigate to. The Log sits here too -- secondary
                                 by placement rather than by being hidden. */}
                             <span className="nav-pilot">
+                                {/* Experiment: free JavaScript with nothing at
+                                    stake. Not one of the four places, so it sits
+                                    here with the Log, still one click away. */}
+                                <Link
+                                    className="nav-aside"
+                                    to="/experiment"
+                                    aria-label="Experiment"
+                                    aria-current={current("experiment")}
+                                >
+                                    <Icon name="spark" size={16} />
+                                    <span className="nav-label">Experiment</span>
+                                </Link>
                                 <Link className="nav-aside" to="/history" aria-label="Log" aria-current={current("log")}>
                                     <Icon name="log" size={16} />
                                     <span className="nav-label">Log</span>
@@ -147,6 +138,7 @@ function Header() {
                                 </span>
                                 <span className="nav-name">{user.username}</span>
                             </span>
+                            <ThemeToggle />
                             <SoundToggle />
                             {failed && (
                                 <span className="logout-error" role="alert">
@@ -163,6 +155,7 @@ function Header() {
                         </>
                     ) : (
                         <>
+                            <ThemeToggle />
                             <SoundToggle />
                             <Link to="/login">Log in</Link>
                             <Link className="button primary small" to="/register">
@@ -173,6 +166,33 @@ function Header() {
                 </nav>
             )}
         </header>
+    );
+}
+
+/**
+ * THE PHONE'S BOTTOM BAR: the same four places as the header, in reach of a
+ * thumb. Shown only on narrow screens (world.css), where the header's primary
+ * group is hidden -- so there is always exactly one set of these links on
+ * screen and in the accessibility tree.
+ *
+ * Signed in only, and only once the session is known: the four places all need
+ * an account, and a bar that flashed in and out on first paint would be noise.
+ */
+function BottomNav() {
+    const { user, loading, unavailable } = useAuth();
+    const area = navAreaFor(useLocation().pathname);
+
+    if (loading || unavailable || !user) return null;
+
+    return (
+        <nav className="bottom-nav" aria-label="Main">
+            {PRIMARY_NAV.map((item) => (
+                <Link key={item.to} to={item.to} aria-current={area === item.area ? "page" : undefined}>
+                    <Icon name={item.icon} size={22} />
+                    <span>{item.label}</span>
+                </Link>
+            ))}
+        </nav>
     );
 }
 
@@ -217,6 +237,15 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <JourneyPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    {/* What the learner can do, from the same path: read-only. */}
+                    <Route
+                        path="/skills"
+                        element={
+                            <ProtectedRoute>
+                                <SkillsPage />
                             </ProtectedRoute>
                         }
                     />
@@ -395,6 +424,9 @@ export default function App() {
                     />
                 </Routes>
             </main>
+
+            {/* Outside <main>, so it stays put across routes like the header. */}
+            <BottomNav />
         </div>
     );
 }

@@ -105,9 +105,10 @@ describe("Home", () => {
         const { container } = renderHome();
 
         const start = await screen.findByRole("link", { name: "Start learning" });
-        expect(start.getAttribute("href")).toBe("/concept/console-output");
+        // A brand-new learner starts with the playable tutorial (games/tutorial.ts).
+        expect(start.getAttribute("href")).toBe("/learn/console-output");
         expect(screen.getByText("Welcome, qa.")).toBeTruthy();
-        expect(screen.getByText(/first step/i)).toBeTruthy();
+        expect(screen.getByText(/your first mission/i)).toBeTruthy();
         expect(container.querySelector(".home-log")).toBeNull();
     });
 
@@ -118,7 +119,10 @@ describe("Home", () => {
         const next = await screen.findByRole("link", { name: "Continue learning" });
         expect(next.getAttribute("href")).toBe("/concept/arithmetic-operators");
         expect(screen.getByText("Welcome back, qa.")).toBeTruthy();
-        expect(screen.getByRole("heading", { level: 1, name: "Values and Types" })).toBeTruthy();
+        // The mission is the page heading; its topic is named above it.
+        expect(screen.getByRole("heading", { level: 1, name: "arithmetic operators" })).toBeTruthy();
+        expect(screen.getByText(/Your mission · Values and Types/)).toBeTruthy();
+        expect(screen.getByText("0 of 3 stops done")).toBeTruthy();
         expect(screen.getByText("1 of 2 concepts done, then the checkpoint")).toBeTruthy();
         expect(document.title).toBe("Home · Jolt");
     });

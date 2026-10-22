@@ -20,7 +20,10 @@ export type IconName =
     | "arrow"
     | "exit"
     | "sound-on"
-    | "sound-off";
+    | "sound-off"
+    | "skills"
+    | "sun"
+    | "moon";
 
 const PATHS: Record<IconName, string> = {
     // A world with an orbit, not a house. Home in Jolt is where you are in the
@@ -40,7 +43,13 @@ const PATHS: Record<IconName, string> = {
     // A speaker with sound waves, and the same speaker struck through: the
     // marks every learner already knows for "sound".
     "sound-on": "M4 9.5h3.5L12 5.5v13l-4.5-4H4Z M15.5 9a4 4 0 0 1 0 6 M18 6.5a7.5 7.5 0 0 1 0 11",
-    "sound-off": "M4 9.5h3.5L12 5.5v13l-4.5-4H4Z M16 9.5l5 5 M21 9.5l-5 5"
+    "sound-off": "M4 9.5h3.5L12 5.5v13l-4.5-4H4Z M16 9.5l5 5 M21 9.5l-5 5",
+    // A trunk with branches: the skill tree. Distinct in shape from the map's
+    // route and the spark, so the bottom bar never relies on its label alone.
+    skills: "M12 20.5v-15 M12 15.5l-5.5-4 M12 10.5l5.5-4 M6.5 11.5v-3 M17.5 6.5v-2.5",
+    // The theme switch: a sun for the light theme, a crescent for the dark.
+    sun: "M12 8a4 4 0 1 0 0.01 0 M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6l1.4 1.4 M17 17l1.4 1.4 M5.6 18.4 7 17 M17 7l1.4-1.4",
+    moon: "M19.5 14.5A7.5 7.5 0 1 1 9.5 4.5a6 6 0 0 0 10 10Z"
 };
 
 interface IconProps {

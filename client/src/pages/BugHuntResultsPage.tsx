@@ -151,6 +151,7 @@ export function BugHuntResultsPage() {
                 outcome, so a phone reaches it without scrolling past the details. */}
             <NextStepActions
                 className="bh-results-actions"
+                outcome={{ hit: session.incidentsResolved, total: session.totalIncidents, unit: "incidents resolved" }}
                 replay={(cls) => (
                     <button className={cls} disabled={starting} onClick={() => void huntAgain()}>
                         {starting ? "Dispatching…" : "Hunt again"}

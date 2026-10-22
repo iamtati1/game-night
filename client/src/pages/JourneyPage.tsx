@@ -201,6 +201,11 @@ export function JourneyPage() {
             >
                 Map
             </button>
+            {/* Not a third view of the path: a different question ("what can I
+                do?"), so it is a link to its own page. */}
+            <Link className="journey-view journey-skills-link" to="/skills">
+                Skills
+            </Link>
         </div>
     );
 

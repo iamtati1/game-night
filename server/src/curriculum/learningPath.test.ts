@@ -1055,32 +1055,23 @@ describe("a learner always has one obvious next action", () => {
         );
     });
 
-    it("keeps the navigation to the three things a learner does", () => {
-        // Read from aria-label rather than from the link text. The visible word
-        // is hidden below 40rem -- the icon carries it there -- so the
-        // accessible name is the thing that is always present, and it is the
-        // stable contract this test actually cares about.
-        const nav = app.slice(app.indexOf("{user ? ("), app.indexOf("nav-pilot"));
-        // Each link also carries aria-current for the area you are in.
-        const links = [...nav.matchAll(/<Link to="[^"]+" aria-label="([^"]+)"[^>]*>/g)].map(
-            (m) => m[1]
-        );
+    it("keeps the navigation to four places, in one list both bars read", () => {
+        // The places live in PRIMARY_NAV (client/src/navArea.ts), and the header
+        // and the phone's bottom bar both render that list, so the two cannot
+        // disagree. Asserted exactly, because the point is that it stays SHORT:
+        // a fifth should have to argue for itself here.
+        //
+        //   Home    where you are and your next mission
+        //   Learn   the guided topic journey
+        //   Games   the five games ("Games", not "Play": the word a beginner looks for)
+        //   Skills  what you can do and what to practise next
+        const navArea = readFileSync(new URL("../../../client/src/navArea.ts", import.meta.url), "utf8");
+        const list = navArea.slice(navArea.indexOf("export const PRIMARY_NAV"));
+        const labels = [...list.matchAll(/label: "([^"]+)"/g)].map((m) => m[1]);
 
-        /*
-         * This was five: Home, Map, Play, Experiment, Log. Three of those
-         * answered the same question -- Home is "where am I and what is next",
-         * the Map is that same path drawn out, and Home linked to both of the
-         * others -- so the navigation competed with the page it landed on, and
-         * a learner had to work out what five words meant before choosing one.
-         *
-         * What is left is the three things there are to do: learn the thing,
-         * play, and try something with nothing at stake. The list is asserted
-         * exactly rather than loosely, because the point is that it stays
-         * SHORT. A fourth should have to argue for itself here.
-         */
-        // "Games" rather than "Play": the five games are what is there.
-        // "Home" rather than "Learn": the first item is the place to return to.
-        expect(links).toEqual(["Home", "Games", "Experiment"]);
+        expect(labels).toEqual(["Home", "Learn", "Games", "Skills"]);
+        // Both bars read the list rather than restating it.
+        expect(app.match(/PRIMARY_NAV\.map\(/g)).toHaveLength(2);
     });
 
     it("keeps the log reachable, beside the pilot rather than as a fourth area", () => {
@@ -1090,6 +1081,9 @@ describe("a learner always has one obvious next action", () => {
         const pilot = app.slice(app.indexOf("nav-pilot"), app.indexOf("Log out"));
 
         expect(pilot).toContain('to="/history"');
+        // Experiment moved here when Learn and Skills became places: still one
+        // click away, secondary by placement rather than removed.
+        expect(pilot).toContain('to="/experiment"');
     });
 });
 

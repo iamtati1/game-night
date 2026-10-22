@@ -2952,7 +2952,9 @@ pre.learn-code {
    under a usable tap target -- once the header's small button grew to the
    readable 14px. The icons keep a real width; the compact bar (max-width:
    25rem, above) already wraps, so the nav takes its own row when it must. */
-@media (max-width: 22rem) {
+@media (max-width: 28rem) {
+    /* Raised from 22rem when the theme switch joined the bar: below ~448px the
+       account controls no longer fit beside the wordmark and slid under it. */
     .site-header nav {
         flex: 1 0 100%;
         justify-content: center;
@@ -3000,4 +3002,1149 @@ pre.learn-code {
 .sound-toggle:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+}
+
+/* ===================================================================== */
+/* MISSION PANEL (components/MissionPanel.tsx)                            */
+/*                                                                        */
+/* One compact panel, used on Home and Games: name, goal, one action,    */
+/* progress. Deliberately small -- no stat grid, nothing that duplicates  */
+/* the journey.                                                           */
+/* ===================================================================== */
+
+.mission-panel {
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 1.25rem 1.35rem 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    text-align: left;
+}
+
+.mission-panel-eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sand);
+}
+
+.mission-panel-name {
+    margin: 0 0 0.4rem;
+    font-family: var(--display);
+    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+    line-height: 1.15;
+    color: var(--text);
+}
+
+.mission-panel-goal {
+    margin: 0 0 1rem;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    color: var(--text-2);
+}
+
+.mission-panel-action {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+}
+
+.mission-panel-progress {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+    margin: 0.9rem 0 0;
+    font-size: 0.9375rem;
+    color: var(--muted);
+}
+
+.mission-panel-pips {
+    display: inline-flex;
+    gap: 0.3rem;
+}
+
+/* Done vs to-do is said in the sentence beside the pips too, never by colour
+   alone; the filled pip is also a different shape (solid, not ringed). */
+.mission-panel-pip {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    border: 2px solid var(--muted);
+}
+
+.mission-panel-pip.is-done {
+    border-color: var(--mint);
+    background: var(--mint);
+}
+
+.mission-panel-topic-progress {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+}
+
+/* Home: the panel is the page's centre of gravity, under the greeting. */
+.home-mission {
+    margin: 0.5rem 0 0.25rem;
+}
+
+/* Games: after the cards, with room above. */
+.islands + .play-mission {
+    margin-top: 2.5rem;
+}
+
+/* ===================================================================== */
+/* SKILLS HUB (pages/SkillsPage.tsx)                                      */
+/*                                                                        */
+/* A winding path of topics, each holding its skills; a summary beside   */
+/* it on desktop and below it on a phone. State is always icon + word,   */
+/* never colour alone.                                                    */
+/* ===================================================================== */
+
+.skills {
+    max-width: 72rem;
+    margin: 0 auto;
+}
+
+.skills-head {
+    margin-bottom: 1.75rem;
+}
+
+.skills-title {
+    margin: 0 0 0.4rem;
+    font-family: var(--display);
+    font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
+    color: var(--text);
+}
+
+.skills-lede {
+    margin: 0 0 1rem;
+    max-width: 40rem;
+    font-size: 1.0625rem;
+    color: var(--text-2);
+}
+
+.skills-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.skill-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    font-size: 0.875rem;
+    color: var(--text-2);
+}
+
+.skills-legend-count {
+    margin-left: 0.15rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.skills-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    gap: 2rem;
+    align-items: start;
+}
+
+/* ---- the tree ---- */
+
+.skill-tree {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.skill-topic {
+    position: relative;
+    width: 88%;
+    margin: 0 0 1.75rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.skill-topic.is-right {
+    margin-left: auto;
+}
+
+/* The path between one topic and the next: a dashed arch from where this one
+   sits to where the next one sits. Decoration -- the order is the list order. */
+.skill-topic + .skill-topic::before {
+    content: "";
+    position: absolute;
+    top: calc(-1.75rem - 1px);
+    left: 30%;
+    width: 52%;
+    height: 1.75rem;
+    border: 2px dashed var(--border);
+    border-bottom: none;
+    border-radius: 1.4rem 1.4rem 0 0;
+    pointer-events: none;
+}
+
+.skill-topic.is-left + .skill-topic.is-right::before { left: 20%; }
+.skill-topic.is-right + .skill-topic.is-left::before { left: 28%; }
+
+.skill-topic.is-locked {
+    background: transparent;
+}
+
+.skill-topic-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+}
+
+.skill-topic-name {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--text);
+}
+
+.skill-topic-count {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.skill-topic-toggle {
+    margin-left: auto;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-size: 0.9375rem;
+    cursor: pointer;
+}
+
+.skill-nodes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.skill-node {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9375rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.skill-node:hover { border-color: var(--sand); }
+.skill-node.is-selected { border-color: var(--sand); box-shadow: 0 0 0 2px var(--sand) inset; }
+
+.skill-node.is-demonstrated .icon { color: var(--mint); }
+.skill-node.is-practised .icon { color: var(--sand); }
+.skill-node.is-learning { border-color: var(--sand); }
+.skill-node.is-locked { background: transparent; color: var(--muted); }
+.skill-node.is-checkpoint { cursor: default; border-style: dashed; color: var(--text-2); }
+
+/* ---- the details, under the topic that holds the skill ---- */
+
+.skill-detail {
+    margin-top: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: calc(var(--radius) - 6px);
+    background: var(--surface-2);
+}
+
+.skill-detail-state {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.25rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.skill-detail-name {
+    margin: 0 0 0.3rem;
+    font-size: 1.125rem;
+    color: var(--text);
+}
+
+.skill-detail-goal,
+.skill-detail-stops,
+.skill-detail-reason {
+    margin: 0 0 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--text-2);
+}
+
+.skill-detail-action {
+    margin-top: 0.25rem;
+}
+
+/* ---- the summary ---- */
+
+.skills-summary {
+    position: sticky;
+    top: 1rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.skills-card {
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.skills-card-title {
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.skills-list {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.9375rem;
+    color: var(--text-2);
+}
+
+.skills-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15rem 0.45rem;
+}
+
+.skills-list .icon { color: var(--mint); }
+
+.skills-why {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.skills-empty {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--muted);
+}
+
+.skills-mission {
+    max-width: none;
+}
+
+/* Phone and narrow tablet: one column, the tree first, no winding offset. */
+@media (max-width: 52rem) {
+    .skills-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .skills-summary {
+        position: static;
+    }
+
+    .skill-topic,
+    .skill-topic.is-right {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .skill-topic + .skill-topic::before,
+    .skill-topic.is-left + .skill-topic.is-right::before,
+    .skill-topic.is-right + .skill-topic.is-left::before {
+        left: 50%;
+        width: 0;
+        border-width: 0 0 0 2px;
+        border-radius: 0;
+    }
+}
+
+/* The Skills link sits in the journey's view switch but is a link, not a view. */
+.journey-skills-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+/* ===================================================================== */
+/* NAVIGATION: four places (App.tsx, PRIMARY_NAV in navArea.ts)           */
+/*                                                                        */
+/* Wide screens: Home, Learn, Games, Skills in the top bar; Experiment   */
+/* and Log beside the account. Phones and small tablets (52rem and      */
+/* under -- the four places plus the account measured ~980px): the four move */
+/* to a bottom bar and the top bar keeps only brand, Experiment, Log,   */
+/* sound and log out -- which is what un-squeezes it. Exactly one set of */
+/* the four is ever displayed, so screen readers meet them once.        */
+/* ===================================================================== */
+
+.nav-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    /* Takes over from `nav > a:first-of-type`: the space between the brand
+       and the places. */
+    margin-left: auto;
+}
+
+.bottom-nav {
+    display: none;
+}
+
+@media (max-width: 52rem) {
+    .site-header .nav-primary {
+        display: none;
+    }
+
+    .bottom-nav {
+        position: fixed;
+        z-index: 50;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+    }
+
+    .bottom-nav a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+        min-height: 52px;
+        border-radius: var(--radius-sm);
+        font-family: var(--ui);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--muted);
+        text-decoration: none;
+    }
+
+    .bottom-nav a .icon {
+        opacity: 0.75;
+    }
+
+    /* The place you are in: brighter ink, full icon and a bar above it -- a
+       shape, not colour alone; aria-current says it to a screen reader. */
+    .bottom-nav a[aria-current="page"] {
+        position: relative;
+        color: var(--text);
+    }
+
+    .bottom-nav a[aria-current="page"] .icon {
+        opacity: 1;
+        color: var(--sand);
+    }
+
+    .bottom-nav a[aria-current="page"]::before {
+        content: "";
+        position: absolute;
+        top: -0.35rem;
+        left: 30%;
+        right: 30%;
+        height: 3px;
+        border-radius: 0 0 3px 3px;
+        background: var(--sand);
+    }
+
+    /* Room at the foot of every page so the bar never covers its last line. */
+    .app {
+        padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+    }
+
+    /* With the four places gone from it, the top bar's remaining icons get
+       their real size back (they were squeezed to 9px wide at 375px). */
+    .site-header nav a:not(.button),
+    .nav-aside {
+        flex: none;
+        min-width: 44px;
+    }
+}
+
+/* Between a small tablet and a laptop the four labelled places fit, but not
+   with the account's labels beside them: Experiment and Log keep their icons
+   and names (as aria-labels), and the avatar and username step aside. */
+/* Up to 72rem: the fully labelled bar (places, Experiment, Log, avatar, name,
+   theme, sound, Log out) measured ~1100px. */
+@media (min-width: 52.01rem) and (max-width: 72rem) {
+    .nav-pilot .nav-label,
+    .nav-pilot .nav-name,
+    .nav-pilot .nav-avatar {
+        display: none;
+    }
+
+    /* With the theme switch in the bar, Log out overflowed by 34px at 840px.
+       Spacing only: every target keeps its 44px. */
+    .nav-pilot .nav-aside { margin-right: 0; }
+    .site-header .nav-primary a:not(.button) { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+
+/* The sound button was squeezed to 22px wide in a full bar. */
+.site-header .sound-toggle {
+    flex: none;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+
+/* ===================================================================== */
+/* FIRST-TIME TUTORIAL (SceneLesson edit beat, LessonPage hand-over)      */
+/* ===================================================================== */
+
+/* JavaScript's complaint when the learner's line cannot run: legible on the
+   dark console, and said in words beside it, so not colour alone. */
+.scene-console-error {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--coral);
+}
+
+.scene-edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+/* The hand-over after the tutorial: one line of what was done, then the first
+   mission panel. */
+.tutorial-done {
+    max-width: 34rem;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.tutorial-done-title {
+    margin: 0 0 0.5rem;
+    font-family: var(--display);
+    font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.4rem);
+    color: var(--text);
+}
+
+.tutorial-done-lede {
+    margin: 0 0 1.5rem;
+    font-size: 1.0625rem;
+    color: var(--text-2);
+}
+
+.scene-skip {
+    margin: 1.25rem 0 0;
+    text-align: center;
+    font-size: 0.9375rem;
+}
+
+/* ===================================================================== */
+/* GAME ISLANDS (components/IslandMap.tsx)                                */
+/*                                                                        */
+/* Five islands in one sea. Shared language (water, sand, landform in    */
+/* the game's accent), different landforms. State is always in words;    */
+/* the mist and the flag are extra cues, never the only ones.           */
+/* ===================================================================== */
+
+.islands {
+    max-width: 60rem;
+    margin: 0 auto;
+}
+
+.island-sea {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem 1rem;
+    margin: 0;
+    padding: 1.5rem 1rem 1rem;
+    list-style: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    /* A calm sea: a flat surface with the faintest depth, no glow. */
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+}
+
+/* Three across the top, two below, offset: a scatter rather than a grid. */
+.island-spot { grid-column: span 2; }
+.island-spot:nth-child(4) { grid-column: 2 / span 2; }
+.island-spot:nth-child(5) { grid-column: 4 / span 2; }
+
+.island {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 1.4rem 0.5rem 0.6rem;
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.island:hover { border-color: var(--border); }
+.island.is-selected { border-color: var(--island, var(--sand)); background: color-mix(in srgb, var(--island, var(--sand)) 8%, transparent); }
+
+.island-art {
+    width: 100%;
+    max-width: 10rem;
+    height: auto;
+}
+
+.island-water { fill: color-mix(in srgb, var(--blue, #7aa2ff) 22%, transparent); }
+.island-sand { fill: color-mix(in srgb, var(--sand) 70%, var(--bg)); }
+.island-land { fill: color-mix(in srgb, var(--island, var(--sand)) 72%, var(--bg)); }
+.island-mark {
+    fill: none;
+    stroke: var(--text);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.85;
+}
+.island-mark.is-solid { fill: var(--text); stroke: none; }
+
+.island-name {
+    margin-top: 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.island-state {
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+/* Not open yet: seen through mist, still selectable, and labelled so. */
+.island.is-misty .island-art {
+    opacity: 0.45;
+    filter: grayscale(0.6) blur(0.6px);
+}
+
+.island.is-misty::after {
+    content: "";
+    position: absolute;
+    inset: 1.2rem 0.4rem 2.6rem;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--text) 18%, transparent), transparent);
+    pointer-events: none;
+}
+
+.island-flag {
+    position: absolute;
+    top: 0.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.15rem 0.6rem;
+    border-radius: var(--radius-pill);
+    background: var(--sand);
+    color: #08163a;
+    font-size: 0.875rem;
+    font-weight: 700;
+    white-space: nowrap;
+    animation: island-bob 2.4s ease-in-out infinite;
+}
+
+/* A slow two-pixel bob: noticeable, not insistent. */
+@keyframes island-bob {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, -2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .island-flag { animation: none; }
+}
+
+/* ---- the panel ---- */
+
+.island-panel-region {
+    margin-top: 1rem;
+}
+
+.island-panel {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 1.2rem 1.35rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--island, var(--sand));
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.island-panel-eyebrow {
+    margin: 0 0 0.3rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sand);
+}
+
+.island-panel-name {
+    margin: 0 0 0.35rem;
+    font-family: var(--display);
+    font-size: clamp(1.5rem, 1.2rem + 1vw, 1.9rem);
+    color: var(--text);
+}
+
+.island-panel-hook,
+.island-panel-status,
+.island-panel-counts,
+.island-panel-resume {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    color: var(--text-2);
+}
+
+.island-panel-resume {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.island-panel-counts {
+    font-size: 0.9375rem;
+    color: var(--muted);
+}
+
+.island-panel-action {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.island-panel-shape {
+    margin: 0.6rem 0 0;
+    font-size: 0.875rem;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* Phones: two across, the fifth centred. */
+@media (max-width: 40rem) {
+    .island-sea {
+        grid-template-columns: repeat(4, 1fr);
+        padding: 1.25rem 0.5rem 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .island-spot,
+    .island-spot:nth-child(4) { grid-column: span 2; }
+    .island-spot:nth-child(5) { grid-column: 2 / span 2; }
+
+    /* Smaller islands, so the whole sea and the panel fit a phone screen. */
+    .island { padding: 1.3rem 0.25rem 0.4rem; }
+    .island-art { max-width: 6.5rem; }
+    .island-name { font-size: 0.9375rem; }
+}
+
+/* ===================================================================== */
+/* DESKTOP GAMEPLAY: arena + supporting column (64rem and wider)          */
+/*                                                                        */
+/* Layout only. Every element is the one the game already renders, in   */
+/* the same DOM order (so keyboard and screen-reader order are          */
+/* unchanged); CSS grid moves the supporting pieces into a column       */
+/* beside the arena. Each side piece has an explicit row, so the card   */
+/* drawn behind the column (::before) never displaces them. Below 64rem */
+/* both games keep their single column exactly as before.               */
+/* ===================================================================== */
+
+@media (min-width: 64rem) {
+    /* ---- Code Blitz: snippet and answers left; progress, clock, feedback right ---- */
+
+    .game.blitz:has(> .play-stage) {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(17rem, 1fr);
+        grid-template-rows: auto auto auto auto 1fr;
+        column-gap: 2rem;
+        align-items: start;
+        isolation: isolate;
+        min-height: 0;
+        max-width: 72rem;
+        margin: 0 auto;
+    }
+
+    .game.blitz:has(> .play-stage) > .hud { grid-column: 1 / -1; grid-row: 1; }
+
+    .game.blitz:has(> .play-stage) > .play-stage {
+        grid-column: 1;
+        grid-row: 2 / -1;
+        margin-top: 0;
+    }
+
+    /* The card wraps the side column's contents (rows 2-4), not the whole
+       arena height: before an answer it holds only progress (and the clock),
+       and a tall empty panel beside the question was wasted space. The
+       arena's extra height goes to the flexible last row. */
+    .game.blitz:has(> .play-stage)::before {
+        content: "";
+        grid-column: 2;
+        grid-row: 2 / 5;
+        align-self: stretch;
+        z-index: -1;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+    }
+
+    .game.blitz:has(> .play-stage) > .round-progress { grid-column: 2; grid-row: 2; padding: 1.1rem 1.1rem 0; }
+    .game.blitz:has(> .play-stage) > .countdown,
+    .game.blitz:has(> .play-stage) > .untimed-note { grid-column: 2; grid-row: 3; margin: 0.75rem 1.1rem 0; }
+
+    /* Feedback stacks in the column: verdict, the why, then Next. */
+    .game.blitz:has(> .play-stage) > .feedback {
+        grid-column: 2;
+        grid-row: 4;
+        margin: 1rem 1.1rem 1.1rem;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .game.blitz:has(> .play-stage) > .feedback > .feedback-why { flex: none; }
+
+    /* ---- Bug Hunt: code and answers left; report, traces, actions, feedback right ---- */
+
+    .bh-incident {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+        grid-template-rows: repeat(7, auto) 1fr;
+        column-gap: 1.75rem;
+        align-items: start;
+        max-width: 76rem;
+    }
+
+    .bh-incident > .bh-head { grid-column: 1 / -1; grid-row: 1; }
+    .bh-incident > .bh-arena { grid-column: 1; grid-row: 2 / -1; }
+
+    .bh-incident > .bh-report     { grid-column: 2; grid-row: 2; }
+    .bh-incident > .bh-hints      { grid-column: 2; grid-row: 3; }
+    .bh-incident > .bh-targeted   { grid-column: 2; grid-row: 4; }
+    .bh-incident > .bh-actions    { grid-column: 2; grid-row: 5; }
+    .bh-incident > .bh-diagnostic { grid-column: 2; grid-row: 6; }
+    .bh-incident > .bh-feedback   { grid-column: 2; grid-row: 7; }
+    .bh-incident > .button        { grid-column: 2; grid-row: 8; justify-self: stretch; }
+
+    /* The actions share a narrow column: stacked in DOM order (Trace, then
+       Test patch), so what you see is the order the keyboard follows. */
+    .bh-incident > .bh-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+
+    .bh-incident > .bh-actions .button { width: 100%; }
+}
+
+/* ---- How the run went (games/runTone.ts): one line, never a banner ---- */
+.run-tone {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    color: var(--text-2);
+}
+
+/* Words carry the meaning; the mark is a second cue, not the only one. */
+.run-tone::before {
+    margin-right: 0.4rem;
+    font-weight: 700;
+}
+
+.run-tone.is-strong::before { content: "✓"; color: var(--mint); }
+.run-tone.is-tough::before { content: "↺"; color: var(--sand); }
+
+/* Bug Hunt's results header is centred; the tone line under it follows. */
+.bh-results .run-tone {
+    text-align: center;
+}
+
+/* Phones and small tablets: the avatar steps aside. It is an identity badge,
+   not a control, and "Log out" already says someone is signed in; the bar
+   needs its room for Experiment, Log, theme and sound. */
+@media (max-width: 52rem) {
+    .site-header .nav-avatar { display: none; }
+}
+
+/* The Paused card's eyebrow is drawn in the game's accent; Code Blitz's
+   violet measured 3.8:1 on the dark surface. A lighter tint on dusk (cream
+   darkens it instead, in the cream block below). */
+:root:not([data-theme="cream"]) .paused-eyebrow {
+    color: color-mix(in srgb, var(--accent) 60%, #ffffff);
+}
+
+/* ===================================================================== */
+/* HINTS (Code Blitz rules out a wrong answer; Flush shows the next      */
+/* output). The cost is always said in words beside the button.          */
+/* ===================================================================== */
+
+.hint-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+    margin-top: 0.85rem;
+}
+
+.hint-cost {
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+/* A ruled-out answer: struck through, dimmed, and named so for screen readers
+   (aria-label) -- never colour alone. */
+.option.struck {
+    opacity: 0.5;
+}
+
+.option.struck .option-text {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+}
+
+/* The hinted tile: outlined, with the word "next" on it. */
+.tile.is-hinted {
+    position: relative;
+    outline: 2px solid var(--sand);
+    outline-offset: 2px;
+}
+
+.tile-hint {
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-pill);
+    background: var(--sand);
+    color: var(--bg);
+    font-family: var(--ui);
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+/* ===================================================================== */
+/* WARM CREAM THEME  (html[data-theme="cream"], set by index.html and     */
+/* games/theme.ts; the header's theme button switches it back)            */
+/*                                                                        */
+/* Warm cream ground, white surfaces, deep slate text, forest-green       */
+/* primary actions, muted sage for progress, restrained gold for rewards  */
+/* and discoveries. Tokens first -- they reach most of the app -- then    */
+/* the places that hardcode a dark-theme colour, each named and fixed     */
+/* here rather than edited in place, so removing this block (or choosing  */
+/* the dusk theme) restores the dark theme exactly.                       */
+/* ===================================================================== */
+
+:root[data-theme="cream"] {
+    color-scheme: light;
+
+    --void: #f6f0e4;
+    --void-deep: #efe7d8;
+    --void-lift: #fbf7ef;
+    --void-high: #ffffff;
+
+    --bg: #f6f0e4;
+    --surface: #ffffff;
+    --surface-2: #f3ede2;
+    --border: #d6cbb8;
+    --hairline: #22302b1f;
+
+    /* Forest green: every primary action. */
+    --forest: #2f6b45;
+    --forest-deep: #24563a;
+
+    /* Gold, not sand: eyebrows, flags and discoveries, dark enough to read. */
+    --sand: #8a5f10;
+    --sand-deep: #6f4c0d;
+    --accent: #2f6b45;
+    --accent-soft: #2f6b451f;
+    --jolt: #8a5f10;
+    --jolt-2: #b23a3a;
+
+    --blue: #3a5fb8;
+    --lavender: #5f4bb6;
+    --violet: #5a44b0;
+    /* Sage for progress and correct. */
+    --mint: #3d7a55;
+    --yellow: #8a6200;
+    --peach: #a4512a;
+    --coral: #b23a3a;
+
+    --text: #22302b;
+    --text-2: #33433c;
+    --muted: #536159;
+    --dim: #56645d;
+    --muted-2: #536159;
+
+    --correct: #2f7a4f;
+    --incorrect: #b23a3a;
+    --warn: #8a5a00;
+
+    --blitz: #6248c4;
+    --flush: #a95c0e;
+    --reaction: #7a5d22;
+    --memory: #6f4cc0;
+    --bughunt: #b4501b;
+
+    --code-paper: #fbf8f2;
+    --code-edge: #d6cbb8;
+
+    --shadow-sm: 0 2px 8px rgba(34, 48, 43, 0.08);
+    --shadow-md: 0 8px 24px rgba(34, 48, 43, 0.1);
+    --shadow-lg: 0 14px 40px rgba(34, 48, 43, 0.12);
+    --surface-glow: 0 0 0 1px rgba(34, 48, 43, 0.04), 0 6px 20px rgba(34, 48, 43, 0.06);
+}
+
+/* The ground: plain warm cream with one soft light overhead. No night sky --
+   its stars and comets would compete with the code on a light page. */
+:root[data-theme="cream"] body {
+    background:
+        radial-gradient(110% 50% at 50% -10%, #fffaf1 0%, transparent 60%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+:root[data-theme="cream"] .cosmos {
+    display: none;
+}
+
+/* Primary actions: forest green with white text, no gold sheen or glow. */
+:root[data-theme="cream"] .button.primary {
+    color: #ffffff;
+    background: var(--forest);
+    border-color: transparent;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 4px 12px -6px rgba(36, 86, 58, 0.5);
+}
+
+:root[data-theme="cream"] .button.primary::after {
+    display: none;
+}
+
+:root[data-theme="cream"] .button.primary:hover:not(:disabled) {
+    background: var(--forest-deep);
+    filter: none;
+    box-shadow: 0 6px 16px -8px rgba(36, 86, 58, 0.6);
+}
+
+:root[data-theme="cream"] .button.primary:disabled {
+    filter: saturate(0.3) brightness(1.05);
+    opacity: 0.85;
+}
+
+:root[data-theme="cream"] .button:not(.primary):hover:not(:disabled) {
+    background: var(--surface-2);
+}
+
+/* The lesson's paper card sits on cream now: white paper, a quiet edge. */
+:root[data-theme="cream"] .lesson {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+
+
+/* ---- Cream: places that hardcode a dark-theme colour (found by the scan) ---- */
+
+/* Text drawn in a game's accent (each game page sets --accent / --game-accent
+   from its catalog colour, tuned for the dark ground) is darkened to read on
+   cream. The hue stays the game's own. */
+:root[data-theme="cream"] :is(.game-intro-eyebrow, .paused-eyebrow, .bh-alert) {
+    color: color-mix(in srgb, var(--accent) 55%, #000000);
+}
+
+:root[data-theme="cream"] .game-chip {
+    color: color-mix(in srgb, var(--game-accent, var(--muted)) 55%, #000000);
+}
+
+/* Tinted pills (counts, in progress, completed, XP): dark ink on the tint. */
+:root[data-theme="cream"] :is(.game-intro-counts, .tag.correct, .tag.in-progress, .xp-earned, .xp-earned strong) {
+    color: var(--forest-deep);
+}
+
+:root[data-theme="cream"] .game-intro-counts.fun {
+    color: var(--muted);
+    background: var(--surface-2);
+}
+
+/* The current step's state word on the journey. */
+:root[data-theme="cream"] .step.is-current .step-state {
+    color: var(--forest-deep);
+}
+
+/* Recommended flag: gold with white ink. */
+:root[data-theme="cream"] .island-flag {
+    color: #ffffff;
+}
+
+/* Bug Hunt results: the stats panel hardcoded a near-black ground. */
+:root[data-theme="cream"] .bh-results-stats {
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="cream"] .bh-results-state.restored { color: var(--forest-deep); }
+:root[data-theme="cream"] .bh-results-state.degraded { color: var(--warn); }
+
+/* Bug Hunt results log and readout: rows and code boxes on near-black. */
+:root[data-theme="cream"] :is(.bh-readout-line, .bh-log-row) {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+:root[data-theme="cream"] .bh-log-answer {
+    background: var(--code-paper);
+    color: var(--code-ink);
+    border: 1px solid var(--code-edge);
+}
+
+:root[data-theme="cream"] :is(.bh-readout-line.strong .bh-readout-tag, .bh-log-status.resolved) { color: var(--correct); }
+:root[data-theme="cream"] .bh-readout-line.weak .bh-readout-tag { color: var(--warn); }
+:root[data-theme="cream"] .bh-log-status.failed { color: var(--incorrect); }
+
+/* Bug Hunt panels that hardcode a near-black ground under body text.
+   (.bh-code stays dark: it is the game's code console, inked for it.) */
+:root[data-theme="cream"] :is(.bh-diagnostic, .bh-feedback, .bh-hints li, .bh-patch, .bh-signoff) {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+:root[data-theme="cream"] .bh-patch:hover {
+    background: var(--surface-2);
+}
+
+/* Experiment and Log beside the account were dimmed to 72%: 4.3:1 on cream. */
+:root[data-theme="cream"] .nav-aside {
+    opacity: 1;
+}
+
+:root[data-theme="cream"] .bh-voice-tag {
+    color: color-mix(in srgb, var(--accent) 55%, #000000);
 }

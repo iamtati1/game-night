@@ -92,8 +92,11 @@ const signedOutChrome = () => ({
     register: screen.queryByRole("link", { name: /create account/i })
 });
 
+// The games are islands now: one button per game, named by the game.
 const gameCards = () =>
-    ["Code Blitz", "Flush", "Reaction", "Memory"].map((name) => screen.queryByText(name));
+    ["Code Blitz", "Flush", "Reaction", "Memory"].map((name) =>
+        screen.queryByRole("button", { name: new RegExp(name) })
+    );
 
 beforeEach(() => {
     vi.unstubAllGlobals();

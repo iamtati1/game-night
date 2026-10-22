@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { runLittleJs } from "../games/littleJs.js";
 import type { AskScene, Scene, SceneLesson as SceneLessonData } from "../games/scenes.js";
 import { Planet } from "../world/Planet.js";
 
@@ -194,16 +195,24 @@ export function SceneLesson({
 }
 
 /**
- * The scene where the learner changes the code themselves.
+ * The scene where the learner changes the code themselves -- and can keep
+ * changing it.
  *
  * The slot is a single input sitting inside the code line, styled as part of it
- * rather than as a form field — so what they are editing reads as the program,
+ * rather than as a form field, so what they are editing reads as the program,
  * not as a box next to the program.
  *
- * Nothing is evaluated. The output of `console.log("x")` is x, so echoing what
- * they typed is the true result rather than a simulation of one. That stays true
- * only for this shape of line, which is why the template is authored rather than
- * free-form.
+ * REALLY RUN. The line is executed by littleJs, the same sandboxed interpreter
+ * the missions and the Experiment page use (no eval, a step budget), so what
+ * appears is what JavaScript does with what they typed -- including when what
+ * they typed breaks the line: a stray quote mark gets JavaScript's own complaint,
+ * worded for a beginner, which is a real thing to discover. It used to echo the
+ * typed text back, which was only true for well-formed input.
+ *
+ * AS MANY TIMES AS THEY LIKE. Cause and effect is learnt by repeating it: change
+ * the word, run, see it follow. The slot stays editable after a run and the run
+ * button stays, so the loop is the learner's to repeat; Next moves on when they
+ * are ready. Nothing is scored, timed or recorded.
  */
 function EditBeat({
     scene,
@@ -226,6 +235,19 @@ function EditBeat({
 }) {
     const typed = draft === "" ? scene.initial : draft;
     const [before, after] = scene.template.split("{slot}");
+    /** The version last run: the result describes this, not the live draft. */
+    const [executed, setExecuted] = useState<string | null>(null);
+
+    const result = useMemo(
+        () => (executed === null ? null : runLittleJs(`${before}${executed}${after}`)),
+        [executed, before, after]
+    );
+    const changedSinceRun = executed !== null && typed !== executed;
+
+    const runIt = () => {
+        setExecuted(typed);
+        onRun();
+    };
 
     return (
         <>
@@ -241,8 +263,11 @@ function EditBeat({
                         aria-label={scene.hint}
                         maxLength={24}
                         size={Math.max(typed.length, 5)}
-                        disabled={running || ran}
+                        disabled={running}
                         onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter" && !running && !busy) runIt();
+                        }}
                     />
                     <span>{after}</span>
                 </p>
@@ -256,12 +281,16 @@ function EditBeat({
                     </p>
                 )}
 
-                <div className="scene-console">
+                <div className="scene-console" aria-live="polite">
                     <span className="scene-console-tag">console</span>
-                    {ran ? (
-                        <pre className="scene-output">
-                            <code>{typed}</code>
-                        </pre>
+                    {ran && result && !running ? (
+                        result.error ? (
+                            <p className="scene-console-error">{result.error}</p>
+                        ) : (
+                            <pre className="scene-output">
+                                <code>{result.output.join("\n")}</code>
+                            </pre>
+                        )
                     ) : (
                         <p className="scene-console-empty">
                             {running ? "running…" : "nothing yet"}
@@ -273,17 +302,36 @@ function EditBeat({
             {!ran ? (
                 <button
                     className="button primary big scene-run"
-                    onClick={onRun}
+                    onClick={runIt}
                     disabled={running || busy}
                 >
                     {running ? "Running…" : "▶  Run your version"}
                 </button>
             ) : (
                 <>
-                    <p className="scene-after">{scene.after}</p>
-                    <button className="button primary big" onClick={onNext} disabled={busy}>
-                        Next
-                    </button>
+                    {!running && result && (
+                        <p className="scene-after">
+                            {result.error
+                                ? "That line could not run. Put the quote marks back around your word and run it again."
+                                : scene.after}
+                        </p>
+                    )}
+                    <div className="scene-edit-actions">
+                        <button
+                            className={`button ${changedSinceRun ? "primary" : "ghost"} big`}
+                            onClick={runIt}
+                            disabled={running || busy}
+                        >
+                            {changedSinceRun ? "▶  Run your change" : "▶  Run it again"}
+                        </button>
+                        <button
+                            className={`button ${changedSinceRun ? "ghost" : "primary"} big`}
+                            onClick={onNext}
+                            disabled={running || busy || Boolean(result?.error)}
+                        >
+                            Next
+                        </button>
+                    </div>
                 </>
             )}
         </>

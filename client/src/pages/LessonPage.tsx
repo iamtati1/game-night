@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { play } from "../games/sound.js";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
@@ -6,6 +6,9 @@ import { challengeFor, lessonFor, type LessonStep } from "../games/lessons.js";
 import { missionFor } from "../games/missions.js";
 import { MissionScene } from "../components/MissionScene.js";
 import { sceneLessonFor } from "../games/scenes.js";
+import { markTutorialSeen } from "../games/tutorial.js";
+import { MissionPanel } from "../components/MissionPanel.js";
+import type { JourneyPathResponse } from "../api/types.js";
 import { SceneLesson } from "../components/SceneLesson.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
 import { CheckpointComplete } from "../components/CheckpointComplete.js";
@@ -38,8 +41,10 @@ import { ACTION } from "../vocabulary.js";
  * challenge; `concept` means a lesson. Only where completion is reported differs.
  */
 export function LessonPage() {
-    usePageTitle("Checkpoint");
     const { concept, topic } = useParams<{ concept?: string; topic?: string }>();
+    // A topic is a checkpoint; a concept here is a lesson (the playable
+    // tutorial, for console-output). It said "Checkpoint" for both.
+    usePageTitle(topic ? "Checkpoint" : (sceneLessonFor(concept ?? null)?.title ?? "Lesson"));
     const lesson = useMemo(
         () => (topic ? challengeFor(topic) : lessonFor(concept ?? null)),
         [concept, topic]
@@ -60,6 +65,8 @@ export function LessonPage() {
     /** Recorded for the whole lesson, reported once at the end. */
     const [neededRetry, setNeededRetry] = useState(false);
     const [done, setDone] = useState(false);
+    /** The playable tutorial was finished: show the hand-over to the first mission. */
+    const [tutorialDone, setTutorialDone] = useState(false);
     const [busy, setBusy] = useState(false);
     /** The server's reason for not recording this, when it would not. */
     const [refused, setRefused] = useState<string | null>(null);
@@ -217,20 +224,37 @@ export function LessonPage() {
         );
     }
 
+    /*
+     * THE PLAYABLE TUTORIAL RECORDS NOTHING. It used to post /demonstrate on
+     * its last scene, which the server refuses until the concept's practice
+     * stops are cleared -- so a new learner finished the tutorial and met an
+     * error. Now finishing (or skipping) it is remembered on this device and
+     * hands over to the first mission, whose practice stops are the evidence.
+     */
     if (scenes) {
-        if (done) {
-            return <ConceptComplete concept={scenes.concept} />;
+        if (tutorialDone) {
+            return <TutorialDone concept={scenes.concept} />;
         }
 
         return (
-            <SceneLesson
-                lesson={scenes}
-                busy={busy}
-                onFinish={(retried) => {
-                    setNeededRetry(retried);
-                    void finishWith(retried);
-                }}
-            />
+            <>
+                <SceneLesson
+                    lesson={scenes}
+                    busy={false}
+                    onFinish={() => {
+                        markTutorialSeen(scenes.concept);
+                        setTutorialDone(true);
+                    }}
+                />
+                <p className="scene-skip">
+                    <Link
+                        to={`/concept/${scenes.concept}`}
+                        onClick={() => markTutorialSeen(scenes.concept)}
+                    >
+                        Skip to the practice
+                    </Link>
+                </p>
+            </>
         );
     }
 
@@ -372,3 +396,41 @@ export function LessonPage() {
         </section>
     );
 }
+
+/**
+ * After the tutorial: what they just did, in one line, and their first mission.
+ *
+ * The mission panel reads the path like everywhere else, so the button goes to
+ * the concept's practice (the tutorial is marked seen by now). If the path
+ * cannot be read, the concept page is still one link away.
+ */
+function TutorialDone({ concept }: { concept: string }) {
+    const [path, setPath] = useState<JourneyPathResponse | null>(null);
+    const [failed, setFailed] = useState(false);
+
+    useEffect(() => {
+        let active = true;
+        api.get<JourneyPathResponse>("/api/curriculum/path")
+            .then((data) => active && setPath(data))
+            .catch(() => active && setFailed(true));
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    return (
+        <section className="tutorial-done">
+            <h1 className="tutorial-done-title">You wrote your first program.</h1>
+            <p className="tutorial-done-lede">
+                Next is your first mission: a few short steps that count toward your journey.
+            </p>
+            {path && <MissionPanel path={path} />}
+            {(failed || (path && !path.current)) && (
+                <Link className="button primary big" to={`/concept/${concept}`}>
+                    Go to your first mission
+                </Link>
+            )}
+        </section>
+    );
+}
+

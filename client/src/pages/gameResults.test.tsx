@@ -51,7 +51,9 @@ const GAMES: {
         Page: FlushResultsPage,
         route: "/flush/results/:id",
         sessionPath: "/api/flush/sessions/7",
-        session: { score: 300, xpEarned: 30, bestStreak: 1, completedRounds: 1, totalRounds: 5, rounds: [] },
+        // A steady run (3 of 5): neither tough nor strong, so the generic next-step
+        // guarantees below are tested without the run-tone wording (games/runTone.ts).
+        session: { score: 300, xpEarned: 30, bestStreak: 1, completedRounds: 3, totalRounds: 5, rounds: [] },
         replay: { role: "link", name: "Play again", href: "/flush" },
         rendered: "300"
     },

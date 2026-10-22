@@ -9,8 +9,9 @@ import { worldFor } from "../world/atlas.js";
 import { Icon } from "../world/Icon.js";
 import type { JourneyPathResponse, ResumableResponse, ResumableSession } from "../api/types.js";
 import { gameBySlug } from "../games/catalog.js";
-import { nextAction, sectionProgress } from "../games/progression.js";
-import { ACTION, STATE } from "../vocabulary.js";
+import { nextAction } from "../games/progression.js";
+import { ACTION } from "../vocabulary.js";
+import { MissionPanel } from "../components/MissionPanel.js";
 
 import { usePageTitle } from "../usePageTitle.js";
 /**
@@ -160,17 +161,9 @@ export function HomePage() {
     /* ------------------------------------------------------------ in orbit */
     const currentTopic = path.topics.find((t) => t.state === "current") ?? null;
     const step = nextAction(path);
-    const progress = currentTopic ? sectionProgress(currentTopic) : null;
     /** Nothing demonstrated and no checkpoint passed: a first visit, whatever
-     *  the account's age. "Welcome back" and "Continue" would both be wrong. */
+     *  the account's age. "Welcome back" would be wrong. */
     const fresh = path.points.concepts === 0 && !path.topics.some((t) => t.state === "complete");
-
-    const action = step
-        ? {
-              label: step.kind === "checkpoint" ? ACTION.takeCheckpoint : fresh ? ACTION.startLearning : ACTION.continueLearning,
-              to: step.href
-          }
-        : { label: ACTION.seeJourney, to: "/journey" };
 
     return (
         <section className="home">
@@ -180,36 +173,20 @@ export function HomePage() {
                         {fresh ? `Welcome, ${user.username}.` : `Welcome back, ${user.username}.`}
                     </p>
 
-                    {currentTopic ? (
-                        <>
-                            <p className="home-label">{STATE.currentTopic}</p>
-                            <h1 className="home-topic">{currentTopic.name}</h1>
-                            {currentTopic.principle && (
-                                <p className="home-principle">{currentTopic.principle}</p>
-                            )}
-                        </>
+                    {/* The mission: what is next, its goal, one action and how far
+                        through it you are. The topic's longer principle lives on
+                        the journey and the topic page, where there is room for it. */}
+                    {step ? (
+                        <MissionPanel path={path} headingLevel={1} className="home-mission" />
                     ) : (
                         <>
                             <p className="home-label">Your journey</p>
                             <h1 className="home-topic">Every topic is complete</h1>
+                            <Link className="button primary big home-action" to="/journey">
+                                {ACTION.seeJourney}
+                            </Link>
                         </>
                     )}
-
-                    {step && (
-                        <p className="home-next">
-                            {fresh ? "First step" : "Next step"}: <strong>{step.name}</strong>
-                            {progress && !fresh && (
-                                <>
-                                    <br />
-                                    <span className="home-progress">{progress.label}</span>
-                                </>
-                            )}
-                        </p>
-                    )}
-
-                    <Link className="button primary big home-action" to={action.to}>
-                        {action.label}
-                    </Link>
 
                     {/* A game left unfinished, said quietly under the one primary
                         action: leaving a game pauses it, and this is the way back. */}
@@ -233,6 +210,9 @@ export function HomePage() {
                         </Link>
                         <Link to="/play">
                             <Icon name="play" size={17} /> {ACTION.playGame}
+                        </Link>
+                        <Link to="/skills">
+                            <Icon name="spark" size={17} /> Your skills
                         </Link>
                     </p>
                 </div>

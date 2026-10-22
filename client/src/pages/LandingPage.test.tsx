@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -45,12 +45,6 @@ const PATH = {
     points: { total: 0, concepts: 0, challenges: 0 }
 };
 
-const ENCOUNTER = {
-    conceptSlug: "console-output",
-    name: "Running Code and Reading Output",
-    rungs: [{ demandSlug: "recognise", demandOrder: 1, cleared: false, options: [{ challengeId: "1", difficulty: 1, content: { kind: "question", id: "1" } }] }]
-};
-
 const FLUSH_NOT_READY = { ready: false, eligible: 1, needed: 3, full: 5, message: "Flush needs at least 3 puzzles…" };
 const HUNT_READY = { ready: true, eligible: 4, needed: 3, full: 6, reason: null, reachable: null, practice: null, message: null };
 
@@ -61,7 +55,6 @@ function open(readiness: { flush?: unknown; bugHunt?: unknown } = { flush: FLUSH
         if (url === "/api/me/sessions/resumable") return Promise.resolve({ sessions: [] });
         if (url === "/api/users/me/stats") return Promise.resolve({ totals: { gamesCompleted: 0, totalXp: 0, totalScore: 0 } });
         if (url === "/api/curriculum/path") return Promise.resolve(PATH);
-        if (url === "/api/curriculum/concepts/console-output/encounter") return Promise.resolve(ENCOUNTER);
         return Promise.reject(new Error(`unexpected ${url}`));
     }) as never);
 
@@ -73,86 +66,111 @@ function open(readiness: { flush?: unknown; bugHunt?: unknown } = { flush: FLUSH
 }
 
 describe("/play", () => {
-    it("has exactly one primary action, and it continues the course", async () => {
+    it("has exactly one primary action: the selected island's", async () => {
         const { container } = open();
-
         await screen.findByRole("link", { name: "Start learning" });
 
+        // Code Blitz is recommended, so it is selected and its Play is the one
+        // primary; the course's mission sits below with a quieter button.
         const primaries = [...container.querySelectorAll(".button.primary")];
-        expect(primaries.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
-            ["Start learning", "/concept/console-output"]
+        expect(primaries.map((a) => [a.getAttribute("aria-label"), a.getAttribute("href")])).toEqual([
+            ["Play Code Blitz", "/code-blitz"]
         ]);
+        expect(screen.getByRole("link", { name: "Start learning" }).getAttribute("href")).toBe("/learn/console-output");
     });
 
-    it("is headed Games, and the grid is named by that heading", async () => {
+    it("is headed Games, and the islands are named Games", async () => {
         open();
 
         expect(await screen.findByRole("heading", { level: 1, name: "Games" })).toBeTruthy();
-        expect(screen.getByText(/none of these is required/i)).toBeTruthy();
+        expect(screen.getByText(/none is required/i)).toBeTruthy();
         expect(screen.getByRole("list", { name: "Games" })).toBeTruthy();
     });
 
-    it("puts the five games before the course block", async () => {
+    it("puts the five islands before the mission panel", async () => {
         const { container } = open();
         await screen.findByRole("link", { name: "Start learning" });
 
-        const grid = container.querySelector(".game-grid")!;
-        const focus = container.querySelector(".play-focus")!;
-        expect(grid.compareDocumentPosition(focus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const sea = container.querySelector(".islands")!;
+        const focus = container.querySelector(".mission-panel")!;
+        expect(sea.compareDocumentPosition(focus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it("keeps all five games directly available", async () => {
+    it("keeps all five games one choice away, each opening to its own page", async () => {
         open();
+        const sea = await screen.findByRole("list", { name: "Games" });
+        await screen.findByText(/In the mist/);
 
-        const grid = await screen.findByRole("list", { name: "Games" });
-        // Flush is not ready in this fixture, so its card says how to open it
-        // -- still a link, to the page that explains.
-        await within(grid).findByRole("link", { name: "Flush: how to open" });
-        const games = within(grid)
-            .getAllByRole("link")
-            .map((a) => [a.getAttribute("aria-label"), a.getAttribute("href")]);
+        const expected: [string, string, string][] = [
+            ["Code Blitz", "Play Code Blitz", "/code-blitz"],
+            ["Flush", "Flush: how to open", "/flush"],
+            ["Bug Hunt", "Play Bug Hunt", "/bug-hunt"],
+            ["Reaction", "Play Reaction", "/reaction"],
+            ["Memory", "Play Memory", "/memory"]
+        ];
+        expect(within(sea).getAllByRole("button")).toHaveLength(5);
 
-        expect(games).toEqual(expect.arrayContaining([
-            ["Play Code Blitz", "/code-blitz"],
-            ["Flush: how to open", "/flush"],
-            ["Play Bug Hunt", "/bug-hunt"],
-            ["Play Reaction", "/reaction"],
-            ["Play Memory", "/memory"]
-        ]));
-        expect(games).toHaveLength(5);
+        for (const [name, label, href] of expected) {
+            fireEvent.click(within(sea).getByRole("button", { name: new RegExp(name) }));
+            expect(screen.getByRole("link", { name: label }).getAttribute("href")).toBe(href);
+        }
     });
 
     it("never presents Reaction or Memory as counting toward the course -- or as locked", async () => {
         const { container } = open();
-        await screen.findByRole("link", { name: "Flush: how to open" });
+        const sea = await screen.findByRole("list", { name: "Games" });
+        await screen.findByText(/In the mist/);
 
         for (const name of ["Reaction", "Memory"]) {
-            const card = screen.getByRole("link", { name: `Play ${name}` });
-            expect(card.textContent).toMatch(/Ready to play\..*Just for fun: doesn’t count toward your course\./);
-            expect(card.textContent).not.toMatch(/how to open|opens at/i);
+            fireEvent.click(within(sea).getByRole("button", { name: new RegExp(name) }));
+            const panel = container.querySelector(".island-panel")!;
+            expect(panel.textContent).toMatch(/Ready to play\..*Just for fun: doesn’t count toward your course\./);
+            expect(panel.textContent).not.toMatch(/how to open|opens at|Recommended/i);
         }
-        expect(container.querySelector(".play-focus")?.textContent).not.toMatch(/Reaction|Memory/);
+        expect(container.querySelector(".mission-panel")?.textContent).not.toMatch(/Reaction|Memory/);
     });
 
-    it("says on each card whether it can be played now, from the server's readiness", async () => {
+    it("says on each island whether it can be played now, from the server's readiness", async () => {
+        const { container } = open();
+        const sea = await screen.findByRole("list", { name: "Games" });
+        await screen.findByText(/In the mist/);
+
+        // Flush is not ready in this fixture: misted, labelled in words, still open to explain.
+        const flush = within(sea).getByRole("button", { name: /Flush/ });
+        expect(flush.textContent).toMatch(/In the mist: not open yet/);
+        fireEvent.click(flush);
+        const panel = () => container.querySelector(".island-panel")!.textContent;
+        expect(panel()).toMatch(/Opens at 3 puzzles on ideas you’ve learned \(1 so far\)/);
+        expect(panel()).toMatch(/Counts toward your journey\./);
+
+        fireEvent.click(within(sea).getByRole("button", { name: /Bug Hunt/ }));
+        expect(panel()).toMatch(/Ready: a short run of 4 bugs\./);
+
+        fireEvent.click(within(sea).getByRole("button", { name: /Code Blitz/ }));
+        expect(panel()).toMatch(/Ready to play\..*Counts toward your journey/);
+    });
+
+    it("recommends the game that practises the current lesson, and says why", async () => {
         open();
+        const sea = await screen.findByRole("list", { name: "Games" });
 
-        const flush = await screen.findByRole("link", { name: "Flush: how to open" });
-        expect(flush.textContent).toMatch(/Opens at 3 puzzles on ideas you’ve learned \(1 so far\)/);
-        expect(flush.textContent).toMatch(/Counts toward your journey\./);
-
-        const hunt = screen.getByRole("link", { name: "Play Bug Hunt" });
-        expect(hunt.textContent).toMatch(/Ready: a short run of 4 bugs\./);
-
-        expect(screen.getByRole("link", { name: "Play Code Blitz" }).textContent).toMatch(/Ready to play\..*Counts toward your journey/);
+        const blitz = within(sea).getByRole("button", { name: /Code Blitz/ });
+        expect(blitz.textContent).toMatch(/Recommended/);
+        expect(blitz.getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByText(/Recommended: practises what you are learning now/)).toBeTruthy();
+        expect(within(sea).getAllByText("Recommended")).toHaveLength(1);
     });
 
     it("says nothing about a gated game whose readiness could not load, rather than guess", async () => {
-        open({ flush: null, bugHunt: null });
+        const { container } = open({ flush: null, bugHunt: null });
+        const sea = await screen.findByRole("list", { name: "Games" });
         await screen.findByRole("link", { name: "Start learning" });
 
-        expect(screen.getByRole("link", { name: "Play Flush" }).querySelector(".card-status")).toBeNull();
-        expect(screen.getByRole("link", { name: "Play Bug Hunt" }).querySelector(".card-status")).toBeNull();
-        expect(screen.getByRole("link", { name: "Play Memory" }).querySelector(".card-status")).not.toBeNull();
+        fireEvent.click(within(sea).getByRole("button", { name: /Flush/ }));
+        expect(container.querySelector(".island-panel-status")).toBeNull();
+        expect(within(sea).getByRole("button", { name: /Flush/ }).textContent).not.toMatch(/mist|Open/);
+
+        fireEvent.click(within(sea).getByRole("button", { name: /Memory/ }));
+        expect(container.querySelector(".island-panel-status")).not.toBeNull();
     });
 });

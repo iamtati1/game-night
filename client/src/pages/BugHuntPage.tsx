@@ -915,6 +915,11 @@ function IncidentScreen({
                 </div>
             )}
 
+            {/* THE ARENA: the code and the way to answer it. On a wide screen
+                it takes most of the width and the report, traces, actions and
+                feedback sit in a column beside it (world.css); on a phone the
+                order is unchanged. One wrapper, no behaviour. */}
+            <div className="bh-arena">
             {unsupported ? (
                 // Loud, not silent. Rendering the wrong interaction would leave the
                 // player unable to answer and reasonably blaming themselves.
@@ -942,6 +947,8 @@ function IncidentScreen({
                     />
                 </>
             )}
+
+            </div>
 
             {hints.length > 0 && (
                 <ol className="bh-hints">

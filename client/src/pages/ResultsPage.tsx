@@ -6,6 +6,7 @@ import { ApiError, api } from "../api/client.js";
 import type { SessionSummary } from "../api/types.js";
 import { rungLabel } from "../api/encounter.js";
 import { nextStepAfterRound } from "../games/progression.js";
+import { recapLabel, runTone, toneLine } from "../games/runTone.js";
 import { RunVerdict } from "../components/RunVerdict.js";
 import { TopicStanding } from "../components/TopicStanding.js";
 import { useRunContext } from "../games/useRunContext.js";
@@ -203,7 +204,7 @@ export function ResultsPage() {
                         claims an unlock: `rungs.cleared >= playable` is the
                         condition the encounter itself demonstrates on. */}
                     {(() => {
-                        const next = nextStepAfterRound(
+                        const step = nextStepAfterRound(
                             curriculum.concept && curriculum.rungs
                                 ? {
                                       slug: curriculum.concept.slug,
@@ -212,14 +213,33 @@ export function ResultsPage() {
                                   }
                                 : null
                         );
+                        /* After a tough run, the same step worded as a look
+                           back at the lesson (games/runTone.ts). Not when every
+                           stop is already cleared: then demonstrating is still
+                           the honest next thing. */
+                        const tone = runTone(session.correctCount, session.totalQuestions);
+                        const recap =
+                            tone === "tough" && curriculum.concept && step.href === `/concept/${curriculum.concept.slug}` &&
+                            !step.label.startsWith("Demonstrate");
+                        const next = recap
+                            ? {
+                                  ...step,
+                                  label: recapLabel(curriculum.concept!.name),
+                                  because: "The lesson's examples first, then the next stop"
+                              }
+                            : step;
+                        const line = toneLine(tone, session.correctCount, session.totalQuestions, "right");
 
                         return (
-                            <p className="round-learning-next">
-                                <Link className="button primary" to={next.href}>
-                                    {next.label}
-                                </Link>
-                                <span className="round-learning-because">{next.because}</span>
-                            </p>
+                            <>
+                                {line && <p className={`run-tone is-${tone}`}>{line}</p>}
+                                <p className="round-learning-next">
+                                    <Link className="button primary" to={next.href}>
+                                        {next.label}
+                                    </Link>
+                                    <span className="round-learning-because">{next.because}</span>
+                                </p>
+                            </>
                         );
                     })()}
                 </div>

@@ -19,6 +19,7 @@ describe("navAreaFor", () => {
         ["/reaction", "games"],
         ["/memory/results/3", "games"],
         ["/results/40", "games"],
+        ["/skills", "skills"],
         ["/experiment", "experiment"],
         ["/history", "log"]
     ])("%s is in %s", (path, area) => {

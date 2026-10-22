@@ -94,6 +94,7 @@ export function FlushResultsPage() {
             {/* Back to the course first; playing again beside it. Right under the
                 outcome, so a phone reaches it without scrolling past the details. */}
             <NextStepActions
+                outcome={{ hit: session.completedRounds, total: session.totalRounds, unit: "rounds flushed" }}
                 replay={(cls) => (
                     <Link className={cls} to="/flush">
                         Play again
