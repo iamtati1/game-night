@@ -891,6 +891,41 @@ export async function findConceptState(
 }
 
 /**
+ * Whether a challenge is a mission movement: a rung realised by a program the
+ * learner writes and runs in the browser, with no question or incident behind
+ * it.
+ *
+ * THE ONLY KIND OF RUNG THE BROWSER MAY REPORT AS DONE. A movement produces no
+ * attempt row of its own (littleJs runs client-side), so POST
+ * /challenges/:id/completion is its evidence arm. Every other practice rung is
+ * cleared by an answer the server judges -- judgeAnswer for lesson exercises,
+ * the game routes for Code Blitz and Bug Hunt, roundTeaching for Flush -- and
+ * accepting a bare "done" for one of those would let a hand-made request clear
+ * it without answering, and then demonstrate the concept.
+ *
+ * Mirrors how findEncounterView offers content: a question or an incident on
+ * the challenge takes precedence, and only a challenge with neither, whose
+ * activity is 'mission', is shown as a writing exercise.
+ */
+export async function isMissionChallenge(challengeId: string): Promise<boolean> {
+    const result = await pool.query(
+        `SELECT 1
+         FROM challenges ch
+         WHERE ch.id = $1
+           AND ch.is_active
+           AND ch.role = 'practise'
+           AND ch.activity = 'mission'
+           AND NOT EXISTS (SELECT 1 FROM questions q
+                           WHERE q.challenge_id = ch.id AND q.is_active)
+           AND NOT EXISTS (SELECT 1 FROM bug_hunt_incidents i
+                           WHERE i.challenge_id = ch.id AND i.is_active)`,
+        [challengeId]
+    );
+
+    return result.rows.length > 0;
+}
+
+/**
  * Whether this learner may play the activity behind a challenge.
  *
  * Enforcement, not decoration. The encounter can describe a locked concept --

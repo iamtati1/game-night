@@ -12,6 +12,7 @@ import {
     findConceptState,
     findEncounterView,
     findExercise,
+    isMissionChallenge,
     isPlayable,
     judgeAnswer,
     mayPlayChallenge,
@@ -365,6 +366,17 @@ curriculumRouter.post(
         const body = typeof req.body === "object" && req.body !== null ? req.body : {};
         if (!(await mayPlayChallenge(req.user!.id, challenge))) {
             res.status(403).json({ error: "That concept is not open yet" });
+            return;
+        }
+
+        // Only a mission movement may be reported done by the browser. A rung
+        // with a question or an incident behind it is cleared by answering it,
+        // which the server judges; without this check a hand-made request
+        // could clear such a rung without an answer (see isMissionChallenge).
+        if (!(await isMissionChallenge(challenge))) {
+            res.status(403).json({
+                error: "This step is cleared by answering it, not by reporting it done"
+            });
             return;
         }
 
