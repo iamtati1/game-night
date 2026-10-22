@@ -16,6 +16,8 @@ import {
 } from "../sessions/queries.js";
 import { requestedFocusTopic, wantsFreshSession, wantsRelaxedRun } from "../sessions/schemas.js";
 import { isRelaxed, markRelaxed } from "../sessions/relaxedRuns.js";
+import { blitzHintCount, blitzHints, NO_HINTS, recordBlitzHint, type BlitzHints } from "../sessions/runHints.js";
+import { hintCapacity, struckOptionIds } from "./hints.js";
 import { findCurrentConcept, findJourneyPath } from "../curriculum/lessons.js";
 import { findNextIntroduction } from "../curriculum/queries.js";
 import { isActiveSessionConflict, resolveSessionRace } from "./conflicts.js";
@@ -67,12 +69,17 @@ interface ServedQuestion {
     msRemaining: number | null;
     /** True for a run the learner chose to play without a clock. */
     relaxed: boolean;
+    /** Options a hint has ruled out on this question (re-sent on reload). */
+    struckOptionIds: string[];
+    /** Hints still available on this question; 0 for assembly questions. */
+    hintsLeft: number;
 }
 
 function summarize(
     session: db.GameSessionRow,
     questions: db.SessionQuestionRow[],
-    relaxed = false
+    relaxed = false,
+    hints: BlitzHints = NO_HINTS
 ) {
     // This run's own shape, computed with the same rules the cross-run figures
     // use, so a result screen and a trend can never disagree about what a streak
@@ -112,6 +119,8 @@ function summarize(
             selectedOption: q.selected_option_text,
             correctOption: q.correct_option_text,
             isCorrect: q.is_correct,
+            // A hint was taken: the answer scored HINTED_POINTS, if correct.
+            hinted: hints.hinted(q.id),
             responseTimeMs:
                 q.served_at && q.answered_at
                     ? q.answered_at.getTime() - q.served_at.getTime()
@@ -124,7 +133,8 @@ function summarize(
                           "predict-output",
                           Number.MAX_SAFE_INTEGER,
                           "developing",
-                          relaxed
+                          relaxed,
+                          hints.hinted(q.id)
                       )
                     : 0
         }))
@@ -158,15 +168,16 @@ async function respondResumed(
     now: Date,
     /** Needed only to mark whether the served beat is the learner's concept. */
     userId: string,
-    relaxed = false
+    relaxed = false,
+    hints: BlitzHints = NO_HINTS
 ): Promise<void> {
     const question = await nextPlayableQuestion(session.id, now, relaxed);
 
     if (!question) {
-        const finished = await finishSession(session.id, relaxed);
+        const finished = await finishSession(session.id, relaxed, hints);
         res.status(200).json({
             resumed: true,
-            session: summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
+            session: summarize(finished, await db.listSessionQuestions(finished.id), relaxed, hints)
         });
         return;
     }
@@ -174,17 +185,22 @@ async function respondResumed(
     res.status(200).json({
         resumed: true,
         sessionId: session.id,
-        scoreSoFar: await db.scoreSoFar(session.id, relaxed),
-        question: await serveQuestion(question, userId, session.id, relaxed)
+        scoreSoFar: await db.scoreSoFar(session.id, relaxed, hints.hinted),
+        question: await serveQuestion(question, userId, session.id, relaxed, hints)
     });
 }
 
-async function finishSession(sessionId: string, relaxed = false): Promise<db.GameSessionRow> {
+async function finishSession(
+    sessionId: string,
+    relaxed = false,
+    hints: BlitzHints = NO_HINTS
+): Promise<db.GameSessionRow> {
     const questions = await db.listSessionQuestions(sessionId);
     const scored = questions.map((q) => ({
         isCorrect: q.is_correct,
         servedAt: q.served_at,
-        answeredAt: q.answered_at
+        answeredAt: q.answered_at,
+        hinted: hints.hinted(q.id)
     }));
 
     return db.completeSession(sessionId, scoreForSession(scored, relaxed), xpForSession(scored));
@@ -277,7 +293,8 @@ async function serveQuestion(
     question: db.SessionQuestionRow,
     userId: string,
     sessionId: string,
-    relaxed = false
+    relaxed = false,
+    hints: BlitzHints = NO_HINTS
 ): Promise<ServedQuestion> {
     const servedAt = question.served_at ?? (await db.markServed(question.id));
     const options = await db.listActiveOptions(question.question_id);
@@ -317,7 +334,19 @@ async function serveQuestion(
         servedAt: servedAt.toISOString(),
         deadlineAt: deadline === null ? null : new Date(deadline).toISOString(),
         msRemaining: deadline === null ? null : Math.max(0, deadline - Date.now()),
-        relaxed
+        relaxed,
+        ...(await hintState(question, hints.count(question.id)))
+    };
+}
+
+/** What hints have done to a question so far, and what is left (game/hints.ts). */
+async function hintState(question: db.SessionQuestionRow, taken: number) {
+    const options = await db.listOptionCorrectness(question.question_id);
+    const capacity = hintCapacity(question.challenge_type, options);
+
+    return {
+        struckOptionIds: struckOptionIds(question.id, question.challenge_type, options, taken),
+        hintsLeft: Math.max(0, capacity - Math.min(taken, capacity))
     };
 }
 
@@ -390,7 +419,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
         const full = await db.findSessionForUser(existing.id, userId);
 
         if (full && full.status === "in_progress") {
-            await respondResumed(res, full, now, userId, isRelaxed(req, full.id));
+            await respondResumed(res, full, now, userId, isRelaxed(req, full.id), blitzHints(req));
             return;
         }
     }
@@ -523,7 +552,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
                     return;
                 }
 
-                await respondResumed(res, full, now, userId, isRelaxed(req, full.id));
+                await respondResumed(res, full, now, userId, isRelaxed(req, full.id), blitzHints(req));
                 return;
             }
         }
@@ -541,7 +570,7 @@ gameRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =>
         resumed: false,
         sessionId: session.id,
         scoreSoFar: 0,
-        question: question ? await serveQuestion(question, userId, session.id, relaxed) : null
+        question: question ? await serveQuestion(question, userId, session.id, relaxed, blitzHints(req)) : null
     });
 });
 
@@ -567,13 +596,14 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
     }
 
     const relaxed = isRelaxed(req, session.id);
+    const hints = blitzHints(req);
     const question = await nextPlayableQuestion(session.id, now, relaxed);
 
     if (!question) {
-        const finished = await finishSession(session.id, relaxed);
+        const finished = await finishSession(session.id, relaxed, hints);
         res.status(200).json({
             complete: true,
-            session: summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
+            session: summarize(finished, await db.listSessionQuestions(finished.id), relaxed, hints)
         });
         return;
     }
@@ -581,8 +611,65 @@ gameRouter.get("/sessions/current", requireAuth, async (req: Request, res: Respo
     res.status(200).json({
         complete: false,
         sessionId: session.id,
-        scoreSoFar: await db.scoreSoFar(session.id, relaxed),
-        question: await serveQuestion(question, userId, session.id, relaxed)
+        scoreSoFar: await db.scoreSoFar(session.id, relaxed, hints.hinted),
+        question: await serveQuestion(question, userId, session.id, relaxed, hints)
+    });
+});
+
+// POST /api/sessions/:id/hints -- rule out one wrong answer, at a cost.
+//
+// Body: { sessionQuestionId }. The server picks which option to rule out
+// (game/hints.ts) and remembers that a hint was taken (sessions/runHints.ts);
+// a correct answer on this question then scores HINTED_POINTS (half, no speed
+// bonus). XP is unchanged. Validated like an answer: your own live run, a
+// question that is pending and on screen, and a hint still available.
+gameRouter.post("/sessions/:id/hints", requireAuth, async (req: Request, res: Response) => {
+    const sessionQuestionId = String((req.body as { sessionQuestionId?: unknown } | undefined)?.sessionQuestionId ?? "");
+
+    if (!/^[0-9]+$/.test(sessionQuestionId)) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+    }
+
+    const session = await db.findSessionForUser(String(req.params.id), req.user!.id);
+
+    if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+    }
+
+    if (session.status !== "in_progress") {
+        res.status(409).json({ error: `Session is ${session.status}` });
+        return;
+    }
+
+    const question = await db.findSessionQuestion(sessionQuestionId, session.id);
+
+    if (!question) {
+        res.status(404).json({ error: "Question not part of this session" });
+        return;
+    }
+
+    if (question.status !== "pending" || !question.served_at) {
+        res.status(409).json({ error: "That question is not on screen" });
+        return;
+    }
+
+    const options = await db.listOptionCorrectness(question.question_id);
+    const capacity = hintCapacity(question.challenge_type, options);
+    const taken = blitzHintCount(req, question.id);
+
+    if (taken >= capacity) {
+        res.status(409).json({ error: "No hints left on this question" });
+        return;
+    }
+
+    const now = recordBlitzHint(req, question.id);
+
+    res.status(200).json({
+        struckOptionIds: struckOptionIds(question.id, question.challenge_type, options, now),
+        hintsLeft: Math.max(0, capacity - now),
+        hintsUsed: now
     });
 });
 
@@ -647,6 +734,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
     const stance = await roundStance(session.id);
     // A relaxed run has no deadline to enforce, here or in the sweep.
     const relaxed = isRelaxed(req, session.id);
+    const hints = blitzHints(req);
 
     if (
         isExpired(
@@ -661,12 +749,12 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         await db.recordTimeout(question.id, correctOptionText);
 
         const remaining = await nextPlayableQuestion(session.id, now, relaxed);
-        const finished = remaining ? null : await finishSession(session.id, relaxed);
+        const finished = remaining ? null : await finishSession(session.id, relaxed, hints);
 
         res.status(200).json({
             outcome: "timed_out",
             pointsAwarded: 0,
-            scoreSoFar: await db.scoreSoFar(session.id, relaxed),
+            scoreSoFar: await db.scoreSoFar(session.id, relaxed, hints.hinted),
             correctOption: correctOptionText,
             explanation,
             complete: !remaining,
@@ -677,7 +765,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
             // fetches it from GET /sessions/current when it is ready to show it.
             question: null,
             session: finished
-                ? summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
+                ? summarize(finished, await db.listSessionQuestions(finished.id), relaxed, hints)
                 : null
         });
         return;
@@ -755,16 +843,17 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         question.challenge_type,
         Number.MAX_SAFE_INTEGER,
         "developing",
-        relaxed
+        relaxed,
+        hints.hinted(question.id)
     );
 
     const remaining = await nextPlayableQuestion(session.id, now, relaxed);
-    const finished = remaining ? null : await finishSession(session.id, relaxed);
+    const finished = remaining ? null : await finishSession(session.id, relaxed, hints);
 
     res.status(200).json({
         outcome: isCorrect ? "correct" : "incorrect",
         pointsAwarded,
-        scoreSoFar: await db.scoreSoFar(session.id, relaxed),
+        scoreSoFar: await db.scoreSoFar(session.id, relaxed, hints.hinted),
         responseTimeMs: elapsedMs,
         correctOption: correctOptionText,
         explanation,
@@ -772,7 +861,7 @@ gameRouter.post("/sessions/:id/answers", requireAuth, async (req: Request, res: 
         // Not served here -- see the note in the timeout branch above.
         question: null,
         session: finished
-            ? summarize(finished, await db.listSessionQuestions(finished.id), relaxed)
+            ? summarize(finished, await db.listSessionQuestions(finished.id), relaxed, hints)
             : null
     });
 });
@@ -817,7 +906,8 @@ gameRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Response)
         session: summarize(
             session,
             await db.listSessionQuestions(session.id),
-            isRelaxed(req, session.id)
+            isRelaxed(req, session.id),
+            blitzHints(req)
         ),
         curriculum: {
             concept:

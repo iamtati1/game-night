@@ -62,6 +62,9 @@ function banked(n: number): number {
 interface Reveal {
     outcome: "wrong" | "round_complete" | "timed_out";
     roundScore: number | null;
+    /** A hint was taken in the round just ended: its score was halved. Captured
+     *  here because `round` may already be the next one when this renders. */
+    hinted?: boolean;
     correctSequence: string[];
     yourSequence: string[];
     /**
@@ -105,6 +108,8 @@ export function FlushPage() {
     // The server's "not enough puzzles for you yet": a next step, not a fault.
     const [notReady, setNotReady] = useState<Readiness | null>(null);
     const [busy, setBusy] = useState(false);
+    /** A hint request is in flight. */
+    const [hinting, setHinting] = useState(false);
 
     const [paused, setPaused] = useState(false);
     /** Counting in after Resume. The session is only resumed once the count
@@ -364,6 +369,34 @@ export function FlushPage() {
         [navigate, later]
     );
 
+    /**
+     * Takes this round's hint: the server names the next output to place and
+     * remembers the hint, so the round banks half. One per round; the
+     * highlight comes back with the round on a reload.
+     */
+    async function takeHint() {
+        if (!round || !sessionId || hinting || round.hinted) return;
+        const asked = round.roundId;
+
+        setHinting(true);
+        try {
+            const res = await api.post<{ outputId: string; pointsBanked: number }>(
+                `/api/flush/sessions/${sessionId}/hints`,
+                { roundId: asked }
+            );
+            play("hint");
+            setRound((r) =>
+                r && r.roundId === asked
+                    ? { ...r, hinted: true, hintOutputId: res.outputId, pointsBanked: res.pointsBanked }
+                    : r
+            );
+        } catch {
+            // Nothing changed on the server; the round carries on as it was.
+        } finally {
+            setHinting(false);
+        }
+    }
+
     async function place(outputId: string) {
         if (!sessionId || !round || settling.current) return;
 
@@ -436,6 +469,7 @@ export function FlushPage() {
                         {
                             outcome: res.outcome === "correct" ? "wrong" : res.outcome,
                             roundScore: res.roundScore,
+                            hinted: round.hinted === true,
                             correctSequence: res.correctSequence ?? [],
                             yourSequence: res.yourSequence ?? [],
                             explanation: res.explanation ?? null
@@ -738,15 +772,41 @@ export function FlushPage() {
                         {round.tiles.map((tile) => (
                             <li key={tile.id}>
                                 <button
-                                    className={`tile${lastWrong === tile.id ? " wrong" : ""}`}
+                                    className={`tile${lastWrong === tile.id ? " wrong" : ""}${
+                                        round.hintOutputId === tile.id ? " is-hinted" : ""
+                                    }`}
                                     onClick={() => void place(tile.id)}
                                     disabled={busy}
+                                    aria-label={round.hintOutputId === tile.id ? `${tile.text}, next (your hint)` : undefined}
                                 >
                                     {tile.text}
+                                    {round.hintOutputId === tile.id && (
+                                        <span className="tile-hint" aria-hidden="true">
+                                            next
+                                        </span>
+                                    )}
                                 </button>
                             </li>
                         ))}
                     </ul>
+                )}
+
+                {/* THE HINT: shows the next output, at a stated cost -- the
+                    round then banks half. One per round. XP is unchanged. */}
+                {!reveal && (
+                    <div className="hint-row">
+                        <button
+                            type="button"
+                            className="button ghost small hint-button"
+                            disabled={busy || hinting || round.hinted === true}
+                            onClick={() => void takeHint()}
+                        >
+                            {round.hinted ? "Hint used" : "Hint: show the next output"}
+                        </button>
+                        <span className="hint-cost">
+                            {round.hinted ? "This round banks half." : "The round then banks half."}
+                        </span>
+                    </div>
                 )}
 
                 </div>
@@ -755,7 +815,10 @@ export function FlushPage() {
                 <div className="reveal" role="status">
                     {reveal.outcome === "round_complete" && (
                         <p className="tag correct">
-                            Flushed · +{reveal.roundScore} <span className="mult">×2</span>
+                            {/* The round score already includes both: doubled for
+                                finishing, then halved for the hint. Said in that order. */}
+                            Flushed · +{reveal.roundScore}{" "}
+                            <span className="mult">{reveal.hinted ? "×2, halved for the hint" : "×2"}</span>
                         </p>
                     )}
                     {reveal.outcome === "wrong" && (

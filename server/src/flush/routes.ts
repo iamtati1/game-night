@@ -11,6 +11,7 @@ import {
 } from "../sessions/queries.js";
 import { wantsFreshSession, wantsRelaxedRun } from "../sessions/schemas.js";
 import { isRelaxed, markRelaxed } from "../sessions/relaxedRuns.js";
+import { flushHints, NO_FLUSH_HINTS, recordFlushHint, type FlushHints } from "../sessions/runHints.js";
 import { mayPlayChallenge, recordActivityCompletion } from "../curriculum/encounter.js";
 import * as db from "./queries.js";
 import { placementSchema } from "./schemas.js";
@@ -20,6 +21,7 @@ import {
     roundTimeLimitMs,
     isExpired,
     isPlacementCorrect,
+    hintedHalf,
     pointsForPlacements,
     roundScore,
     scoreForSession,
@@ -56,7 +58,7 @@ function conflictBody(active: { gameSlug: string; gameName: string }) {
     };
 }
 
-function summarize(session: db.FlushSessionRow, rounds: db.FlushRoundRow[]) {
+function summarize(session: db.FlushSessionRow, rounds: db.FlushRoundRow[], hints: FlushHints = NO_FLUSH_HINTS) {
     // Only the streak. Flush has no per-unit response time worth reporting: a
     // round ends the moment a placement is wrong, so a bad run finishes faster
     // than a good one and "average round time" would reward failing quickly.
@@ -83,16 +85,19 @@ function summarize(session: db.FlushSessionRow, rounds: db.FlushRoundRow[]) {
             status: r.status,
             correctPlacements: r.correct_placements,
             totalOutputs: r.total_outputs,
-            pointsAwarded: roundScore(r.correct_placements, r.status === "completed")
+            // A hint was taken: the round banked half.
+            hinted: hints.hinted(r.id),
+            pointsAwarded: roundScore(r.correct_placements, r.status === "completed", hints.hinted(r.id))
         }))
     };
 }
 
-async function finishSession(sessionId: string): Promise<db.FlushSessionRow> {
+async function finishSession(sessionId: string, hints: FlushHints = NO_FLUSH_HINTS): Promise<db.FlushSessionRow> {
     const rounds = await db.listRounds(sessionId);
     const scored = rounds.map((r) => ({
         correctPlacements: r.correct_placements,
-        status: r.status
+        status: r.status,
+        hinted: hints.hinted(r.id)
     }));
 
     return db.completeSession(sessionId, scoreForSession(scored), xpForSession(scored));
@@ -165,7 +170,7 @@ async function nextPlayableRound(
  * the wire until the round has ended -- the same reason Code Blitz withholds
  * correct_option_text until an answer is submitted.
  */
-async function serveRound(round: db.FlushRoundRow, relaxed = false) {
+async function serveRound(round: db.FlushRoundRow, relaxed = false, hints: FlushHints = NO_FLUSH_HINTS) {
     const servedAt = round.served_at ?? (await db.markServed(round.id));
     const [tiles, placed] = await Promise.all([
         db.listTiles(round.snippet_id),
@@ -198,12 +203,19 @@ async function serveRound(round: db.FlushRoundRow, relaxed = false) {
         tiles: shuffle(tiles.filter((t) => !placedIds.has(t.id))),
         placed: placed.map((p) => ({ outputId: p.output_id, text: p.output_text })),
         totalOutputs: round.total_outputs,
-        pointsBanked: pointsForPlacements(round.correct_placements),
+        pointsBanked: hintedHalf(pointsForPlacements(round.correct_placements), hints.hinted(round.id)),
         servedAt: servedAt.toISOString(),
         deadlineAt: deadline === null ? null : new Date(deadline).toISOString(),
         limitMs,
         msRemaining: deadline === null ? null : Math.max(0, deadline - Date.now()),
-        relaxed
+        relaxed,
+        // The hint: whether one was taken, and the output it showed while that
+        // output is still to place (so a reload keeps the highlight).
+        hinted: hints.hinted(round.id),
+        hintOutputId: (() => {
+            const shown = hints.outputFor(round.id);
+            return shown && !placedIds.has(shown) ? shown : null;
+        })()
     };
 }
 
@@ -213,15 +225,16 @@ async function respondResumed(
     res: Response,
     sessionId: string,
     now: Date,
-    relaxed = false
+    relaxed = false,
+    hints: FlushHints = NO_FLUSH_HINTS
 ): Promise<void> {
     const round = await nextPlayableRound(sessionId, now, relaxed);
 
     if (!round) {
-        const finished = await finishSession(sessionId);
+        const finished = await finishSession(sessionId, hints);
         res.status(200).json({
             resumed: true,
-            session: summarize(finished, await db.listRounds(finished.id))
+            session: summarize(finished, await db.listRounds(finished.id), hints)
         });
         return;
     }
@@ -229,8 +242,8 @@ async function respondResumed(
     res.status(200).json({
         resumed: true,
         sessionId,
-        scoreSoFar: await db.scoreSoFar(sessionId),
-        round: await serveRound(round, relaxed)
+        scoreSoFar: await db.scoreSoFar(sessionId, false, hints.hinted),
+        round: await serveRound(round, relaxed, hints)
     });
 }
 
@@ -319,7 +332,7 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
         const full = await db.findFlushSessionForUser(existing.id, userId);
 
         if (full && full.status === "in_progress") {
-            await respondResumed(res, existing.id, now, isRelaxed(req, existing.id));
+            await respondResumed(res, existing.id, now, isRelaxed(req, existing.id), flushHints(req));
             return;
         }
     }
@@ -411,7 +424,7 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
                     return;
                 }
 
-                await respondResumed(res, winner!.id, now, isRelaxed(req, winner!.id));
+                await respondResumed(res, winner!.id, now, isRelaxed(req, winner!.id), flushHints(req));
                 return;
             }
         }
@@ -427,7 +440,7 @@ flushRouter.post("/sessions", requireAuth, async (req: Request, res: Response) =
         resumed: false,
         sessionId: session.id,
         scoreSoFar: 0,
-        round: round ? await serveRound(round, relaxed) : null
+        round: round ? await serveRound(round, relaxed, flushHints(req)) : null
     });
 });
 
@@ -442,13 +455,14 @@ flushRouter.get("/sessions/current", requireAuth, async (req: Request, res: Resp
     }
 
     const relaxed = isRelaxed(req, active.id);
+    const hints = flushHints(req);
     const round = await nextPlayableRound(active.id, now, relaxed);
 
     if (!round) {
-        const finished = await finishSession(active.id);
+        const finished = await finishSession(active.id, hints);
         res.status(200).json({
             complete: true,
-            session: summarize(finished, await db.listRounds(finished.id))
+            session: summarize(finished, await db.listRounds(finished.id), hints)
         });
         return;
     }
@@ -456,8 +470,8 @@ flushRouter.get("/sessions/current", requireAuth, async (req: Request, res: Resp
     res.status(200).json({
         complete: false,
         sessionId: active.id,
-        scoreSoFar: await db.scoreSoFar(active.id),
-        round: await serveRound(round, relaxed)
+        scoreSoFar: await db.scoreSoFar(active.id, false, hints.hinted),
+        round: await serveRound(round, relaxed, hints)
     });
 });
 
@@ -507,18 +521,19 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
     // The deadline is enforced against the server's own served_at. A late
     // placement is refused outright, not merely scored zero.
     const relaxed = isRelaxed(req, sessionId);
+    const hints = flushHints(req);
 
     if (!relaxed && isExpired(round.served_at, now, round.total_outputs)) {
         await db.markRoundTimedOut(round.id);
 
         const remaining = await nextPlayableRound(sessionId, now, relaxed);
-        const finished = remaining ? null : await finishSession(sessionId);
+        const finished = remaining ? null : await finishSession(sessionId, hints);
 
         res.status(200).json({
             outcome: "timed_out",
             roundEnded: true,
-            pointsBanked: pointsForPlacements(round.correct_placements),
-            scoreSoFar: await db.scoreSoFar(sessionId),
+            pointsBanked: hintedHalf(pointsForPlacements(round.correct_placements), hints.hinted(round.id)),
+            scoreSoFar: await db.scoreSoFar(sessionId, false, hints.hinted),
             // Teaching moment: the order they were reaching for, AND why it
             // is that order. The sequence alone only helps someone who already
             // knows the answer.
@@ -526,8 +541,8 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
             ...(await roundTeaching(userId, round.snippet_id, false)),
             yourSequence: (await db.listPlacements(round.id)).map((p) => p.output_text),
             complete: !remaining,
-            round: remaining ? await serveRound(remaining, relaxed) : null,
-            session: finished ? summarize(finished, await db.listRounds(sessionId)) : null
+            round: remaining ? await serveRound(remaining, relaxed, hints) : null,
+            session: finished ? summarize(finished, await db.listRounds(sessionId), hints) : null
         });
         return;
     }
@@ -555,10 +570,13 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
     });
 
     const roundEnded = !correct || completesRound;
-    const banked = pointsForPlacements(correct ? placementIndex : round.correct_placements);
+    const banked = hintedHalf(
+        pointsForPlacements(correct ? placementIndex : round.correct_placements),
+        hints.hinted(round.id)
+    );
 
     const remaining = roundEnded ? await nextPlayableRound(sessionId, now, relaxed) : null;
-    const finished = roundEnded && !remaining ? await finishSession(sessionId) : null;
+    const finished = roundEnded && !remaining ? await finishSession(sessionId, hints) : null;
 
     res.status(200).json({
         outcome: completesRound ? "round_complete" : correct ? "correct" : "wrong",
@@ -567,9 +585,9 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
         // The multiplier is what a wrong guess forfeits, so show what the round
         // is actually worth once it is over.
         roundScore: roundEnded
-            ? roundScore(correct ? placementIndex : round.correct_placements, completesRound)
+            ? roundScore(correct ? placementIndex : round.correct_placements, completesRound, hints.hinted(round.id))
             : null,
-        scoreSoFar: await db.scoreSoFar(sessionId),
+        scoreSoFar: await db.scoreSoFar(sessionId, false, hints.hinted),
         // Revealed only once the round is over -- never while it is still in play.
         correctSequence: roundEnded ? await db.correctSequence(round.snippet_id) : null,
         ...(roundEnded
@@ -590,12 +608,76 @@ flushRouter.post("/sessions/:id/placements", requireAuth, async (req: Request, r
         //
         // A round that has NOT ended is still re-served: it is the same round,
         // served_at is already set, and markServed leaves it alone.
-        round: roundEnded ? null : await serveRound((await db.findRound(round.id, sessionId))!, relaxed),
-        session: finished ? summarize(finished, await db.listRounds(sessionId)) : null
+        round: roundEnded ? null : await serveRound((await db.findRound(round.id, sessionId))!, relaxed, hints),
+        session: finished ? summarize(finished, await db.listRounds(sessionId), hints) : null
     });
 });
 
 // GET /api/flush/sessions/:id -- results.
+// POST /api/flush/sessions/:id/hints -- show the next output to place, at a cost.
+//
+// Body: { roundId }. One hint per round: it names the output that comes next
+// (by position), and that round then banks half (sessions/runHints.ts). Asking
+// again returns the same output rather than a second hint. XP is unchanged.
+flushRouter.post("/sessions/:id/hints", requireAuth, async (req: Request, res: Response) => {
+    const roundId = String((req.body as { roundId?: unknown } | undefined)?.roundId ?? "");
+
+    if (!/^[0-9]+$/.test(roundId)) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+    }
+
+    const sessionId = String(req.params.id);
+    const session = await db.findFlushSessionForUser(sessionId, req.user!.id);
+
+    if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+    }
+
+    if (session.status !== "in_progress") {
+        res.status(409).json({ error: `Session is ${session.status}` });
+        return;
+    }
+
+    const round = await db.findRound(roundId, sessionId);
+
+    if (!round) {
+        res.status(404).json({ error: "Round not part of this session" });
+        return;
+    }
+
+    if (round.status !== "pending" || !round.served_at) {
+        res.status(409).json({ error: "That round is not on screen" });
+        return;
+    }
+
+    const now = new Date();
+    const relaxed = isRelaxed(req, sessionId);
+
+    if (!relaxed && isExpired(round.served_at, now, round.total_outputs)) {
+        res.status(409).json({ error: "Time is up on this round" });
+        return;
+    }
+
+    const hints = flushHints(req);
+    const already = hints.outputFor(round.id);
+    const outputId = already ?? (await db.nextCorrectOutputId(round.snippet_id, round.correct_placements + 1));
+
+    if (!outputId) {
+        res.status(409).json({ error: "Nothing left to place in this round" });
+        return;
+    }
+
+    if (!already) recordFlushHint(req, round.id, outputId);
+
+    res.status(200).json({
+        outputId,
+        hinted: true,
+        pointsBanked: hintedHalf(pointsForPlacements(round.correct_placements), true)
+    });
+});
+
 flushRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Response) => {
     const sessionId = String(req.params.id);
     const session = await db.findFlushSessionForUser(sessionId, req.user!.id);
@@ -605,5 +687,5 @@ flushRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Response
         return;
     }
 
-    res.status(200).json({ session: summarize(session, await db.listRounds(sessionId)) });
+    res.status(200).json({ session: summarize(session, await db.listRounds(sessionId), flushHints(req)) });
 });

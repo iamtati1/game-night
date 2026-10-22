@@ -482,12 +482,31 @@ export async function completeSession(
  * Like Code Blitz, nothing accumulates a running total, so pausing and resuming
  * cannot desynchronise the score from what the database actually holds.
  */
-export async function scoreSoFar(sessionId: string): Promise<number> {
+export async function scoreSoFar(
+    sessionId: string,
+    _relaxed = false,
+    /** Whether a hint was taken in a round (sessions/runHints.ts). */
+    hinted: (roundId: string) => boolean = () => false
+): Promise<number> {
     const rounds = await listRounds(sessionId);
 
     return scoreForSession(
-        rounds.map((r) => ({ correctPlacements: r.correct_placements, status: r.status }))
+        rounds.map((r) => ({ correctPlacements: r.correct_placements, status: r.status, hinted: hinted(r.id) }))
     );
+}
+
+/**
+ * The output a hint points at: the next one to place, by position. Never sent
+ * except as the answer to a hint request.
+ */
+export async function nextCorrectOutputId(snippetId: string, position: number): Promise<string | null> {
+    const result = await pool.query<{ id: string }>(
+        `SELECT id FROM flush_outputs
+         WHERE snippet_id = $1 AND is_active AND NOT is_distractor AND position = $2`,
+        [snippetId, position]
+    );
+
+    return result.rows[0] ? String(result.rows[0].id) : null;
 }
 
 /**

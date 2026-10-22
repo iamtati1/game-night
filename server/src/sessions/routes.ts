@@ -7,6 +7,8 @@ import {
     pauseActiveSession
 } from "./queries.js";
 import { isRelaxed } from "./relaxedRuns.js";
+import { blitzHints, flushHints } from "./runHints.js";
+import { CODE_BLITZ, FLUSH } from "../games/constants.js";
 
 export const sessionsRouter = Router();
 
@@ -53,7 +55,12 @@ function gameSlugOf(req: Request, res: Response): string | null {
 sessionsRouter.get("/resumable", requireAuth, async (req: Request, res: Response) => {
     // A relaxed Code Blitz run's score has no speed bonus; the paused card
     // must show the same number the run itself does.
-    const sessions = await listResumableSessions(req.user!.id, (id) => isRelaxed(req, id));
+    // ...and a hinted answer or round banks half, there as in the run.
+    const sessions = await listResumableSessions(
+        req.user!.id,
+        (id) => isRelaxed(req, id),
+        (slug) => (slug === CODE_BLITZ ? blitzHints(req).hinted : slug === FLUSH ? flushHints(req).hinted : () => false)
+    );
 
     res.status(200).json({
         sessions: sessions.map((s) => ({

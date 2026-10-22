@@ -35,6 +35,10 @@ export interface ServedQuestion {
     msRemaining: number | null;
     /** True for a run the learner chose to play without a clock. */
     relaxed?: boolean;
+    /** Options a hint has ruled out (server-decided; re-sent on reload). */
+    struckOptionIds?: string[];
+    /** Hints still available on this question; 0 for assembly questions. */
+    hintsLeft?: number;
 }
 
 export interface SessionQuestionResult {
@@ -193,6 +197,10 @@ export interface FlushRound {
     deadlineAt: string | null;
     msRemaining: number | null;
     relaxed?: boolean;
+    /** A hint was taken this round: it banks half. */
+    hinted?: boolean;
+    /** The output a hint pointed at, while it is still to place. */
+    hintOutputId?: string | null;
 }
 
 export interface FlushRoundResult {

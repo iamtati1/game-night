@@ -368,6 +368,8 @@ export function GamePage() {
     const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    /** A hint request is in flight. */
+    const [hinting, setHinting] = useState(false);
     /** Bumped once per adjudicated question. Used purely as a React key so the
      *  award and score animations replay on a repeat of the same value -- two
      *  correct answers worth +130 in a row must animate twice, not once. */
@@ -922,6 +924,35 @@ export function GamePage() {
     }, [finish, sessionId, question, later]);
 
     // Number keys 1-4 answer the question -- it is called Blitz for a reason.
+    /**
+     * Takes a hint: the server rules out one wrong answer and remembers that a
+     * hint was taken, so a correct answer here scores half. The options it
+     * rules out come back with the question on a reload, so this only updates
+     * the question on screen -- never another one that arrived meanwhile.
+     */
+    async function takeHint() {
+        if (!question || !sessionId || hinting) return;
+        const asked = question.sessionQuestionId;
+
+        setHinting(true);
+        try {
+            const result = await api.post<{ struckOptionIds: string[]; hintsLeft: number }>(
+                `/api/sessions/${sessionId}/hints`,
+                { sessionQuestionId: asked }
+            );
+            play("hint");
+            setQuestion((q) =>
+                q && q.sessionQuestionId === asked
+                    ? { ...q, struckOptionIds: result.struckOptionIds, hintsLeft: result.hintsLeft }
+                    : q
+            );
+        } catch {
+            // Nothing changed on the server either way; the options stay as they were.
+        } finally {
+            setHinting(false);
+        }
+    }
+
     useEffect(() => {
         function onKey(event: KeyboardEvent) {
             // Once an answer is in, the only key that does anything is the one
@@ -963,7 +994,13 @@ export function GamePage() {
                 return;
             }
 
-            if (Number.isInteger(index) && index >= 0 && index < question.options.length) {
+            // A ruled-out option cannot be chosen, by key any more than by click.
+            if (
+                Number.isInteger(index) &&
+                index >= 0 &&
+                index < question.options.length &&
+                !(question.struckOptionIds ?? []).includes(question.options[index]!.id)
+            ) {
                 void submit(question.options[index]!.id);
             }
         }
@@ -1215,13 +1252,15 @@ export function GamePage() {
                     {question.options.map((option, index) => {
                         const state = optionStateFor(feedback, option);
                         const glyph = OPTION_GLYPH[state];
+                        const struck = !feedback && (question.struckOptionIds ?? []).includes(option.id);
 
                         return (
                             <li key={option.id}>
                                 <button
-                                    className={`option${state ? ` ${state}` : ""}`}
+                                    className={`option${state ? ` ${state}` : ""}${struck ? " struck" : ""}`}
                                     onClick={() => void submit(option.id)}
-                                    disabled={busy || feedback !== null}
+                                    disabled={busy || feedback !== null || struck}
+                                    aria-label={struck ? `${option.text}, ruled out by a hint` : undefined}
                                 >
                                     <kbd>{index + 1}</kbd>
                                     <span className="option-text">{option.text}</span>
@@ -1236,11 +1275,41 @@ export function GamePage() {
                     })}
                 </ul>
                 )}
+
+                {/* THE HINT: rules out a wrong answer, server-decided, at a
+                    stated cost -- a correct answer then scores half (50) with
+                    no speed bonus. XP is unchanged. Not on assembly questions. */}
+                {question.challengeType !== "complete-code" &&
+                    !feedback &&
+                    ((question.hintsLeft ?? 0) > 0 || (question.struckOptionIds ?? []).length > 0) && (
+                        <div className="hint-row">
+                            <button
+                                type="button"
+                                className="button ghost small hint-button"
+                                disabled={busy || hinting || (question.hintsLeft ?? 0) === 0}
+                                onClick={() => void takeHint()}
+                            >
+                                {(question.struckOptionIds ?? []).length === 0
+                                    ? "Hint: rule out a wrong answer"
+                                    : (question.hintsLeft ?? 0) > 0
+                                      ? "Rule out another"
+                                      : "No hints left"}
+                            </button>
+                            <span className="hint-cost">
+                                {(question.struckOptionIds ?? []).length === 0
+                                    ? "A correct answer then scores half."
+                                    : "Hint used: a correct answer scores half."}
+                            </span>
+                        </div>
+                    )}
             </div>
 
             <div className="feedback" role="status">
                 {feedback?.outcome === "correct" && (
-                    <p className="tag correct">Correct · +{feedback.pointsAwarded}</p>
+                    <p className="tag correct">
+                        Correct · +{feedback.pointsAwarded}
+                        {(question.struckOptionIds ?? []).length > 0 && " (hint)"}
+                    </p>
                 )}
                 {feedback?.outcome === "incorrect" && (
                     <p className="tag incorrect">Not quite: {feedback.correctOption}</p>

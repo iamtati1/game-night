@@ -28,6 +28,12 @@ or loses earned progress.
   browser, the rest of that run is timed as before. Nothing is lost or
   inflated. Bug Hunt stores its limits on the rounds, so a relaxed hunt stays
   relaxed everywhere.
+- **Hints are remembered in the login session.** A hint in Code Blitz (rules
+  out a wrong answer) or Flush (shows the next output) halves that answer's or
+  round's points, and which ones were hinted is kept in the server-side login
+  session, like relaxed runs. If the learner signs out and back in mid-run, an
+  answer hinted before then scores in full. Points only: XP, evidence and
+  progress never depend on hints.
 - **Code Blitz's two untimed opening questions still pay a speed bonus.** The
   scoring code says an untimed question pays none, but the answer route and the
   session total call it without the question's position, so the first two

@@ -551,6 +551,24 @@ export async function listActiveOptions(questionId: string): Promise<OptionRow[]
     return result.rows;
 }
 
+
+/**
+ * Every active option's correctness, for deciding what a hint rules out. Never
+ * sent to the client: only the ids a hint has ruled out ever leave the server.
+ */
+export async function listOptionCorrectness(
+    questionId: string
+): Promise<{ id: string; isCorrect: boolean }[]> {
+    const result = await pool.query<{ id: string; is_correct: boolean }>(
+        `SELECT id, is_correct FROM question_options
+         WHERE question_id = $1 AND is_active
+         ORDER BY display_order`,
+        [questionId]
+    );
+
+    return result.rows.map((r) => ({ id: String(r.id), isCorrect: r.is_correct }));
+}
+
 export async function findOption(
     optionId: string,
     questionId: string
@@ -710,14 +728,20 @@ export async function completeSession(
  * in the client. That is what makes a reload, a resume, or a pause incapable of
  * desynchronising the score: there is nothing to drift.
  */
-export async function scoreSoFar(sessionId: string, relaxed = false): Promise<number> {
+export async function scoreSoFar(
+    sessionId: string,
+    relaxed = false,
+    /** Whether a hint was taken on a session question (sessions/runHints.ts). */
+    hinted: (sessionQuestionId: string) => boolean = () => false
+): Promise<number> {
     const questions = await listSessionQuestions(sessionId);
 
     return scoreForSession(
         questions.map((q) => ({
             isCorrect: q.is_correct,
             servedAt: q.served_at,
-            answeredAt: q.answered_at
+            answeredAt: q.answered_at,
+            hinted: hinted(q.id)
         })),
         relaxed
     );

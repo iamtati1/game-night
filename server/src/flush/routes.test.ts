@@ -113,8 +113,8 @@ describe("architecture boundaries", () => {
         const handlers = ROUTES.match(/flushRouter\.(get|post)\(/g) ?? [];
         const guarded = ROUTES.match(/flushRouter\.(get|post)\([^,]+, requireAuth,/g) ?? [];
 
-        // Five: the four game routes and the read-only /readiness.
-        expect(handlers.length).toBe(5);
+        // Six: the four game routes, the hint route and the read-only /readiness.
+        expect(handlers.length).toBe(6);
         expect(guarded.length).toBe(handlers.length);
         expect(ROUTES).not.toMatch(/flushRouter\.use\(requireAuth\)/);
     });

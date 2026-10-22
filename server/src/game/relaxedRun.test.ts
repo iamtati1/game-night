@@ -67,6 +67,10 @@ vi.mock("./queries.js", () => ({
         { id: "2", option_text: "55" }
     ]),
     findSessionQuestion: vi.fn(async () => beat),
+    listOptionCorrectness: vi.fn(async () => [
+        { id: "1", isCorrect: true },
+        { id: "2", isCorrect: false }
+    ]),
     findCorrectOptionText: vi.fn(async () => "10"),
     findExplanation: vi.fn(async () => "Worked out first."),
     findOption: vi.fn(async (id: string) => ({ id, optionText: id === "1" ? "10" : "55", isCorrect: id === "1" })),

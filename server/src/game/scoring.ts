@@ -145,6 +145,8 @@ export function timeLimitFor(
 export const QUESTIONS_PER_SESSION = 10;
 
 const BASE_POINTS = 100;
+/** What a correct answer earns after a hint: half the base, no speed bonus. */
+export const HINTED_POINTS = BASE_POINTS / 2;
 const MAX_SPEED_BONUS = 50;
 // Derived from the platform rule rather than hardcoded, so a perfect game is
 // worth the same XP here as in every other game. Evaluates to 10 and 25.
@@ -178,10 +180,21 @@ export function pointsForAnswer(
     challengeType = "predict-output",
     displayOrder = Number.MAX_SAFE_INTEGER,
     stance: Stance = "developing",
-    relaxed = false
+    relaxed = false,
+    /** A hint was taken on this question (sessions/runHints.ts). */
+    hinted = false
 ): number {
     if (!isCorrect) {
         return 0;
+    }
+
+    /*
+     * A HINTED ANSWER EARNS HALF: HINTED_POINTS, with no speed bonus. The hint
+     * did part of the work, so the score says so; XP does not change, because
+     * XP counts correct answers and this one is still correct.
+     */
+    if (hinted) {
+        return HINTED_POINTS;
     }
 
     /*
@@ -218,6 +231,8 @@ export interface ScoredAnswer {
     isCorrect: boolean | null;
     servedAt: Date | null;
     answeredAt: Date | null;
+    /** A hint was taken on this question: it scores HINTED_POINTS if correct. */
+    hinted?: boolean;
 }
 
 /**
@@ -240,7 +255,8 @@ export function scoreForSession(answers: ScoredAnswer[], relaxed = false): numbe
                 "predict-output",
                 Number.MAX_SAFE_INTEGER,
                 "developing",
-                relaxed
+                relaxed,
+                answer.hinted === true
             )
         );
     }, 0);

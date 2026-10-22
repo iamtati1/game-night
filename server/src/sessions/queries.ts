@@ -165,7 +165,9 @@ interface ResumableSummaryRow extends ResumableRow {
 export async function listResumableSessions(
     userId: string,
     /** Whether a run is relaxed (sessions/relaxedRuns.ts); absent means timed. */
-    isRelaxedRun: (sessionId: string) => boolean = () => false
+    isRelaxedRun: (sessionId: string) => boolean = () => false,
+    /** Per game: whether a hint was taken on one of its units (sessions/runHints.ts). */
+    hintedFor: (gameSlug: string) => (unitId: string) => boolean = () => () => false
 ): Promise<ResumableSummary[]> {
     const result = await pool.query<ResumableSummaryRow>(
         `WITH resumable AS (
@@ -227,7 +229,7 @@ export async function listResumableSessions(
                 unitsTotal: Number(row.units_total),
                 // A game with no adapter is a programming error, not a runtime
                 // one: report 0 rather than crashing the whole list.
-                score: adapter ? await adapter.scoreSoFar(row.id, isRelaxedRun(row.id)) : 0
+                score: adapter ? await adapter.scoreSoFar(row.id, isRelaxedRun(row.id), hintedFor(row.game_slug)) : 0
             };
         })
     );

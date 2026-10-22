@@ -74,15 +74,26 @@ export function pointsForPlacements(correctPlacements: number): number {
  * Note there is no speed bonus anywhere. Code Blitz rewards speed; Flush rewards
  * accuracy. Two games that both reward speed would be one game with two skins.
  */
-export function roundScore(correctPlacements: number, completed: boolean): number {
+/**
+ * A HINTED ROUND BANKS HALF (sessions/runHints.ts): the hint showed the next
+ * output, so the round is worth half of what it would have been. XP is
+ * unchanged -- it counts completed rounds, not points.
+ */
+export function hintedHalf(points: number, hinted: boolean): number {
+    return hinted ? Math.floor(points / 2) : points;
+}
+
+export function roundScore(correctPlacements: number, completed: boolean, hinted = false): number {
     const banked = pointsForPlacements(correctPlacements);
 
-    return completed ? banked * COMPLETION_MULTIPLIER : banked;
+    return hintedHalf(completed ? banked * COMPLETION_MULTIPLIER : banked, hinted);
 }
 
 export interface ScoredRound {
     correctPlacements: number;
     status: string;
+    /** A hint was taken in this round: it banks half. */
+    hinted?: boolean;
 }
 
 export function isCompletedRound(round: ScoredRound): boolean {
@@ -91,7 +102,8 @@ export function isCompletedRound(round: ScoredRound): boolean {
 
 export function scoreForSession(rounds: ScoredRound[]): number {
     return rounds.reduce(
-        (total, round) => total + roundScore(round.correctPlacements, isCompletedRound(round)),
+        (total, round) =>
+            total + roundScore(round.correctPlacements, isCompletedRound(round), round.hinted === true),
         0
     );
 }
