@@ -26,3 +26,10 @@ describe("the client deadline matches the server's bound", () => {
         expect(DEADLINE_MS).toBeGreaterThan(MIN_PLAUSIBLE_MS * 10);
     });
 });
+
+describe("the client floor matches the server's", () => {
+    it("treats a press as a reaction exactly where the server starts accepting one", async () => {
+        const { FASTEST_MS } = await import("./reactionTiming.js");
+        expect(FASTEST_MS).toBe(MIN_PLAUSIBLE_MS);
+    });
+});

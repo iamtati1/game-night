@@ -86,6 +86,16 @@ describe("Code Blitz results after a tough run", () => {
         expect(await screen.findByRole("link", { name: "Demonstrate Running Code" })).toBeTruthy();
         expect(screen.queryByRole("link", { name: /Look back/ })).toBeNull();
     });
+
+    it("does not also tell the learner to look back at the lesson above a Demonstrate button", async () => {
+        // QA finding: "A tough run... Looking back at the lesson first usually
+        // helps." sat directly above "Demonstrate", two contradictory next steps.
+        open(3, { cleared: 1, playable: 1 });
+
+        expect(await screen.findByRole("link", { name: "Demonstrate Running Code" })).toBeTruthy();
+        expect(screen.queryByText(/A tough run/)).toBeNull();
+        expect(screen.queryByText(/Looking back at the lesson/)).toBeNull();
+    });
 });
 
 describe("Code Blitz results after a strong run", () => {

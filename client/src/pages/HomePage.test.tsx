@@ -151,6 +151,23 @@ describe("Home", () => {
         expect([...container.querySelectorAll(".button.primary")].map((a) => a.textContent)).toEqual(["Continue learning"]);
     });
 
+    it("says no count for a run left before its first round, not \"round 0 of 0\"", async () => {
+        // Reaction and Memory create each round as it is served, so a run
+        // paused before round one has no rounds to count.
+        vi.mocked(api.get).mockImplementation(((url: string) =>
+            Promise.resolve(
+                url === "/api/me/sessions/resumable"
+                    ? { sessions: [{ id: "11", game: { slug: "memory", name: "Memory" }, status: "paused", score: 0, unitsDone: 0, unitsTotal: 0, pauseCount: 1, startedAt: "", pausedAt: "" }] }
+                    : pathWith(true)
+            )) as never);
+        renderHome();
+
+        const resume = await screen.findByRole("link", { name: "Resume" });
+        const line = resume.closest(".home-held")?.textContent ?? "";
+        expect(line).toMatch(/^Paused: Memory\. Resume$/);
+        expect(line).not.toMatch(/0 of 0/);
+    });
+
     it("says nothing about games when none is unfinished", async () => {
         vi.mocked(api.get).mockImplementation(((url: string) =>
             Promise.resolve(url === "/api/me/sessions/resumable" ? { sessions: [] } : pathWith(true))) as never);

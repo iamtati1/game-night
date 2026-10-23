@@ -228,7 +228,14 @@ export function ResultsPage() {
                                   because: "The lesson's examples first, then the next stop"
                               }
                             : step;
-                        const line = toneLine(tone, session.correctCount, session.totalQuestions, "right");
+                        /* Nor the tough-run line, then: "look back at the lesson"
+                           above a button saying "Demonstrate" was two
+                           contradictory next steps. The score above still says
+                           how the run went. */
+                        const line =
+                            tone === "tough" && step.label.startsWith("Demonstrate")
+                                ? null
+                                : toneLine(tone, session.correctCount, session.totalQuestions, "right");
 
                         return (
                             <>

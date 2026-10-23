@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { resumePosition } from "../games/resumeLabel.js";
 import { Link } from "react-router-dom";
 import type { GameMotif } from "../games/catalog.js";
 import { recommendedIsland, type Island, type IslandState } from "../games/islands.js";
@@ -103,8 +104,9 @@ function IslandPanel({ island, why }: { island: Island; why: string | null }) {
 
             {island.resume && (
                 <p className="island-panel-resume">
-                    {(game.unit ?? "Round")} {Math.min(island.resume.unitsDone + 1, island.resume.unitsTotal)} of{" "}
-                    {island.resume.unitsTotal} · {island.resume.score} pts so far
+                    {resumePosition(game.unit ?? "Round", island.resume.unitsDone, island.resume.unitsTotal) ??
+                        "No rounds played yet"}{" "}
+                    · {island.resume.score} pts so far
                 </p>
             )}
 

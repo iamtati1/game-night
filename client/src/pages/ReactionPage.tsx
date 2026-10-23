@@ -15,7 +15,7 @@ import { PausedRun } from "../components/PausedRun.js";
 import { GetReady } from "../components/GetReady.js";
 import { RoundProgress } from "../components/RoundProgress.js";
 import { REACTION, gameBySlug } from "../games/catalog.js";
-import { DEADLINE_MS } from "../games/reactionTiming.js";
+import { DEADLINE_MS, FASTEST_MS } from "../games/reactionTiming.js";
 
 import { usePageTitle } from "../usePageTitle.js";
 import { GameIntro } from "../components/GameIntro.js";
@@ -273,8 +273,14 @@ export function ReactionPage() {
             // The deadline timer should already have fired, but a tab that was
             // backgrounded can deliver a late press against a stale signal. Send
             // it as the timeout it is rather than as a reaction the server will
-            // refuse.
-            void (ms > DEADLINE_MS ? submit("timed_out") : submit("reacted", ms));
+            // refuse. Likewise a press faster than any human reaction was an
+            // anticipation: a false start, not a reaction the server would
+            // refuse with a developer-facing error.
+            void (ms > DEADLINE_MS
+                ? submit("timed_out")
+                : ms < FASTEST_MS
+                  ? submit("false_start")
+                  : submit("reacted", ms));
             return;
         }
 

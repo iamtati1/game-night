@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { resumePosition } from "../games/resumeLabel.js";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.js";
@@ -193,9 +194,15 @@ export function HomePage() {
                     {held && gameBySlug(held.game.slug) && (
                         <p className="home-held">
                             {held.status === "paused" ? "Paused" : "In progress"}:{" "}
-                            <strong>{held.game.name}</strong>,{" "}
-                            {(gameBySlug(held.game.slug)!.unit ?? "Round").toLowerCase()}{" "}
-                            {Math.min(held.unitsDone + 1, held.unitsTotal)} of {held.unitsTotal}.{" "}
+                            <strong>{held.game.name}</strong>
+                            {(() => {
+                                const at = resumePosition(
+                                    (gameBySlug(held.game.slug)!.unit ?? "Round").toLowerCase(),
+                                    held.unitsDone,
+                                    held.unitsTotal
+                                );
+                                return at ? `, ${at}. ` : ". ";
+                            })()}
                             <Link to={gameBySlug(held.game.slug)!.path}>Resume</Link>
                         </p>
                     )}
