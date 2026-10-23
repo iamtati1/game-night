@@ -5,6 +5,7 @@ import { MissionScene } from "../components/MissionScene.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
 import { practiceFor } from "../games/practice.js";
 
+import { usePageTitle } from "../usePageTitle.js";
 import { ACTION } from "../vocabulary.js";
 /**
  * Write the thing you were just shown.
@@ -57,6 +58,8 @@ function notRecorded(err: unknown): NotRecorded {
 export function PracticePage() {
     const { concept } = useParams<{ concept: string }>();
     const practice = practiceFor(concept ?? null);
+    // Its own title: without one the tab kept the previous page's name.
+    usePageTitle(practice ? `Practice: ${practice.title}` : "Practice");
 
     const [busy, setBusy] = useState(false);
     const [done, setDone] = useState(false);
@@ -137,16 +140,22 @@ export function PracticePage() {
     }
 
     return (
-        <MissionScene
-            mission={{
-                topic: "variables",
-                title: practice.title,
-                place: "Practice",
-                capability: "",
-                movements: practice.movements
-            }}
-            busy={busy}
-            onFinish={(retried) => void finish(retried)}
-        />
+        <>
+            {/* The scene shows its title as an eyebrow, not a heading; this
+                gives the page the one top-level heading a screen reader
+                navigates by. */}
+            <h1 className="visually-hidden">Practice: {practice.title}</h1>
+            <MissionScene
+                mission={{
+                    topic: "variables",
+                    title: practice.title,
+                    place: "Practice",
+                    capability: "",
+                    movements: practice.movements
+                }}
+                busy={busy}
+                onFinish={(retried) => void finish(retried)}
+            />
+        </>
     );
 }

@@ -135,6 +135,9 @@ export function BugHuntResultsPage() {
     return (
         <section className="bh-results">
             <header className="bh-results-head">
+                {/* The page's one top-level heading for screen-reader
+                    navigation; the visible headline below is the run's state. */}
+                <h1 className="visually-hidden">Bug Hunt results</h1>
                 <p className={`bh-results-state ${allClear ? "restored" : "degraded"}`}>
                     <span aria-hidden="true">{allClear ? "✓" : "⚠"}</span>{" "}
                     {allClear ? "System restored" : "System stabilized"}

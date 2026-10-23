@@ -157,4 +157,11 @@ describe("the first-time tutorial", () => {
         expect(screen.queryByText("You wrote your first program.")).toBeNull();
         expect(window.localStorage.getItem("jolt.tutorial.console-output")).toBe("seen");
     });
+
+    it("has one top-level heading, the lesson's title, above each scene's own", () => {
+        renderTutorial();
+
+        expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([CONSOLE_OUTPUT.title]);
+        expect(screen.getByRole("heading", { level: 2, name: "You don't need to know JavaScript yet." })).toBeTruthy();
+    });
 });

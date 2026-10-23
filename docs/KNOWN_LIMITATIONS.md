@@ -91,6 +91,18 @@ debt** · **deployment requirements**.
 
 ### Interface
 
+- **Focus stays where it was after a route change.** Moving between pages does
+  not move focus to the new page or announce it, so a screen-reader user lands
+  on the top of the document. Fixing it from the app shell would override the
+  games' own autofocus, so it needs a design decision and testing with a real
+  screen reader.
+- **Bug Hunt's incident numbers are faint in dusk** (2.0:1). They are hidden
+  from assistive technology and decorative; the incident titles beside them
+  carry the content.
+- **Practice on a concept already demonstrated shows "+25" again.** The
+  server records nothing new and points do not change; the completion screen
+  does not know the concept was already done. The route is not linked.
+
 - **Profile is a primary tab, not yet behind an avatar or settings control.**
   The blueprint (`JOLT_VISION.md`, The places) puts Profile & Settings behind
   an avatar or settings control; the current navigation is Home, Games, Skills,
@@ -109,14 +121,15 @@ debt** · **deployment requirements**.
 - **Production database state.** Which migrations and seeds production has is
   unknown; nothing has been checked against it. See Deployment requirements.
 - **Screen readers.** Accessibility was checked with automated tooling, tests
-  and browser inspection (names, roles, live regions, keyboard operation,
-  focus, contrast). A pass with VoiceOver or NVDA has not been done; Memory's
-  flashing sequence is the most likely gap. Reaction supports Space and Enter
-  and announces its state through a live region.
-- **The first-time tutorial's last scenes in a real browser.** The full
-  walkthrough, including the replay's closing screen, is covered by
-  `LessonTutorial.test.tsx`; the 2026-10-23 browser check stopped at the
-  edit-and-run scene.
+  and browser inspection: on 2026-10-23 an in-browser audit of 17 learner
+  pages in both themes (one `h1` each, named landmarks and controls, labelled
+  inputs, live regions for feedback, WCAG AA text contrast, a visible focus
+  ring). A pass with VoiceOver or NVDA has not been done; Memory's flashing
+  sequence is the most likely gap. Reaction supports Space and Enter and
+  announces its state through a live region.
+- **Keyboard order in a real, focused browser.** Focus styles were checked by
+  focusing controls programmatically; pressing Tab through whole pages was not
+  possible in the QA browser pane.
 - **Free-tier hosting behaviour.** Cold-start time and Render's current free
   Postgres expiry terms have not been measured or re-read.
 
@@ -132,6 +145,10 @@ debt** · **deployment requirements**.
 - **Unused code:** `GET /api/curriculum/journey` has no client caller;
   `components/GameCard.tsx` is used only for its `GameStatus` type; `.play-focus`
   rules in `index.css` and `world.css` style nothing.
+- **Some client tests are timing-sensitive under a loaded full run.** Seen
+  2026-10-23: `ProfilePage.test.tsx` (sound toggle) failed once in a full run
+  and passed alone and on the next full run; `GameTimeout.test.tsx` has done
+  the same before. Re-run before treating one as a regression.
 - **Seeds are not tracked.** There is no table of applied seeds; whether one is
   applied has to be read from the content it adds.
 

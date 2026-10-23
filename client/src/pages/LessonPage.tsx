@@ -259,21 +259,24 @@ export function LessonPage() {
     // must show, not the mission the learner already finished.
     if (mission && quizDone && !done && !refused) {
         return (
-            <MissionScene
-                mission={mission}
-                busy={busy}
-                onFinish={(retried) => {
-                    // finishWith takes the value rather than reading state:
-                    // setNeededRetry would not have flushed by the time the
-                    // request is built, and this is the one fact the request
-                    // carries. Combined with the quiz half, because struggling
-                    // anywhere in the topic is one fact about the learner.
-                    const struggled = neededRetry || retried;
+            <>
+                <h1 className="visually-hidden">{lesson?.title ?? mission.title}</h1>
+                <MissionScene
+                    mission={mission}
+                    busy={busy}
+                    onFinish={(retried) => {
+                        // finishWith takes the value rather than reading state:
+                        // setNeededRetry would not have flushed by the time the
+                        // request is built, and this is the one fact the request
+                        // carries. Combined with the quiz half, because struggling
+                        // anywhere in the topic is one fact about the learner.
+                        const struggled = neededRetry || retried;
 
-                    setNeededRetry(struggled);
-                    void finishWith(struggled);
-                }}
-            />
+                        setNeededRetry(struggled);
+                        void finishWith(struggled);
+                    }}
+                />
+            </>
         );
     }
 
@@ -416,6 +419,9 @@ export function LessonPage() {
 
     return (
         <section className="lesson">
+            {/* The title is shown as the eyebrow below; this is the page's one
+                top-level heading for screen-reader navigation. */}
+            <h1 className="visually-hidden">{lesson.title}</h1>
             <p className="lesson-eyebrow">
                 {lesson.title}
                 <span className="lesson-progress">

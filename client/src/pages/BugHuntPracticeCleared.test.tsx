@@ -99,4 +99,11 @@ describe("Bug Hunt results: course practice", () => {
         await screen.findByText("410");
         expect(screen.queryByRole("region", { name: "Course practice" })).toBeNull();
     });
+
+    it("has one top-level heading naming the page", async () => {
+        openResults({ session: SESSION, earned: [] });
+
+        await screen.findByText("410");
+        expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Bug Hunt results"]);
+    });
 });

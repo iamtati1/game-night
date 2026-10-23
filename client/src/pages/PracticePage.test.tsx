@@ -147,4 +147,13 @@ describe("practice completion", () => {
         expect(await screen.findByRole("heading", { name: `Complete: ${CONCEPT}` })).toBeTruthy();
         expect(api.post).toHaveBeenCalledTimes(1);
     });
+
+    it("names itself: its own page title and one top-level heading", async () => {
+        openPractice();
+
+        expect(document.title).toBe(`Practice: ${PRACTICES[0]!.title} · Jolt`);
+        expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([
+            `Practice: ${PRACTICES[0]!.title}`
+        ]);
+    });
 });

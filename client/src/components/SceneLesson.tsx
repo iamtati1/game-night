@@ -86,6 +86,9 @@ export function SceneLesson({
 
     return (
         <section className="scene">
+            {/* The page's one top-level heading, for screen-reader navigation:
+                each scene's own headline is an h2 beneath it. */}
+            <h1 className="visually-hidden">{lesson.title}</h1>
             {/* Always on screen, always answering "what am I learning?". It also
                 names the PLACE — Values is a topic today and is meant to become
                 somewhere the learner goes. Keeping the topic in the frame from

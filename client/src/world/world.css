@@ -4384,3 +4384,15 @@ pre.learn-code {
 :root[data-theme="cream"] .bh-voice-tag {
     color: color-mix(in srgb, var(--accent) 55%, #000000);
 }
+
+/* The empty console's "nothing yet" took the cream muted ink (#536159), but
+   the console itself stays dark in both themes: 3.0:1. The dusk muted ink. */
+:root[data-theme="cream"] .scene-console .scene-console-empty {
+    color: #cdc3b5;
+}
+
+/* "New best" set near-black on the cream accent (#b4501b): 3.8:1 at 17px.
+   White on the same pill is 5.1:1. */
+:root[data-theme="cream"] .verdict.is-best {
+    color: #ffffff;
+}

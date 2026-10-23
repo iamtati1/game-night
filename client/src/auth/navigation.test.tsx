@@ -125,4 +125,11 @@ describe("navigation", () => {
 
         expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
     });
+
+    it("names both navigation landmarks, so a screen reader can tell them apart", async () => {
+        renderAt("/play");
+
+        expect(await screen.findByRole("navigation", { name: "Main" })).toBeTruthy();
+        expect(screen.getByRole("navigation", { name: "Site" })).toBeTruthy();
+    });
 });

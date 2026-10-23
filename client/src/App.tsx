@@ -60,7 +60,7 @@ function Header() {
                 whether they are signed in, so "Log in" would be a guess.
             */}
             {!loading && !unavailable && (
-                <nav>
+                <nav aria-label="Site">
                     {user ? (
                         <>
                             {/*

@@ -249,3 +249,11 @@ describe("a pass the server refuses", () => {
         expect(await screen.findByText("1 / 3")).toBeTruthy();
     });
 });
+
+describe("a checkpoint's question screen", () => {
+    it("has one top-level heading naming the checkpoint", () => {
+        openChallenge("values");
+
+        expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Values challenge"]);
+    });
+});
