@@ -2,6 +2,17 @@
 
 A gamified software engineering learning platform built with React, TypeScript, Express, PostgreSQL, and AI.
 
+## Documentation
+
+| Document | What it owns |
+|---|---|
+| [`docs/JOLT_VISION.md`](docs/JOLT_VISION.md) | The product blueprint: identity, the places, decision criteria |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Status, priorities, release blockers, open decisions |
+| [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md) | How changes are planned, verified, reviewed and released |
+| [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) | Known gaps, unverified behaviour, technical debt, deployment requirements |
+
+Coding assistants start from [`CLAUDE.md`](CLAUDE.md) or [`AGENTS.md`](AGENTS.md).
+
 ## Local setup
 
 Requires Node 22+ and a running PostgreSQL.
@@ -49,7 +60,7 @@ cd client && npm run dev     # http://localhost:5173
 ### Tests
 
 ```bash
-cd server && npm test        # scoring, routes, registry, migration runner
+cd server && npm test -- --maxWorkers=4   # scoring, routes, registry, migration runner
 cd client && npm test        # component and page tests
 ```
 
@@ -60,8 +71,8 @@ SQL rather than a hand-written fixture.
 Type checks and the production build:
 
 ```bash
-cd server && npm run typecheck
-cd client && npm run typecheck && npm run build
+cd server && npm run typecheck && npm run build
+cd client && npm run build    # runs tsc -b, then vite build
 ```
 
 ## Known limitations

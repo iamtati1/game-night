@@ -139,7 +139,8 @@ game defines: concepts reinforced · skills · player actions · learning object
 mechanic · feedback · difficulty · evidence · demands satisfied · progression
 impact · expected round length.
 
-**Status** 🟡 — **2 of 5 games** meet this. See `GAMEPLAY_SPEC.md`.
+**Status** 🟡 — **3 of 5 games** meet this (Code Blitz, Bug Hunt, Flush;
+updated 2026-10-23). See `GAMEPLAY_SPEC.md`.
 
 ## 11. Game difficulty
 
@@ -149,8 +150,9 @@ one** — the test is *does the timer help practise this skill?*
 
 **Implementation** 🟡 — Bug Hunt's opening hunts are genuinely **untimed**
 (`THINKING_MS[1] = null`), on the stated grounds that a countdown sitting at 90
-seconds still tells a learner they are being measured. Code Blitz times **every**
-question from beat one, including a learner's first ever.
+seconds still tells a learner they are being measured. Code Blitz now agrees:
+its first two beats are untimed (`UNTIMED_OPENING_BEATS`), and relaxed (no
+clock) is the default pace for the curriculum games (updated 2026-10-23).
 
 ## 12. Debugging and repair
 
@@ -227,11 +229,14 @@ current concept. **The learner should never wonder "why am I playing this?"**
 
 **Implementation** 🟡 — the current concept is resolved by
 `findCurrentConcept()` (reading `findJourneyPath()`), passed server-side into
-both dealers, and reserved into `FOCUS_SLOTS [0,5]` / `FOCUS_HUNTS [0,5]`.
+both dealers, and reserved into Code Blitz beats chosen by `focusSlots()`
+(`server/src/game/curve.ts`; a count derived from the concept's tagged
+content, still [0, 5] for two beats of ten) and `FOCUS_HUNTS [0,5]` in Bug Hunt.
 Reserved beats are labelled *"What you are learning · <concept>"*; the results
 screen names the rungs the round earned and links straight back to the concept.
 
-🔴 for Flush, Reaction and Memory — see `GAMEPLAY_SPEC.md`.
+🔴 for Reaction and Memory — see `GAMEPLAY_SPEC.md`. (Flush was 🔴 until it
+joined the curriculum; updated 2026-10-23.)
 
 ## 19. Gameplay requirements
 
@@ -252,8 +257,12 @@ rewards. The learner understands what is being asked before being asked to do it
 quickly.
 
 **Status** 🟡 — difficulty and content were audited for this (no untaught
-prerequisites, no trick questions, answer shapes de-tells). The *timer on a
-beginner's first question* is the open conflict with §11.
+prerequisites, no trick questions, answer shapes de-tells). The timer on a
+beginner's first question, once the open conflict with §11, is resolved: Code
+Blitz's first two beats are untimed (`UNTIMED_OPENING_BEATS` in
+`server/src/game/scoring.ts`), the clock drops after two misses in a row, and
+the curriculum games now start relaxed, with the clock as an opt-in choice
+(updated 2026-10-23). What keeps this 🟡 is in `ROADMAP.md`.
 
 ## 21. Product principle
 

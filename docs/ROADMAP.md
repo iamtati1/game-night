@@ -1,176 +1,149 @@
-# Jolt — Where we are, and what is left
+# Jolt — Roadmap
 
-Written 2026-10-02. Status against `LEARNING_LOOP.md` (the contract).
-🟢 built · 🟡 partial · 🔴 missing · 🔵 needs a product decision
+Updated 2026-10-23 against branch `pre-jolt-visual-redesign` at `558d5b2`.
+Measured against `JOLT_VISION.md` (the blueprint) and `LEARNING_LOOP.md` (the
+contract). Known gaps are detailed in `KNOWN_LIMITATIONS.md`; how work moves
+through this list is in `DEVELOPMENT_WORKFLOW.md`.
+
+🟢 built and verified · 🟡 partial · 🔴 missing · 🔵 needs a product decision ·
+⚪ not verified
+
+**Done means** technically correct *and* right for the learner
+(`DEVELOPMENT_WORKFLOW.md`, Definition of done). Nothing below is marked 🟢
+without a commit and a verification behind it.
 
 ---
 
-# PART 1 — Where the project is now
+## 1. Where Jolt is
 
-## The learning system is finished
-
-| | |
+| | 2026-10-23 |
 |---|---|
-| Topics / concepts | **16 / 100** |
-| Declared rungs realised | **281 / 281** — no holes |
-| Active questions | 495 (261 tagged to challenges) |
-| Bug Hunt incidents | 64 (25 tagged) |
-| Mission-realised rungs | 32 |
-| Server tests | **1288** |
-| Client tests | **521** |
+| Topics / concepts / declared rungs | 16 / 101 / 282 (dev database) |
+| Games producing learning evidence | 3 of 5 (Code Blitz, Bug Hunt, Flush) |
+| Server tests | 1621 in 103 files, passing |
+| Client tests | 924 in 69 files, passing |
+| Client lint | 39 findings (34 errors, 5 warnings), the pre-existing baseline |
+| Builds | Client and server production builds pass; Render's exact build command passed on a clean export (2026-10-22) |
 
-Typechecks and production builds green on both sides.
+## 2. Completed since the 2026-10-02 plan
 
-## What is genuinely working
+| Work | Evidence | Verified by |
+|---|---|---|
+| Untimed opening beats in Code Blitz; clock drops after two misses | `d56d551`; `UNTIMED_OPENING_BEATS = 2` in `server/src/game/scoring.ts` | server tests |
+| Concept targeting widened from fixed slots to a derived count | `d56d551`; `focusSlots()` in `server/src/game/curve.ts` | server tests |
+| Flush joins the curriculum: concept tags, explanations, credited rounds count as evidence | `d56d551`, `7fc514d`; migration 032 | server tests |
+| Learn Beat routing, beginner pacing | `7fc514d` | server and client tests |
+| Deployment preparation and Render build fix | `2f53849`, `18a565f` | clean-export build (2026-10-22) |
+| Only mission steps can be reported done by the browser | `490f13d` | server tests |
+| Costed hints in Code Blitz and Flush (half points; XP unchanged) | `47d66e0` | server and client tests |
+| Redesign: mission panel, Skills hub, first-time tutorial, islands under Games, desktop game layouts, adaptive results wording, cream theme with dusk switch, relaxed timers | `cf96277` | client tests; browser QA on a database clone |
+| Profile page; navigation Home, Games, Skills, Profile | `558d5b2` | client and server tests; browser QA at 320, 375, 1024 and 1280px in both themes |
 
-- **One curriculum, enforced.** A composite FK refuses a challenge whose demand
-  its concept does not declare. A rung cannot be invented by writing content.
-- **Server decides what you are learning.** `findCurrentConcept` →
-  `findJourneyPath`. No `concept` field exists in any client request body.
-- **One evidence model.** `CLEARED_RUNGS_CTE`, three arms, all requiring
-  `role='practise'`. Introductions deliberately excluded.
-- **Demonstration is gated.** `/demonstrate` 409s unless `evidenceFor()` finds
-  every playable rung cleared. No game can call it.
-- **One interpreter.** `littleJs` — no `eval`, grammar grown with the
-  curriculum, now refuses nothing. Experiment imports no API client at all.
-- **Auth persists.** argon2id, session regeneration, verified register → play →
-  logout → login → same learner, same evidence.
-- **Two games are real learning activities.** Code Blitz and Bug Hunt resolve
-  the current concept server-side, reserve beats for it, and clear rungs.
-- **Round lengths are on target.** Code Blitz 10 × 18s = 3:00. Bug Hunt 6 hunts,
-  timed portion capped at 3:00.
-- **The map reflects progress** with per-concept `cleared/playable`.
-- **Remediation ladder in the encounter**: feedback naming the misconception →
-  a neighbouring question → back to the explanation.
+### Status of the 2026-10-02 phases
 
----
-
-# PART 2 — What is left
-
-## A. Three of five games are not learning activities 🔴🔵
-
-| Game | Curriculum predicates | Content | Verdict |
-|---|---|---|---|
-| Code Blitz | 3 | `questions` | 🟢 |
-| Bug Hunt | 3 | `bug_hunt_incidents` | 🟢 |
-| Flush | **0** | `flush_snippets`, no `challenge_id` | 🔴 cheap to fix |
-| Reaction | **0** | procedural, no content table | 🔵 decision |
-| Memory | **0** | procedural, no content table | 🔵 decision |
-
-## B. Nothing adapts 🔴 — the largest gap
-
-`needed_retry` is **written** to `concept_demonstrations` and
-`topic_challenge_completions` and **read nowhere**. The codebase says so
-outright:
-
-- `eligibility.ts`: *"'met' here means encountered, never understood. No
-  thresholds, no success rates, no decay."*
-- `frontier.ts`: *"EXPOSURE, NOT MASTERY."*
-
-A learner who struggles through three concepts gets exactly the same next
-experience as one who breezed through. Contract §12 and §13 are 0% implemented.
-
-## C. The beginner's first minute contradicts the contract 🔴
-
-Code Blitz times a learner's **first ever question**. Contract §11: *"a timer
-should never exist simply because a game traditionally has one."* Bug Hunt
-already agrees — `THINKING_MS[1] = null`, its opening hunts have no clock. The
-two games disagree with each other.
-
-## D. Targeting is 2 beats of 10 🟡
-
-`FOCUS_SLOTS = [0, 5]`. The other eight are *eligible*, not *targeted* — this is
-the mechanism behind "why am I being asked this?"
-
-## E. The world reflects but does not react 🟡
-
-`Planet`, `ConceptObject` and `Ship` all have real per-state renderings, read on
-mount. Every animation is ambient. Nothing happens *because* a rung cleared.
-
-## F. Smaller, known
-
-| Item | Status |
+| Phase | Status |
 |---|---|
-| Code Blitz has no in-round remediation | 🟡 |
-| Bug Hunt content thin — 39/64 untagged | 🔴 content |
-| HUD chrome at 0.6–0.68rem (24 declarations) | 🟡 — primary reading path is fine |
-| `this`/classes never browser-tested (needs 95 concepts of progress) | 🟡 |
-| Seeds not idempotent — rebuild, don't re-seed | 🔴 backlog |
-| `() => console.log(x)` unsupported | 🔴 interpreter |
-| Integrity meter floors at 4%, not 0 | 🔵 decision |
+| 1. The beginner's first minute | 🟢 |
+| 2. Widen concept targeting | 🟢 |
+| 3. Adaptation | 🟡 Within a run: clock drop, remediation ladder, recap after a tough run. Across sessions: not built, and the scope is still undecided. |
+| 4. Flush joins the curriculum | 🟢 |
+| 5. The world reacts to a cleared rung | ⚪ Not verified as built. |
+| 6. HUD density | ⚪ Not re-audited since the redesign. |
 
 ---
 
-# PART 3 — The plan
+## 3. Release blockers
 
-Ordered by vision impact per unit of risk. Each phase is independently
-shippable and independently revertible.
+These must be resolved before a production deploy. Each is its own slice.
 
-## Phase 1 — The beginner's first minute 🔴→🟢
-**Fixes §11, §20. Makes the two games agree.**
+| # | Blocker | Evidence | Acceptance | Slice type |
+|---|---|---|---|---|
+| R1 | **Server production dependencies have advisories:** `proxy-addr` (critical), `qs` and `ip-address` (moderate) | `npm audit --omit=dev` in `server/` (2026-10-23); all three fixable with `npm audit fix`. Client: 0. | `npm audit --omit=dev` reports 0; full server suite and build pass; lockfile committed | Security |
+| R2 | **Production database state is unknown.** Render runs no migrations or seeds (`render.yaml` has no pre-deploy step; free plan has no shell). | `render.yaml` | Backup taken; `migrate:prod` and `seed:prod` run from a trusted machine **with explicit approval**; seeds 083–087 confirmed present | Deployment (needs approval) |
+| R3 | **Which branch Render deploys.** `render.yaml` names none, so Render uses the repository's default branch. | `render.yaml` | The intended branch is merged or selected on purpose | Deployment (needs approval) |
 
-Opening beats of a Code Blitz round carry no clock, mirroring Bug Hunt.
+## 4. Prioritised next work
 
-- **Files:** `server/src/game/scoring.ts`, `game/routes.ts`, `client/.../GamePage.tsx`
-- **DB:** none · **XP:** unchanged
-- **Open question:** how an untimed beat scores. Bug Hunt already solved this;
-  the answer must be read from there, not invented.
-- **Acceptance:** a fresh learner's opening beats show no timer; the clock
-  appears from the ramp's timed portion; XP for a perfect game still 125.
+Ordered by learner impact per unit of risk. One slice at a time, with approval
+between slices.
 
-## Phase 2 — Widen concept targeting 🟡→🟢
-**Fixes §2, §18, Problem 1 and Problem 5.**
+### P1 — Checkpoint integrity 🔴
+- **Problem:** a topic checkpoint pass is a claim from the browser. The quiz is
+  judged client-side; the server records the pass once every concept is
+  demonstrated, without seeing an answer. Checkpoints gate the next topic.
+- **Evidence:** `server/src/curriculum/routes.ts` (the checkpoint route reads
+  only `neededRetry`, then checks `topicReadyForCheckpoint`); content in
+  `client/src/games/lessons.ts` (`TOPIC_CHALLENGES`).
+- **Depends on:** a decision on where checkpoint questions live (server seed or
+  shared module).
+- **Acceptance:** the server judges each checkpoint answer; a request without
+  correct answers is refused; the learner's experience is unchanged.
+- **Slice type:** curriculum / progression (needs approval).
 
-`FOCUS_SLOTS` becomes a count derived from how much tagged content the current
-concept actually has, capped so a round never becomes a single-concept quiz.
+### P2 — Practice completion that ignores refusal 🔴
+- **Problem:** `/practise/:concept` shows "concept complete" even when the
+  server refuses `/demonstrate`. Nothing links to it, but a typed or bookmarked
+  URL shows completion that did not happen.
+- **Evidence:** `client/src/pages/PracticePage.tsx` (`catch {}` then
+  `setDone(true)`).
+- **Acceptance:** a refused demonstration is said plainly, as `LessonPage`
+  already does, or the orphan route is removed. A test covers the refusal.
+- **Slice type:** progression bug fix.
 
-- **Files:** `game/curve.ts`, `game/queries.ts`
-- **DB:** none
-- **Acceptance:** with N tagged questions available, up to K beats are the
-  current concept; at least one beat is not; both asserted.
+### P3 — Profile & Settings behind an avatar or settings control 🟡
+- **Problem:** the blueprint puts Profile & Settings behind an avatar or
+  settings control; it is currently a fourth primary tab.
+- **Evidence:** `client/src/navArea.ts` (`PRIMARY_NAV`); `JOLT_VISION.md` (The
+  places).
+- **Acceptance:** primary navigation is Home, Games, Skills; Profile is reached
+  from an avatar or settings control on desktop and phone, with an accessible
+  name and a visible active state; the nav tests and
+  `server/src/curriculum/learningPath.test.ts` are updated deliberately, not
+  weakened.
+- **Slice type:** navigation.
 
-## Phase 3 — Adaptation 🔴→🟢
-**Fixes §12, §13. The largest gap.**
+### P4 — XP honesty 🔵
+- **Problem:** Reaction and Memory pay XP for every round played (a 0-of-5
+  Reaction run earns the same XP as a perfect Code Blitz run), and XP is shown
+  on the Games page. Blueprint criterion 7 asks that recorded progress reflect
+  genuine practice.
+- **Evidence:** `server/src/reaction/scoring.ts` and
+  `server/src/memory/scoring.ts` (`xpForSession` counts resolved rounds). Code
+  Blitz counts correct answers, Flush completed rounds, Bug Hunt resolved
+  incidents.
+- **Depends on:** decision D2. XP constants are on the "not to be changed" list
+  below, so this needs explicit approval.
+- **Slice type:** scoring (needs approval).
 
-`learnerStance(userId, concept)` → `struggling | developing | confident`,
-**derived** from rows that already exist. Drives: whether the timer applies,
-whether the repair is offered sooner, which difficulty is preferred.
-
-- **Files:** `server/src/curriculum/`, `game/routes.ts`, `bugHunt/routes.ts`
-- **DB:** **none** — deliberately derived, matching the recorded decision to
-  reject `learner_concept_state` (see `CURRICULUM_ARCHITECTURE.md`)
-- **Needs sign-off:** the thresholds, and whether adaptation is within-session
-  only or across sessions.
-
-## Phase 4 — Flush joins the curriculum 🔴→🟢
-2 of 5 games becomes 3 of 5, honestly: predicting output *in order* genuinely is
-the `predict` demand.
-
-- **DB:** one additive column `flush_snippets.challenge_id` + a tagging seed
-- **Acceptance:** Flush deals only eligible snippets; a cleared round clears a
-  `predict` rung; untagged snippets stay playable and uncredited.
-
-## Phase 5 — The world reacts 🟡→🟢
-An acknowledgement when a rung clears — arrival, not ambience. Data already
-exists; this is design, not plumbing.
-
-## Phase 6 — HUD density 🟡→🟢
-Evidence-led, narrow: the primary reading path (`.ask` 1.35rem, `.prompt`
-1.02rem) is fine. The audit is of chrome, not a redesign.
+### P5 — Smaller, known
+| Item | Status | Evidence |
+|---|---|---|
+| Untimed opening beats in timed Code Blitz still pay a speed bonus | 🔴 | `KNOWN_LIMITATIONS.md` |
+| Screen-reader pass (VoiceOver or NVDA), Memory in particular | ⚪ | never performed |
+| Unused `GET /api/curriculum/journey` | 🔴 tech debt | no client caller |
+| `GameCard` used only for its `GameStatus` type; dead `.play-focus` CSS | 🔴 tech debt | `client/src/games/islands.ts`, `client/src/index.css` |
+| Bug Hunt content thin | ⚪ re-count needed | 2026-10-02: 39/64 untagged |
+| `() => console.log(x)` unsupported | ⚪ re-check | 2026-10-02 interpreter gap |
 
 ---
 
-# Decisions needed before Phase 3 and 4
+## 5. Open decisions
 
-1. **Reaction and Memory** — connect them, or remove them from the learning path
-   and let them be what they are? Inventing curriculum content for a reflex game
-   is the invented relationship §10 forbids.
-2. **Adaptation scope** — within a session, or across sessions?
-3. **Integrity meter** — raise `INTEGRITY_FAILED_COST` so a catastrophic run
-   reaches 0 again, or accept 4%?
+| # | Decision | Blocks |
+|---|---|---|
+| D1 | Reaction and Memory: connect them to the curriculum, or keep them off the learning path as "just for fun"? | the scoreboard; P4 |
+| D2 | Should XP reward correctness in every game, and should XP be shown beside learning progress? | P4 |
+| D3 | Adaptation across sessions: build it, and with what thresholds? | Phase 3 |
+| D4 | Integrity meter floors at 4%, not 0: raise `INTEGRITY_FAILED_COST`, or accept? | — |
 
-# Not to be changed
+## 6. Not to be changed without explicit approval
 
 XP constants · `CLEARED_RUNGS_CTE` · `evidenceFor()` gating · `roleEligible`
 ordering · the interpreter's progressive allowlist · Experiment's no-API
-guarantee · derive-don't-store.
+guarantee · derive-don't-store · auth and sessions.
+
+---
+
+*History:* the 2026-10-02 version of this roadmap, with its full analysis, is
+in git history (`git show 558d5b2:docs/ROADMAP.md`). `GAP_ANALYSIS.md` and
+`BACKLOG.md` are snapshots from that period.

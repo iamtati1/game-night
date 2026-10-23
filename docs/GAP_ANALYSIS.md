@@ -1,5 +1,10 @@
 # Gap Analysis — vision vs implementation
 
+> **Historical snapshot (2026-10-02).** Kept as the record of what the vision
+> reconciliation found. It is not current: Flush has since joined the
+> curriculum, and several gaps below are closed. Current status and priorities
+> are in `ROADMAP.md`; known gaps in `KNOWN_LIMITATIONS.md`.
+
 Reconciled 2026-10-02. Status: 🟢 implemented · 🟡 partial · 🔴 missing ·
 🔵 needs gameplay redesign.
 

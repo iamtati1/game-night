@@ -1,5 +1,11 @@
 # Game Night — Backlog
 
+> **Historical snapshot.** Recorded before the October 2026 work; several items
+> below have since been built (pause, game intro screens, the five game
+> islands, a profile and stats page) while the line "Nothing here is
+> implemented" is kept as written. Current status and priorities are in
+> `ROADMAP.md`; known gaps in `KNOWN_LIMITATIONS.md`.
+
 Recorded, not scheduled. Nothing here is implemented. Categories follow the
 testing-pass convention: **A** = bug, **B** = missing requirement from the
 current game design, **C** = future UX enhancement.

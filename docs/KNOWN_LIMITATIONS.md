@@ -1,18 +1,45 @@
 # Known limitations
 
-What a demo or a reviewer might run into, and why it is the way it is. Each item
-is known, deliberate to leave for now, and safe — none of them invents progress
-or loses earned progress.
+What a demo, a reviewer or the next coding session might run into, and why.
+Updated 2026-10-23 against `558d5b2`; each item was checked against the code
+or a read-only database query on that date unless it says otherwise.
+Prioritised fixes live in `ROADMAP.md`.
 
-## Gameplay
+Sections: **confirmed limitations** · **unverified behaviour** · **technical
+debt** · **deployment requirements**.
 
-- **Reaction and Memory restart after a reload mid-run.** A *paused* run resumes
-  where it stopped. A run that is simply left in progress — the tab reloaded or
-  closed between rounds — shows the game's intro again, and pressing Start
-  abandons that unfinished run and deals a new one (the start request sends
-  `fresh: true`). Code Blitz, Flush and Bug Hunt restore an in-progress run
-  instead. Neither game records learning evidence, so nothing on the journey is
-  lost; only that run's XP is.
+---
+
+## Confirmed limitations
+
+### Progress and evidence
+
+- **Topic checkpoints are judged in the browser.** The checkpoint quiz is
+  marked client-side (`TOPIC_CHALLENGES` in `client/src/games/lessons.ts`), and
+  `POST /api/curriculum/topics/:topic/challenge` records a pass once every
+  concept in the topic is demonstrated, reading only `neededRetry` from the
+  request (`server/src/curriculum/routes.ts`). Normal use cannot trigger a false
+  pass; a hand-made request can. Roadmap P1.
+- **`/practise/:concept` shows completion even when the server refuses it.**
+  `PracticePage` posts `/demonstrate`, swallows any refusal and shows the
+  completion screen (`client/src/pages/PracticePage.tsx`). Nothing links to
+  this route; a typed or bookmarked URL reaches it. Roadmap P2.
+- **Reaction and Memory pay XP for rounds played, not rounds right.** Their
+  `xpForSession` counts resolved rounds (`server/src/reaction/scoring.ts`,
+  `server/src/memory/scoring.ts`), so a 0-of-5 run earns the same XP as a
+  perfect one. Code Blitz counts correct answers, Flush completed rounds, Bug
+  Hunt resolved incidents. XP is never evidence and never moves progress, but
+  it is shown on the Games page. Roadmap P4 (needs a decision).
+
+### Gameplay
+
+- **Reaction and Memory restart after a reload mid-run.** A *paused* run
+  resumes where it stopped. A run that is simply left in progress — the tab
+  reloaded or closed between rounds — shows the game's intro again, and
+  pressing Start abandons that unfinished run and deals a new one (the start
+  request sends `fresh: true`). Code Blitz, Flush and Bug Hunt restore an
+  in-progress run instead. Neither game records learning evidence, so nothing
+  on the journey is lost; only that run's XP is.
 - **Code Blitz may open with a short intro instead of a round.** When too few
   questions are open for a ten-question round, starting Code Blitz teaches the
   next idea first (a Learn Beat). This is the curriculum working as designed,
@@ -37,44 +64,86 @@ or loses earned progress.
 - **Code Blitz's two untimed opening questions still pay a speed bonus.** The
   scoring code says an untimed question pays none, but the answer route and the
   session total call it without the question's position, so the first two
-  questions of a timed run can score 150. This was here before and is
-  unchanged. A relaxed run is unaffected: every correct answer there scores
-  exactly 100.
+  questions of a timed run can score 150. A relaxed run is unaffected: every
+  correct answer there scores exactly 100.
 
-## Content and data
+### Content and data
 
-- **Beginner Flush puzzles need seed 083 in the database.** Without
-  `seeds/083_flush_beginner.sql` applied, Flush only holds Async puzzles, which
-  open late in the course, so early learners see "Flush needs at least 3
-  puzzles". Apply 083 (and 084, a wording fix to one Bug Hunt option) on their
-  own, as rehearsed — not with `npm run seed`, which re-runs every seed file.
-- **Seed 085 (question quality) is written and verified but not applied.** It
-  retires three arithmetic-drill questions from `expressions-produce-values`
-  and adds three on telling quoted text from an expression, removes printed
-  quotes from five legacy answers, and fixes two ambiguous option sets. Until
-  it is applied the old questions are still served. Apply it on its own, like
-  083 and 084.
+- **Beginner Flush puzzles need seed 083, and the dev database does not have
+  it.** Without `seeds/083_flush_beginner.sql`, Flush holds only the 34 Async
+  puzzles, which open late in the course, so early learners see "Flush needs at
+  least 3 puzzles". On 2026-10-23 dev held only those 34; the QA clones
+  (`jolt_qa_085_20261019`, `jolt_qa_087_20261019`) also hold the 10 beginner
+  puzzles. Apply 083 on its own, as rehearsed, and only with approval.
 - **Some one-line Bug Hunt bugs list their choices instead of using the line
   picker.** When a bug's wrong answer is a sentence on the same line as the
   fault, clicking the line could not tell the two apart, so the options are
   listed as choices, as the lesson shows them.
 
-## Interface
+### Interface
 
-- **The journey map is an optional view.** The step list is the default; the map
-  is one click away and is tall on a phone.
-- **Two routes are unused.** `/learn/:concept` and `/practise/:concept` are
-  routed but nothing links to them; the lesson flow is `/concept/:concept` and
-  checkpoints are `/challenge/:topic`.
-- **Accessibility was checked with automated tooling, not a screen reader.**
-  Names, roles, live regions, keyboard operation and focus are covered by tests
-  and browser inspection. A pass with VoiceOver or NVDA has not been done.
+- **Profile is a primary tab, not yet behind an avatar or settings control.**
+  The blueprint (`JOLT_VISION.md`, The places) puts Profile & Settings behind
+  an avatar or settings control; the current navigation is Home, Games, Skills,
+  Profile. Roadmap P3.
+- **Signed-in theme and sound settings are on Profile only.** The header's
+  theme and sound buttons show only to signed-out visitors.
+- **The default pace on Profile applies when a game's intro opens.** An intro
+  already on screen keeps the choice it opened with.
+- **The journey map is an optional view.** The step list is the default; the
+  map is one click away and is tall on a phone.
 
-## Engineering
+---
 
-- **Lint baseline: 39 findings (34 errors, 5 warnings), all pre-existing.**
-  Mostly React-hooks rules in the larger game pages. Not changed by the
-  redesign slices or the readability and relaxed-timer work.
+## Unverified behaviour
+
+- **Production database state.** Which migrations and seeds production has is
+  unknown; nothing has been checked against it. See Deployment requirements.
+- **Screen readers.** Accessibility was checked with automated tooling, tests
+  and browser inspection (names, roles, live regions, keyboard operation,
+  focus, contrast). A pass with VoiceOver or NVDA has not been done; Memory's
+  flashing sequence is the most likely gap. Reaction supports Space and Enter
+  and announces its state through a live region.
+- **The first-time tutorial's last scenes in a real browser.** The full
+  walkthrough, including the replay's closing screen, is covered by
+  `LessonTutorial.test.tsx`; the 2026-10-23 browser check stopped at the
+  edit-and-run scene.
+- **Free-tier hosting behaviour.** Cold-start time and Render's current free
+  Postgres expiry terms have not been measured or re-read.
+
+---
+
+## Technical debt
+
+- **Lint baseline: 39 findings (34 errors, 5 warnings), all pre-existing**
+  (`cd client && npm run lint`). Mostly React-hooks rules in the larger game
+  pages. New work must not raise the count.
 - **Two global stylesheets overlap** (`client/src/index.css` and
-  `client/src/world/world.css`). Consolidation is out of scope for the current
-  work.
+  `client/src/world/world.css`).
+- **Unused code:** `GET /api/curriculum/journey` has no client caller;
+  `components/GameCard.tsx` is used only for its `GameStatus` type; `.play-focus`
+  rules in `index.css` and `world.css` style nothing.
+- **Seeds are not tracked.** There is no table of applied seeds; whether one is
+  applied has to be read from the content it adds.
+
+---
+
+## Deployment requirements
+
+Release steps are in `DEVELOPMENT_WORKFLOW.md` (Release checklist). What must
+be true:
+
+- **Server production dependencies have advisories.** `npm audit --omit=dev`
+  in `server/` reports `proxy-addr` (critical), `qs` and `ip-address`
+  (moderate), all fixable with `npm audit fix`. The client reports 0. Release
+  blocker R1.
+- **Render runs no migrations or seeds.** `render.yaml` has no pre-deploy step
+  and the free plan has no shell, so `migrate:prod` and `seed:prod` must be run
+  from a trusted machine, after a backup, with approval. Seeds 083–087 are the
+  most recent; confirm each one's content after applying. Release blocker R2.
+- **Render deploys the default branch.** `render.yaml` names no branch. Release
+  blocker R3.
+- **Node 22.19.0** (`.node-version`); the server requires `>=22.9.0`.
+- **Single origin.** The web service serves the client and the API;
+  `CLIENT_ORIGIN` and `COOKIE_SAMESITE` stay unset. `app.set("trust proxy", 1)`
+  lets the `Secure` session cookie work behind Render's proxy.

@@ -7,11 +7,12 @@ is not.
 
 > Companion docs: `GAME_DESIGN.md` holds the *quality bar* (is the mechanic fun?
 > are there interesting decisions?). This file holds what each game **is** and
-> what it owes the curriculum. A game can pass one and fail the other — three
-> currently do. `gameplay-baseline/` holds the captured screenshots these
+> what it owes the curriculum. A game can pass one and fail the other — two
+> currently do (Reaction and Memory). `gameplay-baseline/` holds the captured screenshots these
 > judgements were made against.
 
-**Scoreboard: 2 of 5 games are learning activities.**
+**Scoreboard: 3 of 5 games are learning activities** (Code Blitz, Bug Hunt and
+Flush; updated 2026-10-23 — it read 2 of 5 before Flush joined the curriculum).
 
 ---
 
@@ -59,21 +60,30 @@ a retry in the loop, and the only one whose opening is deliberately untimed.
 13 incidents against 40 declared rungs. The integrity meter no longer reaches 0
 on a catastrophic run now that a run is six hunts (worst case 4%).
 
-## Flush 🔴
+## Flush 🟢
 
 | | |
 |---|---|
-| Concepts reinforced | **none** — `flush_snippets` has no `challenge_id` |
+| Concepts reinforced | each snippet's tagged concept (`flush_snippets.challenge_id`, migration 032; beginner puzzles in seed 083) |
 | Skills | predicting printed output *in order* |
 | Player actions | read a snippet · call each output in sequence |
-| Evidence / Demands / Progression | **none** |
-| Round length | 5 rounds × (20s + 10s per output) |
+| Evidence | a solved round on a snippet the learner can reach writes `activity_completions` for its `predict` rung (`roundTeaching` in `server/src/flush/routes.ts`) |
+| Demands | `predict` |
+| Progression | clears the same `predict` rung a question would; never calls `/demonstrate` |
+| Round length | 5 rounds × (20s + 10s per output) when timed; relaxed (no clock) is the default |
 
-**The cheapest to connect, and the most clearly worth connecting.** Predicting
-output in order *is* the `predict` demand, done more rigorously than Code Blitz
-does it — one wrong call ends the round, so it rewards actually tracing the
-program rather than recognising a shape. It needs: a `challenge_id` column on
-`flush_snippets`, tagging, and the same reservation the other two have.
+**Connected, as this spec recommended.** Predicting output in order *is* the
+`predict` demand, done more rigorously than Code Blitz does it — one wrong call
+ends the round, so it rewards actually tracing the program rather than
+recognising a shape. Every round explains the order it was looking for
+(`flush_snippets.explanation`), whether or not it credits anything. Evidence is
+gated by `mayPlayChallenge`, the check Code Blitz and Bug Hunt use, so a
+snippet from a concept not yet reached teaches but does not clear a rung. Many
+snippets may share one challenge: Flush is a second way to clear a rung that
+already exists, not a new rung.
+
+*Before 2026-10-06 this section read 🔴: `flush_snippets` had no
+`challenge_id`.*
 
 ## Reaction 🔵
 
