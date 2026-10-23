@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { play } from "../games/sound.js";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
@@ -76,6 +76,37 @@ interface Reveal {
      * wrong.
      */
     explanation: string | null;
+    /**
+     * Whether the server credited this round toward the course, or null when
+     * the server has not judged the round (the clock's own timeout). Never
+     * worked out here: the server alone decides what counts.
+     */
+    credited: boolean | null;
+    /** The concept the puzzle practises, captured like `hinted`. */
+    practising: string | null;
+}
+
+/** One line saying whether a round counted toward the course, in words. */
+function countedLine(reveal: Reveal): ReactNode {
+    if (reveal.credited === null) return null;
+
+    if (reveal.credited) {
+        return (
+            <p className="round-counted">
+                <span aria-hidden="true">✓</span> <strong>Counted toward your course</strong>
+                {reveal.practising ? ` · practised ${reveal.practising}` : ""}
+            </p>
+        );
+    }
+
+    return (
+        <p className="round-counted">
+            <strong>Not counted toward your course</strong>
+            {reveal.outcome === "round_complete"
+                ? " this time."
+                : ": only a finished order counts."}
+        </p>
+    );
 }
 
 export function FlushPage() {
@@ -472,7 +503,9 @@ export function FlushPage() {
                             hinted: round.hinted === true,
                             correctSequence: res.correctSequence ?? [],
                             yourSequence: res.yourSequence ?? [],
-                            explanation: res.explanation ?? null
+                            explanation: res.explanation ?? null,
+                            credited: res.credited === true,
+                            practising: round.practising?.name ?? null
                         },
                         res.round,
                         res.complete,
@@ -537,7 +570,9 @@ export function FlushPage() {
                 roundScore: null,
                 correctSequence: [],
                 yourSequence: round.placed.map((p) => p.text),
-                explanation: null
+                explanation: null,
+                credited: null,
+                practising: round.practising?.name ?? null
             },
             null,
             false,
@@ -846,6 +881,11 @@ export function FlushPage() {
                                 </p>
                             </>
                         ))}
+
+                    {/* Whether this round counted toward the course, as the
+                        server judged it -- so a solved puzzle is not mistaken
+                        for course progress, nor a credited one missed. */}
+                    {countedLine(reveal)}
 
                     {/* The teaching moment. Seeing both sequences side by side is
                         what turns "the game screwed me" into "ohhh, microtasks

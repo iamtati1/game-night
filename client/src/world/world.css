@@ -4133,6 +4133,50 @@ pre.learn-code {
     }
 }
 
+/* What a run counted toward the course (Bug Hunt results), and whether a
+   Flush round did. Tokens only, so cream and dusk read it without overrides;
+   the state is always said in words, never by colour alone. */
+.practice-cleared {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0 0 2rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-2);
+}
+
+.practice-cleared > * { margin: 0; }
+
+.practice-cleared-title {
+    font-size: 1.0625rem;
+    color: var(--text);
+}
+
+.practice-cleared-list {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0;
+    list-style: none;
+    color: var(--text);
+}
+
+.practice-cleared-list span { color: var(--mint); }
+
+.practice-cleared-note {
+    font-size: 0.9375rem;
+    color: var(--muted);
+}
+
+.round-counted {
+    margin: 0.5rem 0 0;
+    font-size: 0.9375rem;
+    color: var(--text-2);
+}
+
+.round-counted strong { color: var(--text); }
+
 /* A checkpoint not passed, or refused: try again, or back to the journey. */
 .checkpoint-actions {
     display: flex;

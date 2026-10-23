@@ -750,6 +750,40 @@ export async function listRoundsForResults(sessionId: string): Promise<BugHuntRe
 }
 
 /**
+ * The practice stops this session cleared, for the results screen.
+ *
+ * THE SAME RULE AS THE EVIDENCE, NARROWED TO ONE RUN. These are the conditions
+ * of the Bug Hunt arm of CLEARED_RUNGS_CTE (curriculum/encounter.ts): a round
+ * resolved, on an incident tagged to a practise challenge. Read-only, and it
+ * decides nothing -- it reports what that arm already counts, so the screen
+ * can say which stops the run cleared rather than leave XP to imply it.
+ * Distinct per rung: two resolved incidents on one rung cleared one stop.
+ */
+export async function practiceClearedInSession(
+    sessionId: string
+): Promise<{ conceptSlug: string; conceptName: string; demandSlug: string }[]> {
+    const result = await pool.query<{ concept_slug: string; concept_name: string; demand_slug: string }>(
+        `SELECT DISTINCT c.slug AS concept_slug, c.name AS concept_name, d.slug AS demand_slug
+         FROM bug_hunt_rounds r
+         JOIN bug_hunt_incidents i ON i.id = r.incident_id
+         JOIN challenges ch        ON ch.id = i.challenge_id
+         JOIN concepts c           ON c.id  = ch.concept_id
+         JOIN demands d            ON d.id  = ch.demand_id
+         WHERE r.game_session_id = $1
+           AND r.status = 'resolved'
+           AND ch.role = 'practise'
+         ORDER BY c.slug, d.slug`,
+        [sessionId]
+    );
+
+    return result.rows.map((r) => ({
+        conceptSlug: r.concept_slug,
+        conceptName: r.concept_name,
+        demandSlug: r.demand_slug
+    }));
+}
+
+/**
  * What the curriculum says this incident is teaching, or null when it is one of
  * the fifty legacy incidents that carry no challenge.
  *

@@ -640,7 +640,15 @@ bugHuntRouter.get("/sessions/:id", requireAuth, async (req: Request, res: Respon
         return;
     }
 
+    const [rounds, earned] = await Promise.all([
+        db.listRoundsForResults(sessionId),
+        db.practiceClearedInSession(sessionId)
+    ]);
+
     res.status(200).json({
-        session: summarize(session, await db.listRoundsForResults(sessionId))
+        session: summarize(session, rounds),
+        // Which practice stops this run cleared, from the evidence rule itself.
+        // XP counts every resolved incident; only these move the course on.
+        earned
     });
 });

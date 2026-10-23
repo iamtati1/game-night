@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Encounter, Exercise } from "../api/encounter.js";
@@ -300,6 +300,39 @@ describe("recording a finished program", () => {
         // Saved, and the ladder is finished, so the concept is completed.
         await screen.findByText("change a value after naming it");
         expect(posts("/completion")).toHaveLength(2);
+    });
+
+    it("does not offer to resend a program the server refused, and says why", async () => {
+        await open({ exercise: () => Promise.resolve(EXERCISE), encounters: [MISSION, FINISHED] });
+        vi.mocked(api.post).mockImplementation(((path: string) =>
+            path.endsWith("/completion")
+                ? Promise.reject(new ApiError(403, "That concept is not open yet"))
+                : Promise.resolve({ demonstrated: true })) as never);
+
+        await click(await screen.findByRole("button", { name: "Finish the program" }));
+
+        const alert = await screen.findByRole("alert");
+        expect(alert.textContent).toMatch(/that concept is not open yet/i);
+        expect(alert.textContent).not.toMatch(/could not be saved/i);
+        expect(screen.queryByRole("button", { name: "Send it again" })).toBeNull();
+        expect(within(alert).getByRole("link", { name: /journey/i }).getAttribute("href")).toBe("/journey");
+        // Nothing moved on, and nothing was completed.
+        expect(posts("/completion")).toHaveLength(1);
+        expect(posts("/demonstrate")).toHaveLength(0);
+    });
+
+    it.each([
+        ["a server failure", () => new ApiError(503, "Jolt's server is not responding right now.")],
+        ["a gateway with nothing behind it", () => new ApiError(502, "Bad gateway")]
+    ])("offers a resend after %s", async (_label, error) => {
+        await open({ exercise: () => Promise.resolve(EXERCISE), encounters: [MISSION, FINISHED] });
+        vi.mocked(api.post).mockImplementation(((path: string) =>
+            path.endsWith("/completion") ? Promise.reject(error()) : Promise.resolve({ demonstrated: true })) as never);
+
+        await click(await screen.findByRole("button", { name: "Finish the program" }));
+
+        expect((await screen.findByRole("alert")).textContent).toMatch(/your program works, but it could not be saved/i);
+        expect(screen.getByRole("button", { name: "Send it again" })).toBeTruthy();
     });
 });
 

@@ -574,6 +574,19 @@ export interface BugHuntIncidentResult {
     pointsAwarded: number;
 }
 
+/** A practice stop a run cleared: a concept and the rung (demand) of it. */
+export interface PracticeStopCleared {
+    conceptSlug: string;
+    conceptName: string;
+    demandSlug: string;
+}
+
+/** GET /api/bug-hunt/sessions/:id. `earned` is optional: an older server omits it. */
+export interface BugHuntResultsResponse {
+    session: BugHuntSessionSummary;
+    earned?: PracticeStopCleared[];
+}
+
 export interface BugHuntSessionSummary {
     id: string;
     status: string;

@@ -917,8 +917,12 @@ function MissionRung({
     onCleared: (neededRetry: boolean) => void | Promise<void>;
 }) {
     const mission = useMemo(() => movementMissionFor(concept, demand), [concept, demand]);
-    /** The record failed; holds what to resend. */
-    const [failed, setFailed] = useState<{ retried: boolean } | null>(null);
+    /**
+     * The record failed. `retry` says whether sending it again could help: a
+     * network or server failure, yes; a refusal (4xx), no -- the server has
+     * answered, and the same request gets the same answer.
+     */
+    const [failed, setFailed] = useState<{ retried: boolean; retry: boolean; message: string } | null>(null);
     /** Set synchronously, so one finished program is recorded once at a time. */
     const sending = useRef(false);
 
@@ -936,7 +940,9 @@ function MissionRung({
      * The failure used to be swallowed and the rung treated as cleared, so the
      * learner was moved on to a ladder that still had this stop open and landed
      * back on it with no explanation. Now a failed record says so and can be
-     * sent again; the written program stays on screen.
+     * sent again; the written program stays on screen. A refusal is told apart
+     * from a failure (the same `transient` rule as finishing the concept): it
+     * gives the server's reason and a way out, not a retry that cannot work.
      */
     const record = async (retried: boolean) => {
         if (sending.current) return;
@@ -948,8 +954,17 @@ function MissionRung({
             await api.post(`/api/curriculum/challenges/${challengeId}/completion`, {
                 neededRetry: retried
             });
-        } catch {
-            setFailed({ retried });
+        } catch (err) {
+            const retry = transient(err);
+            setFailed({
+                retried,
+                retry,
+                message: retry
+                    ? "Your program works, but it could not be saved just now."
+                    : err instanceof ApiError
+                      ? err.message
+                      : "This step could not be recorded."
+            });
             return;
         } finally {
             sending.current = false;
@@ -968,12 +983,16 @@ function MissionRung({
 
             {failed && (
                 <div className="encounter-send-error" role="alert">
-                    <p className="form-error">
-                        Your program works, but it could not be saved just now.
-                    </p>
-                    <button className="button primary" onClick={() => void record(failed.retried)}>
-                        Send it again
-                    </button>
+                    <p className="form-error">{failed.message}</p>
+                    {failed.retry ? (
+                        <button className="button primary" onClick={() => void record(failed.retried)}>
+                            Send it again
+                        </button>
+                    ) : (
+                        <Link className="button primary" to="/journey">
+                            {ACTION.seeJourney}
+                        </Link>
+                    )}
                 </div>
             )}
         </>

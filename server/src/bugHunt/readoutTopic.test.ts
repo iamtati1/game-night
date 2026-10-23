@@ -37,6 +37,9 @@ vi.mock("./queries.js", async (original) => ({
         round(1, "Running Code and Reading Output", "scope-closures", "resolved"),
         round(2, "Running Code and Reading Output", "scope-closures", "resolved"),
         round(3, null, "async", "failed")
+    ]),
+    practiceClearedInSession: vi.fn(async () => [
+        { conceptSlug: "console-output", conceptName: "Running Code and Reading Output", demandSlug: "diagnose" }
     ])
 }));
 
@@ -70,5 +73,14 @@ describe("GET /api/bug-hunt/sessions/:id readout", () => {
         expect(res.body.session.incidents[2].concept).toBeNull();
         // The category is still sent, unchanged, for anything that reads it.
         expect(res.body.session.incidents[0].bugCategory).toBe("scope-closures");
+    });
+
+    it("names the practice stops the run cleared, beside the XP", async () => {
+        const res = await request(app()).get("/api/bug-hunt/sessions/s1");
+
+        expect(res.body.earned).toEqual([
+            { conceptSlug: "console-output", conceptName: "Running Code and Reading Output", demandSlug: "diagnose" }
+        ]);
+        expect(res.body.session.xpEarned).toBe(10);
     });
 });

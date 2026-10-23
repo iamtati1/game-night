@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
-import type { BugHuntSessionSummary } from "../api/types.js";
+import { rungLabel } from "../api/encounter.js";
+import type { BugHuntResultsResponse, BugHuntSessionSummary, PracticeStopCleared } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
 import { NextStepActions } from "../components/NextStepActions.js";
 import { BUG_HUNT } from "../games/catalog.js";
@@ -69,6 +70,8 @@ export function BugHuntResultsPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [session, setSession] = useState<BugHuntSessionSummary | null>(null);
+    /** Practice stops this run cleared, from the server; null when it did not say. */
+    const [earned, setEarned] = useState<PracticeStopCleared[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [starting, setStarting] = useState(false);
     const { previousBest, improvement } = useRunContext(BUG_HUNT, id);
@@ -76,8 +79,12 @@ export function BugHuntResultsPage() {
     useEffect(() => {
         let active = true;
 
-        api.get<{ session: BugHuntSessionSummary }>(`/api/bug-hunt/sessions/${id}`)
-            .then((data) => active && setSession(data.session))
+        api.get<BugHuntResultsResponse>(`/api/bug-hunt/sessions/${id}`)
+            .then((data) => {
+                if (!active) return;
+                setSession(data.session);
+                setEarned(data.earned ?? null);
+            })
             .catch(
                 (err) =>
                     active &&
@@ -196,6 +203,43 @@ export function BugHuntResultsPage() {
                     <dd>+{session.xpEarned}</dd>
                 </div>
             </dl>
+
+            {/* XP IS NOT PROGRESS. XP counts every incident resolved; only a
+                resolved bug from a lesson concept clears a practice stop, and
+                the server says which ones did (the same rule the journey
+                reads). Said here so a big XP number is not read as course
+                progress, and a run that cleared nothing says so. */}
+            {earned && (
+                <section className="practice-cleared" aria-labelledby="bh-practice-title">
+                    <h2 id="bh-practice-title" className="practice-cleared-title">
+                        Course practice
+                    </h2>
+                    {earned.length > 0 ? (
+                        <>
+                            <ul className="practice-cleared-list">
+                                {earned.map((stop) => (
+                                    <li key={`${stop.conceptSlug}:${stop.demandSlug}`}>
+                                        <span aria-hidden="true">✓</span>{" "}
+                                        <strong>{rungLabel(stop.demandSlug)}</strong> · {stop.conceptName}
+                                    </li>
+                                ))}
+                            </ul>
+                            <p className="practice-cleared-note">
+                                {earned.length === 1 ? "This stop counts" : "These stops count"} toward
+                                your course.
+                            </p>
+                        </>
+                    ) : (
+                        <p className="practice-cleared-note">
+                            No practice stops cleared this run. Only bugs from your lessons count
+                            toward your course.
+                        </p>
+                    )}
+                    <p className="practice-cleared-note">
+                        XP counts every bug you fix; practice stops are what move your course on.
+                    </p>
+                </section>
+            )}
 
             {(strong.length > 0 || weak.length > 0) && (
                 <div className="bh-readout">

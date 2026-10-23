@@ -36,6 +36,10 @@ debt** · **deployment requirements**.
 
 ### Gameplay
 
+- **Flush says whether a round counted only on that round's reveal.** The
+  results screen lists rounds and XP but not which rounds counted: the server
+  decides `credited` as each round ends and does not keep it per round.
+
 - **Reaction and Memory restart after a reload mid-run.** A *paused* run
   resumes where it stopped. A run that is simply left in progress — the tab
   reloaded or closed between rounds — shows the game's intro again, and
@@ -107,6 +111,10 @@ debt** · **deployment requirements**.
   focus, contrast). A pass with VoiceOver or NVDA has not been done; Memory's
   flashing sequence is the most likely gap. Reaction supports Space and Enter
   and announces its state through a live region.
+- **Bug Hunt's "Course practice" block in a real browser.** Its server query
+  is tested against a database built from the migrations and seeds (and agrees
+  with the evidence rule), and the block by component tests; a full Bug Hunt
+  run in the browser has not been played to look at it.
 - **The first-time tutorial's last scenes in a real browser.** The full
   walkthrough, including the replay's closing screen, is covered by
   `LessonTutorial.test.tsx`; the 2026-10-23 browser check stopped at the
