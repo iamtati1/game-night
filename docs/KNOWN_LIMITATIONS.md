@@ -31,7 +31,9 @@ debt** · **deployment requirements**.
   `xpForSession` counts resolved rounds (`server/src/reaction/scoring.ts`,
   `server/src/memory/scoring.ts`), so a 0-of-5 run earns the same XP as a
   perfect one. Code Blitz counts correct answers, Flush completed rounds, Bug
-  Hunt resolved incidents. XP is never evidence and never moves progress, but
+  Hunt resolved incidents; every game adds a 25 XP completion bonus
+  (`server/src/games/xp.ts`), so a finished run with nothing right still earns
+  25. XP is never evidence and never moves progress, but
   it is shown on the Games page. Roadmap P4 (needs a decision).
 
 ### Gameplay
@@ -111,10 +113,6 @@ debt** · **deployment requirements**.
   focus, contrast). A pass with VoiceOver or NVDA has not been done; Memory's
   flashing sequence is the most likely gap. Reaction supports Space and Enter
   and announces its state through a live region.
-- **Bug Hunt's "Course practice" block in a real browser.** Its server query
-  is tested against a database built from the migrations and seeds (and agrees
-  with the evidence rule), and the block by component tests; a full Bug Hunt
-  run in the browser has not been played to look at it.
 - **The first-time tutorial's last scenes in a real browser.** The full
   walkthrough, including the replay's closing screen, is covered by
   `LessonTutorial.test.tsx`; the 2026-10-23 browser check stopped at the

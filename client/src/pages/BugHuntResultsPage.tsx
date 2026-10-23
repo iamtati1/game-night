@@ -204,11 +204,12 @@ export function BugHuntResultsPage() {
                 </div>
             </dl>
 
-            {/* XP IS NOT PROGRESS. XP counts every incident resolved; only a
-                resolved bug from a lesson concept clears a practice stop, and
-                the server says which ones did (the same rule the journey
-                reads). Said here so a big XP number is not read as course
-                progress, and a run that cleared nothing says so. */}
+            {/* XP IS NOT PROGRESS. XP pays for a finished hunt and every
+                incident resolved (bugHunt/scoring.ts); only a resolved bug
+                from a lesson concept clears a practice stop, and the server
+                says which ones did (the same rule the journey reads). Said
+                here so a big XP number is not read as course progress, and a
+                run that cleared nothing says so. */}
             {earned && (
                 <section className="practice-cleared" aria-labelledby="bh-practice-title">
                     <h2 id="bh-practice-title" className="practice-cleared-title">
@@ -231,12 +232,13 @@ export function BugHuntResultsPage() {
                         </>
                     ) : (
                         <p className="practice-cleared-note">
-                            No practice stops cleared this run. Only bugs from your lessons count
-                            toward your course.
+                            No practice stops cleared this run. A stop clears when you fix a bug
+                            from one of your lessons.
                         </p>
                     )}
                     <p className="practice-cleared-note">
-                        XP counts every bug you fix; practice stops are what move your course on.
+                        XP is for finishing the hunt and for every bug you fix; practice stops
+                        are what move your course on.
                     </p>
                 </section>
             )}

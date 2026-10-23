@@ -38,7 +38,7 @@ without a commit and a verification behind it.
 | Costed hints in Code Blitz and Flush (half points; XP unchanged) | `47d66e0` | server and client tests |
 | Redesign: mission panel, Skills hub, first-time tutorial, islands under Games, desktop game layouts, adaptive results wording, cream theme with dusk switch, relaxed timers | `cf96277` | client tests; browser QA on a database clone |
 | Profile page; navigation Home, Games, Skills, Profile | `558d5b2` | client and server tests; browser QA at 320, 375, 1024 and 1280px in both themes |
-| Progress feedback: each Flush reveal says whether the round counted toward the course (from the server's `credited`); Bug Hunt results list the practice stops the run cleared (new read-only `practiceClearedInSession`, the Bug Hunt arm of `CLEARED_RUNGS_CTE` for one run) apart from XP; a refused lesson program save gives the server's reason instead of "Send it again" | this commit | server and client tests; Flush checked in the browser on the `jolt_qa_087_20261019` clone (credited and lost rounds, dusk, phone width) |
+| Progress feedback: each Flush reveal says whether the round counted toward the course (from the server's `credited`); Bug Hunt results list the practice stops the run cleared (new read-only `practiceClearedInSession`, the Bug Hunt arm of `CLEARED_RUNGS_CTE` for one run) apart from XP; a refused lesson program save gives the server's reason instead of "Send it again" | this commit | server and client tests; Flush checked in the browser on the `jolt_qa_087_20261019` clone (credited and lost rounds, dusk, phone width); two full Bug Hunt runs on the clone (2 of 3 resolved: one stop listed, matching `CLEARED_RUNGS_CTE`; 0 of 3: "no practice stops") at 320px, 422px and 1280px in both themes |
 
 ### Status of the 2026-10-02 phases
 
@@ -118,7 +118,7 @@ between slices.
 - **Evidence:** `server/src/reaction/scoring.ts` and
   `server/src/memory/scoring.ts` (`xpForSession` counts resolved rounds). Code
   Blitz counts correct answers, Flush completed rounds, Bug Hunt resolved
-  incidents.
+  incidents; every game adds a 25 XP completion bonus (`server/src/games/xp.ts`).
 - **Depends on:** decision D2. XP constants are on the "not to be changed" list
   below, so this needs explicit approval.
 - **Slice type:** scoring (needs approval).

@@ -77,7 +77,7 @@ describe("Bug Hunt results: course practice", () => {
         ]);
         expect(within(block).getByText(/these stops count toward your course/i)).toBeTruthy();
         // XP is said to be a different thing.
-        expect(within(block).getByText(/XP counts every bug you fix/)).toBeTruthy();
+        expect(within(block).getByText(/XP is for finishing the hunt and for every bug you fix/)).toBeTruthy();
     });
 
     it("says plainly when the run cleared no practice stop, while XP was still earned", async () => {
@@ -86,6 +86,10 @@ describe("Bug Hunt results: course practice", () => {
         const block = await screen.findByRole("region", { name: "Course practice" });
         expect(within(block).queryAllByRole("listitem")).toHaveLength(0);
         expect(within(block).getByText(/no practice stops cleared this run/i)).toBeTruthy();
+        // True whether the run's bugs were untagged or tagged and not fixed:
+        // it says what clears a stop, not that these bugs were not lessons.
+        expect(within(block).getByText(/a stop clears when you fix a bug from one of your lessons/i)).toBeTruthy();
+        expect(within(block).queryByText(/only bugs from your lessons/i)).toBeNull();
         expect(screen.getByText("+41")).toBeTruthy();
     });
 
