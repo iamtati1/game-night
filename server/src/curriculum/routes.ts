@@ -25,6 +25,7 @@ import {
     findNextIntroduction,
     findTopicStanding
 } from "./queries.js";
+import { hasCheckpoint, judgeCheckpoint } from "./checkpoints.js";
 
 export const curriculumRouter = Router();
 
@@ -255,6 +256,15 @@ curriculumRouter.post(
  *
  * The learner passed a topic's cumulative challenge. This is what completes the
  * topic and opens the next one -- walking every lesson alone does not.
+ *
+ * Body: `{ answers: [{ choice, retry? }, ...] }`, one per checkpoint question,
+ * judged here against the server's key (checkpoints.ts). It used to read only
+ * `neededRetry`, so an empty request passed.
+ *
+ *     404  no such topic, or the topic has no checkpoint
+ *     409  not every concept in the topic is demonstrated yet
+ *     400  the answers do not describe a walk through this checkpoint
+ *     422  an answer was wrong: nothing recorded, the learner can try again
  */
 curriculumRouter.post(
     "/topics/:topic/challenge",
@@ -267,10 +277,17 @@ curriculumRouter.post(
             return;
         }
 
-        const neededRetry =
-            typeof req.body === "object" &&
-            req.body !== null &&
-            (req.body as { neededRetry?: unknown }).neededRetry === true;
+        // A topic with no authored checkpoint has nothing to pass. Recording one
+        // anyway paid POINTS_PER_CHALLENGE for a checkpoint that does not exist.
+        if (!hasCheckpoint(topic)) {
+            res.status(404).json({ error: "No checkpoint for this topic" });
+            return;
+        }
+
+        const body = (typeof req.body === "object" && req.body !== null ? req.body : {}) as {
+            answers?: unknown;
+            neededRetry?: unknown;
+        };
 
         // EVIDENCE, NOT A CLAIM -- the same rule /demonstrate follows. Without
         // this, posting here completed the topic and opened the next one
@@ -289,6 +306,23 @@ curriculumRouter.post(
             });
             return;
         }
+
+        const verdict = judgeCheckpoint(topic, body.answers);
+
+        if (verdict.outcome === "malformed") {
+            res.status(400).json({ error: verdict.reason });
+            return;
+        }
+
+        if (verdict.outcome === "failed") {
+            res.status(422).json({ error: "Not every checkpoint answer was right. Try the checkpoint again." });
+            return;
+        }
+
+        // Derived from the answers. The browser's flag can still ADD a retry --
+        // the mission half is browser-reported, and admitting a struggle
+        // inflates nothing -- but it can no longer hide one.
+        const neededRetry = verdict.neededRetry || body.neededRetry === true;
 
         const recorded = await recordChallenge(req.user!.id, topic, neededRetry);
 

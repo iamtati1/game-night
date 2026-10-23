@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { play } from "../games/sound.js";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
@@ -73,6 +73,18 @@ export function LessonPage() {
     /** The server's reason for not recording this, when it would not. */
     const [refused, setRefused] = useState<string | null>(null);
 
+    /*
+     * A CHECKPOINT IS JUDGED BY THE SERVER. Each step's answer (and its retry's,
+     * when one was shown) is kept and sent with the pass, and the server checks
+     * every one against its own key. Refs rather than state, because the last
+     * answer is recorded and the request built in the same click.
+     */
+    const answers = useRef<{ choice: string; retry?: string }[]>([]);
+    /** A step ended wrong: no retry left, or the retry was wrong too. */
+    const missed = useRef(false);
+    /** The checkpoint was walked with a wrong answer in it; offer it again. */
+    const [notPassed, setNotPassed] = useState(false);
+
     const step: LessonStep | null = useMemo(() => {
         if (!lesson) return null;
 
@@ -103,7 +115,9 @@ export function LessonPage() {
                     lesson?.challengeFor
                         ? `/api/curriculum/topics/${lesson.challengeFor}/challenge`
                         : `/api/curriculum/concepts/${"concept" in done ? done.concept : concept}/demonstrate`,
-                    { neededRetry: retried }
+                    lesson?.challengeFor
+                        ? { neededRetry: retried, answers: answers.current }
+                        : { neededRetry: retried }
                 );
                 setDone(true);
             } catch (err) {
@@ -144,7 +158,7 @@ export function LessonPage() {
                 lesson.challengeFor
                     ? `/api/curriculum/topics/${lesson.challengeFor}/challenge`
                     : `/api/curriculum/concepts/${lesson.concept}/demonstrate`,
-                { neededRetry }
+                lesson.challengeFor ? { neededRetry, answers: answers.current } : { neededRetry }
             );
             setDone(true);
         } catch (err) {
@@ -164,19 +178,54 @@ export function LessonPage() {
      * evidence is not the capability.
      */
     const finishQuiz = useCallback(() => {
+        // Not passed: say so now, before the mission and without a request the
+        // server would refuse. The server still judges every pass it is sent.
+        if (lesson?.challengeFor && missed.current) {
+            setNotPassed(true);
+            return;
+        }
+
         if (mission) {
             setQuizDone(true);
             return;
         }
 
         void finish();
-    }, [mission, finish]);
+    }, [lesson, mission, finish]);
+
+    /** Back to the first question, with nothing carried over. Records nothing. */
+    const retakeCheckpoint = useCallback(() => {
+        answers.current = [];
+        missed.current = false;
+        setIndex(0);
+        setChosen(null);
+        setRetrying(false);
+        setNeededRetry(false);
+        setQuizDone(false);
+        setRefused(null);
+        setNotPassed(false);
+    }, []);
 
     const advance = useCallback(() => {
         if (!lesson || !step) return;
 
         const authored = lesson.steps[index]!;
         const wasWrong = chosen !== null && !step.choices[chosen]?.correct;
+        const text = chosen !== null ? step.choices[chosen]?.text : undefined;
+
+        if (text !== undefined) {
+            if (retrying) {
+                const last = answers.current[answers.current.length - 1];
+                if (last) last.retry = text;
+            } else {
+                answers.current.push({ choice: text });
+            }
+        }
+
+        // Wrong with nothing left to try on this step.
+        if (wasWrong && (retrying || !authored.retry)) {
+            missed.current = true;
+        }
 
         // Wrong, and this step has a retry we have not shown yet.
         if (wasWrong && !retrying && authored.retry) {
@@ -206,7 +255,9 @@ export function LessonPage() {
     // Quiz passed, mission still to go. `neededRetry` carries across both
     // halves: struggling anywhere in the topic is one fact about the learner,
     // not two.
-    if (mission && quizDone && !done) {
+    // Not once the server has refused the pass: the refusal (and its retake)
+    // must show, not the mission the learner already finished.
+    if (mission && quizDone && !done && !refused) {
         return (
             <MissionScene
                 mission={mission}
@@ -282,9 +333,41 @@ export function LessonPage() {
                 <p className="form-error" role="alert">
                     {refused}
                 </p>
-                <Link className="button primary" to="/journey">
-                    {ACTION.seeJourney}
-                </Link>
+                <div className="checkpoint-actions">
+                    {lesson.challengeFor && (
+                        <button className="button primary" onClick={retakeCheckpoint}>
+                            Try the checkpoint again
+                        </button>
+                    )}
+                    <Link className={`button ${lesson.challengeFor ? "ghost" : "primary"}`} to="/journey">
+                        {ACTION.seeJourney}
+                    </Link>
+                </div>
+            </section>
+        );
+    }
+
+    if (notPassed) {
+        /* NOT A FAILURE SCREEN. Every concept in the topic is already
+           demonstrated; this asks for the whole topic at once, and one answer
+           was off. Nothing was recorded, and the same questions are one tap
+           away -- with the feedback just read fresh in mind. */
+        return (
+            <section className="panel narrow">
+                <h1>Not quite there yet</h1>
+                <p role="status">
+                    One or more answers in the {lesson.title.toLowerCase()} were not right, so the
+                    checkpoint is not passed yet. Nothing was recorded. Read the feedback, then go
+                    through it again.
+                </p>
+                <div className="checkpoint-actions">
+                    <button className="button primary" onClick={retakeCheckpoint}>
+                        Try the checkpoint again
+                    </button>
+                    <Link className="button ghost" to="/journey">
+                        {ACTION.seeJourney}
+                    </Link>
+                </div>
             </section>
         );
     }

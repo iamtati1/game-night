@@ -20,8 +20,8 @@ without a commit and a verification behind it.
 |---|---|
 | Topics / concepts / declared rungs | 16 / 101 / 282 (dev database) |
 | Games producing learning evidence | 3 of 5 (Code Blitz, Bug Hunt, Flush) |
-| Server tests | 1621 in 103 files, passing |
-| Client tests | 924 in 69 files, passing |
+| Server tests | 1654 in 105 files, passing |
+| Client tests | 930 in 69 files, passing |
 | Client lint | 39 findings (34 errors, 5 warnings), the pre-existing baseline |
 | Builds | Client and server production builds pass; Render's exact build command passed on a clean export (2026-10-22) |
 
@@ -67,18 +67,23 @@ These must be resolved before a production deploy. Each is its own slice.
 Ordered by learner impact per unit of risk. One slice at a time, with approval
 between slices.
 
-### P1 — Checkpoint integrity 🔴
-- **Problem:** a topic checkpoint pass is a claim from the browser. The quiz is
-  judged client-side; the server records the pass once every concept is
-  demonstrated, without seeing an answer. Checkpoints gate the next topic.
-- **Evidence:** `server/src/curriculum/routes.ts` (the checkpoint route reads
-  only `neededRetry`, then checks `topicReadyForCheckpoint`); content in
-  `client/src/games/lessons.ts` (`TOPIC_CHALLENGES`).
-- **Depends on:** a decision on where checkpoint questions live (server seed or
-  shared module).
-- **Acceptance:** the server judges each checkpoint answer; a request without
-  correct answers is refused; the learner's experience is unchanged.
-- **Slice type:** curriculum / progression (needs approval).
+### P1 — Checkpoint integrity 🟢 (implemented, not yet committed)
+- **Was:** a topic checkpoint pass was a claim from the browser. The server
+  recorded it once every concept was demonstrated, without seeing an answer;
+  an empty request passed, and a topic with no checkpoint could be "passed"
+  for points.
+- **Now:** `POST /api/curriculum/topics/:topic/challenge` requires the answers
+  and judges them against the server's key (`server/src/curriculum/checkpoints.ts`):
+  every step right, first time or on its retry. 400 for a malformed
+  submission, 422 for a wrong answer, 404 for a topic with no checkpoint;
+  `needed_retry` is derived from the answers. The checkpoint page sends the
+  answers and offers "Try the checkpoint again".
+- **Verified:** `checkpointRoute.test.ts` (11 of its 15 tests fail against the
+  original route), `checkpoints.test.ts` (rule and drift against
+  `TOPIC_CHALLENGES`), `LessonPage.test.tsx`; browser check on the
+  `jolt_qa_087_20261019` clone (2026-10-23).
+- **Remaining:** see `KNOWN_LIMITATIONS.md` (answer key in the client bundle;
+  the Variables mission half is browser-reported).
 
 ### P2 — Practice completion that ignores refusal 🔴
 - **Problem:** `/practise/:concept` shows "concept complete" even when the

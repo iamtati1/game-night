@@ -14,12 +14,16 @@ debt** · **deployment requirements**.
 
 ### Progress and evidence
 
-- **Topic checkpoints are judged in the browser.** The checkpoint quiz is
-  marked client-side (`TOPIC_CHALLENGES` in `client/src/games/lessons.ts`), and
-  `POST /api/curriculum/topics/:topic/challenge` records a pass once every
-  concept in the topic is demonstrated, reading only `neededRetry` from the
-  request (`server/src/curriculum/routes.ts`). Normal use cannot trigger a false
-  pass; a hand-made request can. Roadmap P1.
+- **Checkpoint answers are judged by the server, but the key is also in the
+  client bundle.** Since 2026-10-23 the checkpoint route judges every answer
+  against `server/src/curriculum/checkpoints.ts` and refuses empty, malformed
+  or wrong submissions. The quiz still gives per-choice feedback in the
+  browser, so the right answers ship in `client/src/games/lessons.ts`; someone
+  reading the bundle could script a correct submission. Closing that means
+  serving checkpoint questions from the server one at a time.
+- **The Variables checkpoint's mission half is browser-reported.** The quiz
+  half is judged by the server; the launch-check mission runs in the browser's
+  interpreter and is accepted on the browser's word, as concept missions are.
 - **`/practise/:concept` shows completion even when the server refuses it.**
   `PracticePage` posts `/demonstrate`, swallows any refusal and shows the
   completion screen (`client/src/pages/PracticePage.tsx`). Nothing links to

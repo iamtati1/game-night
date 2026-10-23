@@ -4133,6 +4133,14 @@ pre.learn-code {
     }
 }
 
+/* A checkpoint not passed, or refused: try again, or back to the journey. */
+.checkpoint-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
 /* ===================================================================== */
 /* WARM CREAM THEME  (html[data-theme="cream"], set by index.html and     */
 /* games/theme.ts; Profile's theme setting switches it back)              */
