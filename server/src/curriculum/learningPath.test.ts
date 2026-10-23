@@ -1061,28 +1061,31 @@ describe("a learner always has one obvious next action", () => {
         // disagree. Asserted exactly, because the point is that it stays SHORT:
         // a fifth should have to argue for itself here.
         //
-        //   Home    where you are and your next mission
-        //   Learn   the guided topic journey
-        //   Games   the five games ("Games", not "Play": the word a beginner looks for)
-        //   Skills  what you can do and what to practise next
+        //   Home     your next mission, and the guided journey from it (Home/Learn)
+        //   Games    the five games ("Games", not "Play": the word a beginner looks for)
+        //   Skills   what you can do and what to practise next
+        //   Profile  the account, its settings and the Log
         const navArea = readFileSync(new URL("../../../client/src/navArea.ts", import.meta.url), "utf8");
         const list = navArea.slice(navArea.indexOf("export const PRIMARY_NAV"));
         const labels = [...list.matchAll(/label: "([^"]+)"/g)].map((m) => m[1]);
 
-        expect(labels).toEqual(["Home", "Learn", "Games", "Skills"]);
+        expect(labels).toEqual(["Home", "Games", "Skills", "Profile"]);
         // Both bars read the list rather than restating it.
         expect(app.match(/PRIMARY_NAV\.map\(/g)).toHaveLength(2);
     });
 
-    it("keeps the log reachable, beside the pilot rather than as a fourth area", () => {
+    it("keeps the log reachable from Profile, and Experiment beside the pilot", () => {
         // Secondary by placement, not by being hidden: history is a real thing
-        // to want, and a learner who wants it should not have to guess that it
-        // is gone. It sits with the account, below the hairline.
-        const pilot = app.slice(app.indexOf("nav-pilot"), app.indexOf("Log out"));
+        // to want. It lives with the account on Profile, which is a place.
+        const profile = readFileSync(
+            new URL("../../../client/src/pages/ProfilePage.tsx", import.meta.url),
+            "utf8"
+        );
+        expect(profile).toContain('to="/history"');
 
-        expect(pilot).toContain('to="/history"');
-        // Experiment moved here when Learn and Skills became places: still one
-        // click away, secondary by placement rather than removed.
+        // Experiment stays one click away in the header, secondary by
+        // placement rather than removed.
+        const pilot = app.slice(app.indexOf("nav-pilot"), app.indexOf("Log out"));
         expect(pilot).toContain('to="/experiment"');
     });
 });

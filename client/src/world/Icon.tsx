@@ -22,6 +22,7 @@ export type IconName =
     | "sound-on"
     | "sound-off"
     | "skills"
+    | "profile"
     | "sun"
     | "moon";
 
@@ -47,6 +48,8 @@ const PATHS: Record<IconName, string> = {
     // A trunk with branches: the skill tree. Distinct in shape from the map's
     // route and the spark, so the bottom bar never relies on its label alone.
     skills: "M12 20.5v-15 M12 15.5l-5.5-4 M12 10.5l5.5-4 M6.5 11.5v-3 M17.5 6.5v-2.5",
+    // A head and shoulders: the account. Open strokes like the rest.
+    profile: "M12 4a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 4Z M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5",
     // The theme switch: a sun for the light theme, a crescent for the dark.
     sun: "M12 8a4 4 0 1 0 0.01 0 M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6l1.4 1.4 M17 17l1.4 1.4 M5.6 18.4 7 17 M17 7l1.4-1.4",
     moon: "M19.5 14.5A7.5 7.5 0 1 1 9.5 4.5a6 6 0 0 0 10 10Z"

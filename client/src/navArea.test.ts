@@ -8,10 +8,11 @@ import { navAreaFor } from "./navArea.js";
 describe("navAreaFor", () => {
     it.each([
         ["/", "home"],
-        ["/journey", "learn"],
-        ["/concept/console-output", "learn"],
-        ["/world/values", "learn"],
-        ["/challenge/values", "learn"],
+        ["/journey", "home"],
+        ["/concept/console-output", "home"],
+        ["/learn/console-output", "home"],
+        ["/world/values", "home"],
+        ["/challenge/values", "home"],
         ["/play", "games"],
         ["/code-blitz", "games"],
         ["/flush/results/12", "games"],
@@ -21,18 +22,24 @@ describe("navAreaFor", () => {
         ["/results/40", "games"],
         ["/skills", "skills"],
         ["/experiment", "experiment"],
-        ["/history", "log"]
+        ["/profile", "profile"],
+        ["/history", "profile"]
     ])("%s is in %s", (path, area) => {
         expect(navAreaFor(path)).toBe(area);
     });
 
-    it("lights Home on Home alone, not inside a lesson", () => {
-        expect(navAreaFor("/")).toBe("home");
-        expect(navAreaFor("/concept/console-output")).not.toBe("home");
-        expect(navAreaFor("/journey")).not.toBe("home");
+    it("lights Home for the journey and its lessons: Home is Home/Learn", () => {
+        // There is no Learn tab. The journey is reached from Home, so being in
+        // the course is being under Home.
+        expect(navAreaFor("/journey")).toBe("home");
+        expect(navAreaFor("/concept/console-output")).toBe("home");
     });
 
-    it("marks nothing for pages outside the three areas", () => {
+    it("puts the Log under Profile, with the account", () => {
+        expect(navAreaFor("/history")).toBe("profile");
+    });
+
+    it("marks nothing for pages outside the places", () => {
         expect(navAreaFor("/login")).toBeNull();
         // A prefix match on the word alone would put this under Games.
         expect(navAreaFor("/playground")).toBeNull();

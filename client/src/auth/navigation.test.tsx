@@ -5,7 +5,7 @@ import App from "../App.js";
 import { AuthProvider } from "./AuthContext.js";
 
 /**
- * Four places -- Home, Learn, Games, Skills -- in the header on a wide screen
+ * Four places -- Home, Games, Skills, Profile -- in the header on a wide screen
  * and in a bottom bar on a phone. Which one is displayed is CSS (world.css,
  * 40rem); jsdom applies none, so both are in the DOM here and each is checked
  * on its own terms.
@@ -47,8 +47,8 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-const PLACES = ["Home", "Learn", "Games", "Skills"];
-const HREFS = ["/", "/journey", "/play", "/skills"];
+const PLACES = ["Home", "Games", "Skills", "Profile"];
+const HREFS = ["/", "/play", "/skills", "/profile"];
 
 describe("navigation", () => {
     it("puts the four places in the header, in order", async () => {
@@ -61,13 +61,30 @@ describe("navigation", () => {
         expect(links.map((a) => a.getAttribute("href"))).toEqual(HREFS);
     });
 
-    it("keeps Experiment and the Log one click away, beside the account", async () => {
+    it("keeps Experiment one click away, beside the account", async () => {
         const { container } = renderAt("/play");
         await screen.findByRole("button", { name: /log out/i });
 
         const pilot = container.querySelector(".nav-pilot") as HTMLElement;
         expect(within(pilot).getByRole("link", { name: "Experiment" }).getAttribute("href")).toBe("/experiment");
-        expect(within(pilot).getByRole("link", { name: "Log" }).getAttribute("href")).toBe("/history");
+    });
+
+    it("moves theme, sound and the Log off a signed-in header and onto Profile", async () => {
+        const { container } = renderAt("/play");
+        await screen.findByRole("button", { name: /log out/i });
+
+        const header = container.querySelector(".site-header") as HTMLElement;
+        expect(within(header).queryByRole("button", { name: "Dark theme" })).toBeNull();
+        expect(within(header).queryByRole("button", { name: "Sound effects" })).toBeNull();
+        expect(within(header).queryByRole("link", { name: "Log" })).toBeNull();
+    });
+
+    it("keeps theme and sound in the header for a signed-out visitor, who has no Profile", async () => {
+        renderAt("/play", false);
+        await screen.findByRole("link", { name: "Log in" });
+
+        expect(screen.getByRole("button", { name: "Dark theme" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Sound effects" })).toBeTruthy();
     });
 
     it("offers the same four places in the phone's bottom bar", async () => {
@@ -82,8 +99,11 @@ describe("navigation", () => {
     it.each([
         ["/play", "Games"],
         ["/skills", "Skills"],
-        ["/journey", "Learn"],
-        ["/concept/console-output", "Learn"]
+        ["/", "Home"],
+        ["/journey", "Home"],
+        ["/concept/console-output", "Home"],
+        ["/profile", "Profile"],
+        ["/history", "Profile"]
     ])("marks the place you are in on %s, in both bars", async (path, place) => {
         const { container } = renderAt(path);
         const bar = await screen.findByRole("navigation", { name: "Main" });

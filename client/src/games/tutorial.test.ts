@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { JourneyConcept, JourneyPathResponse } from "../api/types.js";
-import { hasSeenTutorial, markTutorialSeen, tutorialHref } from "./tutorial.js";
+import { sceneLessonFor } from "./scenes.js";
+import { hasSeenTutorial, markTutorialSeen, replayTutorialHref, TUTORIAL_CONCEPT, tutorialHref } from "./tutorial.js";
 
 /** Who is sent through the playable tutorial first -- read from the path. */
 
@@ -45,5 +46,20 @@ describe("the first-time tutorial", () => {
 
     it("exists only for concepts with a playable lesson", () => {
         expect(tutorialHref(path("arithmetic-operators"))).toBeNull();
+    });
+});
+
+describe("replaying the tutorial from Profile", () => {
+    it("goes to the same scene lesson a new learner walks", () => {
+        expect(sceneLessonFor(TUTORIAL_CONCEPT)).not.toBeNull();
+        expect(replayTutorialHref()).toBe(`/learn/${TUTORIAL_CONCEPT}?replay=1`);
+    });
+
+    it("needs no stored flag cleared, and clears none", () => {
+        markTutorialSeen(TUTORIAL_CONCEPT);
+        replayTutorialHref();
+        expect(hasSeenTutorial(TUTORIAL_CONCEPT)).toBe(true);
+        // A seen tutorial still keeps a returning learner on their own next step.
+        expect(tutorialHref(path())).toBeNull();
     });
 });

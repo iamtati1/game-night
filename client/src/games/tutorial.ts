@@ -45,3 +45,17 @@ export function tutorialHref(path: JourneyPathResponse): string | null {
 
     return `/learn/${current.slug}`;
 }
+
+/** The concept whose scene lesson is the first-time tutorial. */
+export const TUTORIAL_CONCEPT = "console-output";
+
+/**
+ * Where Profile's "Replay the tutorial" goes. The same /learn page a new
+ * learner walks: it records nothing, so a replay cannot add to progress or
+ * take anything away, and no stored flag needs clearing to reach it. The
+ * query only changes the closing words, which would otherwise call this the
+ * learner's first program.
+ */
+export function replayTutorialHref(): string {
+    return `/learn/${TUTORIAL_CONCEPT}?replay=1`;
+}

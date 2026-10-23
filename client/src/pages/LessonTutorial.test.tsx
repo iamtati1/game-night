@@ -64,9 +64,9 @@ afterEach(() => {
     cleanup();
 });
 
-function renderTutorial() {
+function renderTutorial(url = "/learn/console-output") {
     return render(
-        <MemoryRouter initialEntries={["/learn/console-output"]}>
+        <MemoryRouter initialEntries={[url]}>
             <Routes>
                 <Route path="/learn/:concept" element={<LessonPage />} />
             </Routes>
@@ -137,5 +137,24 @@ describe("the first-time tutorial", () => {
         fireEvent.click(skip);
         expect(window.localStorage.getItem("jolt.tutorial.console-output")).toBe("seen");
         expect(api.post).not.toHaveBeenCalled();
+    });
+
+    it("replayed from Profile, records nothing and says progress is unchanged", async () => {
+        // A returning learner: already seen, with progress on the path.
+        window.localStorage.setItem("jolt.tutorial.console-output", "seen");
+        const progressed = { ...PATH, points: { total: 50, concepts: 2, challenges: 0 } };
+        vi.mocked(api.get).mockResolvedValue(progressed);
+
+        renderTutorial("/learn/console-output?replay=1");
+        walk();
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        expect(api.post).not.toHaveBeenCalled();
+        expect(screen.getByRole("heading", { level: 1, name: "Tutorial replayed." })).toBeTruthy();
+        expect(screen.getByText(/nothing was recorded and your progress is as you left it/i)).toBeTruthy();
+        expect(screen.queryByText("You wrote your first program.")).toBeNull();
+        expect(window.localStorage.getItem("jolt.tutorial.console-output")).toBe("seen");
     });
 });

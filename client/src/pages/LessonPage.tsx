@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { play } from "../games/sound.js";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { challengeFor, lessonFor, type LessonStep } from "../games/lessons.js";
 import { missionFor } from "../games/missions.js";
@@ -42,6 +42,8 @@ import { ACTION } from "../vocabulary.js";
  */
 export function LessonPage() {
     const { concept, topic } = useParams<{ concept?: string; topic?: string }>();
+    // Replayed from Profile: the same tutorial, closing words for a returning learner.
+    const replay = useSearchParams()[0].get("replay") === "1";
     // A topic is a checkpoint; a concept here is a lesson (the playable
     // tutorial, for console-output). It said "Checkpoint" for both.
     usePageTitle(topic ? "Checkpoint" : (sceneLessonFor(concept ?? null)?.title ?? "Lesson"));
@@ -233,7 +235,7 @@ export function LessonPage() {
      */
     if (scenes) {
         if (tutorialDone) {
-            return <TutorialDone concept={scenes.concept} />;
+            return <TutorialDone concept={scenes.concept} replay={replay} />;
         }
 
         return (
@@ -404,7 +406,7 @@ export function LessonPage() {
  * the concept's practice (the tutorial is marked seen by now). If the path
  * cannot be read, the concept page is still one link away.
  */
-function TutorialDone({ concept }: { concept: string }) {
+function TutorialDone({ concept, replay = false }: { concept: string; replay?: boolean }) {
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
     const [failed, setFailed] = useState(false);
 
@@ -420,14 +422,25 @@ function TutorialDone({ concept }: { concept: string }) {
 
     return (
         <section className="tutorial-done">
-            <h1 className="tutorial-done-title">You wrote your first program.</h1>
-            <p className="tutorial-done-lede">
-                Next is your first mission: a few short steps that count toward your journey.
-            </p>
+            {replay ? (
+                <>
+                    <h1 className="tutorial-done-title">Tutorial replayed.</h1>
+                    <p className="tutorial-done-lede">
+                        Nothing was recorded and your progress is as you left it. Here is your next step.
+                    </p>
+                </>
+            ) : (
+                <>
+                    <h1 className="tutorial-done-title">You wrote your first program.</h1>
+                    <p className="tutorial-done-lede">
+                        Next is your first mission: a few short steps that count toward your journey.
+                    </p>
+                </>
+            )}
             {path && <MissionPanel path={path} />}
             {(failed || (path && !path.current)) && (
                 <Link className="button primary big" to={`/concept/${concept}`}>
-                    Go to your first mission
+                    {replay ? "Go to the practice" : "Go to your first mission"}
                 </Link>
             )}
         </section>

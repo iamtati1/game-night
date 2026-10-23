@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { SoundToggle } from "./components/SoundToggle.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
@@ -6,6 +5,7 @@ import { JoltLogo } from "./components/JoltLogo.js";
 import { Cosmos } from "./world/Cosmos.js";
 import { Icon } from "./world/Icon.js";
 import { useAuth } from "./auth/AuthContext.js";
+import { useLogout } from "./auth/useLogout.js";
 import { navAreaFor, PRIMARY_NAV, type NavArea } from "./navArea.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { HomePage } from "./pages/HomePage.js";
@@ -26,38 +26,17 @@ import { MemoryResultsPage } from "./pages/MemoryResultsPage.js";
 import { ReactionPage } from "./pages/ReactionPage.js";
 import { ReactionResultsPage } from "./pages/ReactionResultsPage.js";
 import { HistoryPage } from "./pages/HistoryPage.js";
+import { ProfilePage } from "./pages/ProfilePage.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { RegisterPage } from "./pages/RegisterPage.js";
 import { ResultsPage } from "./pages/ResultsPage.js";
 
 function Header() {
-    const { user, loading, unavailable, logout } = useAuth();
+    const { user, loading, unavailable } = useAuth();
     const area = navAreaFor(useLocation().pathname);
     const current = (a: NavArea) => (area === a ? ("page" as const) : undefined);
-    const [loggingOut, setLoggingOut] = useState(false);
-    const [failed, setFailed] = useState(false);
-
-    /**
-     * The rejection from logout() has to be caught somewhere. Left as
-     * `void logout()` it became an unhandled promise rejection: the request
-     * failed, the session stayed live on the server, and the player got no
-     * indication either way -- the one outcome worse than a failed logout is a
-     * silent one.
-     */
-    async function handleLogout() {
-        setLoggingOut(true);
-        setFailed(false);
-
-        try {
-            await logout();
-        } catch {
-            // Still signed in, so the nav stays and says why.
-            setFailed(true);
-        } finally {
-            setLoggingOut(false);
-        }
-    }
+    const { loggingOut, failed, logOut } = useLogout();
 
     return (
         <header className="site-header">
@@ -85,13 +64,14 @@ function Header() {
                     {user ? (
                         <>
                             {/*
-                                FOUR PLACES: Home, Learn, Games, Skills.
+                                FOUR PLACES: Home, Games, Skills, Profile.
 
                                 Read from PRIMARY_NAV (navArea.ts), the same list
-                                the phone's bottom bar uses. Home is where you
-                                are and your next mission; Learn is the guided
-                                topic journey; Games are the five games; Skills
-                                is what you can do. On a phone these move to
+                                the phone's bottom bar uses. Home is your next
+                                mission and the guided journey from it; Games
+                                are the five islands; Skills is what you can
+                                do; Profile is the account, its settings and
+                                the Log. On a phone these move to
                                 the bottom bar and this group is hidden, which
                                 is what gives the top bar room again.
 
@@ -112,14 +92,15 @@ function Header() {
                                 ))}
                             </span>
 
-                            {/* The pilot, set apart from the three areas by a
-                                hairline: an identity is not somewhere you can
-                                navigate to. The Log sits here too -- secondary
-                                by placement rather than by being hidden. */}
+                            {/* The pilot, set apart from the places by a
+                                hairline: who is signed in, and the way out.
+                                Theme, sound and the Log live on Profile now,
+                                one place for settings rather than icons
+                                scattered along the bar. */}
                             <span className="nav-pilot">
                                 {/* Experiment: free JavaScript with nothing at
                                     stake. Not one of the four places, so it sits
-                                    here with the Log, still one click away. */}
+                                    here, still one click away. */}
                                 <Link
                                     className="nav-aside"
                                     to="/experiment"
@@ -129,17 +110,11 @@ function Header() {
                                     <Icon name="spark" size={16} />
                                     <span className="nav-label">Experiment</span>
                                 </Link>
-                                <Link className="nav-aside" to="/history" aria-label="Log" aria-current={current("log")}>
-                                    <Icon name="log" size={16} />
-                                    <span className="nav-label">Log</span>
-                                </Link>
                                 <span className="nav-avatar" aria-hidden="true">
                                     {user.username.slice(0, 1).toUpperCase()}
                                 </span>
                                 <span className="nav-name">{user.username}</span>
                             </span>
-                            <ThemeToggle />
-                            <SoundToggle />
                             {failed && (
                                 <span className="logout-error" role="alert">
                                     Could not log out: still signed in.
@@ -148,13 +123,15 @@ function Header() {
                             <button
                                 className="button ghost small"
                                 disabled={loggingOut}
-                                onClick={() => void handleLogout()}
+                                onClick={logOut}
                             >
                                 {loggingOut ? "Logging out…" : "Log out"}
                             </button>
                         </>
                     ) : (
                         <>
+                            {/* No Profile to hold them yet, so a visitor
+                                keeps the two switches in the bar. */}
                             <ThemeToggle />
                             <SoundToggle />
                             <Link to="/login">Log in</Link>
@@ -392,6 +369,14 @@ export default function App() {
                         element={
                             <ProtectedRoute>
                                 <BugHuntResultsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <ProfilePage />
                             </ProtectedRoute>
                         }
                     />

@@ -4,19 +4,21 @@
  * Areas rather than exact paths: a game or its results are all "Games".
  * Without this the nav marked nothing at all.
  *
- * HOME IS ITS OWN AREA. The nav's first item is "Home" -- the place to come
- * back to and choose -- so it is marked on Home alone. Lessons, topics and
- * the journey are "learn": part of the course, not Home, so being in a lesson
- * does not light "Home".
+ * HOME IS HOME/LEARN. The guided journey is reached from Home (its mission
+ * panel and "See your journey"), not from a tab of its own, so the journey,
+ * topics and lessons all light "Home": being in a lesson is being in the
+ * course, and the course starts at Home.
+ *
+ * PROFILE holds the account and its settings, and the Log with it.
  */
-export type NavArea = "home" | "learn" | "games" | "skills" | "experiment" | "log";
+export type NavArea = "home" | "games" | "skills" | "profile" | "experiment";
 
 const AREA_PREFIXES: [NavArea, string[]][] = [
     ["games", ["/play", "/code-blitz", "/flush", "/reaction", "/memory", "/bug-hunt", "/results/"]],
     ["experiment", ["/experiment"]],
-    ["log", ["/history"]],
+    ["profile", ["/profile", "/history"]],
     ["skills", ["/skills"]],
-    ["learn", ["/journey", "/concept/", "/practise/", "/world/", "/challenge/", "/learn/"]]
+    ["home", ["/journey", "/concept/", "/practise/", "/world/", "/challenge/", "/learn/"]]
 ];
 
 export function navAreaFor(pathname: string): NavArea | null {
@@ -36,19 +38,17 @@ export function navAreaFor(pathname: string): NavArea | null {
  * by the bottom bar on a phone, so the two can never disagree about what the
  * places are or what they are called.
  *
- *     Home     where you are and your next mission
- *     Learn    the guided topic journey
- *     Games    the five games
- *     Skills   what you can do and what to practise
+ *     Home     your next mission, and the guided topic journey from it
+ *     Games    the five game islands
+ *     Skills   honest evidence of what you understand
+ *     Profile  your account, settings and Log
  *
- * Experiment and the Log are not places in this sense -- one is a free
- * sandbox, the other your history -- so they sit with the account, secondary
- * by placement rather than hidden.
+ * Experiment is not a place in this sense -- it is a free sandbox -- so it
+ * sits beside the account, secondary by placement rather than hidden.
  */
 export const PRIMARY_NAV = [
     { to: "/", label: "Home", icon: "home", area: "home" },
-    { to: "/journey", label: "Learn", icon: "map", area: "learn" },
     { to: "/play", label: "Games", icon: "play", area: "games" },
-    { to: "/skills", label: "Skills", icon: "skills", area: "skills" }
+    { to: "/skills", label: "Skills", icon: "skills", area: "skills" },
+    { to: "/profile", label: "Profile", icon: "profile", area: "profile" }
 ] as const satisfies readonly { to: string; label: string; icon: string; area: NavArea }[];
-
