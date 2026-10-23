@@ -58,7 +58,7 @@ These must be resolved before a production deploy. Each is its own slice.
 
 | # | Blocker | Evidence | Acceptance | Slice type |
 |---|---|---|---|---|
-| R1 | **Server production dependencies have advisories:** `proxy-addr` (critical), `qs` and `ip-address` (moderate) | `npm audit --omit=dev` in `server/` (2026-10-23); all three fixable with `npm audit fix`. Client: 0. | `npm audit --omit=dev` reports 0; full server suite and build pass; lockfile committed | Security |
+| R1 | ✅ **Resolved 2026-10-23.** Server production dependencies had advisories: `proxy-addr` (critical), `qs` and `ip-address` (moderate) | Lockfile-only update to `proxy-addr` 2.0.8, `qs` 6.16.1, `ip-address` 10.7.4 (`npm audit fix` hit an npm 10.9.3 bug, so the three were updated directly). `npm audit --omit=dev` reports 0 in `server/` and `client/`. Four advisories remain in dev-only test tooling (vitest, vite, source-map-js); the running service never loads them. | Met: production audit 0; 1654 server tests, typecheck and build pass; Render's build command passed on a clean export | Security |
 | R2 | **Production database state is unknown.** Render runs no migrations or seeds (`render.yaml` has no pre-deploy step; free plan has no shell). | `render.yaml` | Backup taken; `migrate:prod` and `seed:prod` run from a trusted machine **with explicit approval**; seeds 083–087 confirmed present | Deployment (needs approval) |
 | R3 | **Which branch Render deploys.** `render.yaml` names none, so Render uses the repository's default branch. | `render.yaml` | The intended branch is merged or selected on purpose | Deployment (needs approval) |
 

@@ -136,10 +136,12 @@ debt** · **deployment requirements**.
 Release steps are in `DEVELOPMENT_WORKFLOW.md` (Release checklist). What must
 be true:
 
-- **Server production dependencies have advisories.** `npm audit --omit=dev`
-  in `server/` reports `proxy-addr` (critical), `qs` and `ip-address`
-  (moderate), all fixable with `npm audit fix`. The client reports 0. Release
-  blocker R1.
+- **Production dependencies audit clean (2026-10-23).** `npm audit --omit=dev`
+  reports 0 in `server/` and `client/` after the lockfile update that resolved
+  release blocker R1. Re-run it before each release. Four advisories remain in
+  the server's dev-only test tooling (vitest, vite, source-map-js). Render's
+  build installs them (`--include=dev`), but the server build is `tsc` and
+  the running service never loads them, so they are not a release blocker.
 - **Render runs no migrations or seeds.** `render.yaml` has no pre-deploy step
   and the free plan has no shell, so `migrate:prod` and `seed:prod` must be run
   from a trusted machine, after a backup, with approval. Seeds 083–087 are the
