@@ -21,7 +21,7 @@ without a commit and a verification behind it.
 | Topics / concepts / declared rungs | 16 / 101 / 282 (dev database) |
 | Games producing learning evidence | 3 of 5 (Code Blitz, Bug Hunt, Flush) |
 | Server tests | 1654 in 105 files, passing |
-| Client tests | 930 in 69 files, passing |
+| Client tests | 936 in 70 files, passing |
 | Client lint | 39 findings (34 errors, 5 warnings), the pre-existing baseline |
 | Builds | Client and server production builds pass; Render's exact build command passed on a clean export (2026-10-22) |
 
@@ -85,15 +85,17 @@ between slices.
 - **Remaining:** see `KNOWN_LIMITATIONS.md` (answer key in the client bundle;
   the Variables mission half is browser-reported).
 
-### P2 — Practice completion that ignores refusal 🔴
-- **Problem:** `/practise/:concept` shows "concept complete" even when the
-  server refuses `/demonstrate`. Nothing links to it, but a typed or bookmarked
-  URL shows completion that did not happen.
-- **Evidence:** `client/src/pages/PracticePage.tsx` (`catch {}` then
-  `setDone(true)`).
-- **Acceptance:** a refused demonstration is said plainly, as `LessonPage`
-  already does, or the orphan route is removed. A test covers the refusal.
-- **Slice type:** progression bug fix.
+### P2 — Practice completion that ignores refusal 🟢 (implemented, not yet committed)
+- **Was:** `/practise/:concept` swallowed any failure of `/demonstrate` and
+  showed the completion screen ("+25", Continue to the next concept) anyway.
+  The server had recorded nothing, so nothing unlocked, but the learner was
+  told it had.
+- **Now:** `client/src/pages/PracticePage.tsx` shows completion only after the
+  server confirms it. A refusal (4xx) shows the server's reason and a link to
+  the concept's practice; no response or a server failure (5xx) offers "Try
+  again", which re-sends the same record. One request at a time.
+- **Verified:** `PracticePage.test.tsx` (4 of its 6 tests fail against the
+  original page). The route is still not linked from the app.
 
 ### P3 — Profile & Settings behind an avatar or settings control 🟡
 - **Problem:** the blueprint puts Profile & Settings behind an avatar or

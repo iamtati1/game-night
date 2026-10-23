@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../api/client.js";
+import { ApiError, api } from "../api/client.js";
 import { MissionScene } from "../components/MissionScene.js";
 import { ConceptComplete } from "../components/ConceptComplete.js";
 import { practiceFor } from "../games/practice.js";
@@ -24,18 +24,56 @@ import { ACTION } from "../vocabulary.js";
  * is what concept_demonstrations.demand_id was added for and what nothing had
  * consumed until now. A lesson demonstration says "they met this"; this one
  * says what they can do with it.
+ *
+ * COMPLETE ONLY WHEN THE SERVER SAYS SO. This used to swallow any failure and
+ * show the completion screen anyway -- "+25", "You can now", Continue to the
+ * next concept -- over a demonstration the server had refused (409 until the
+ * concept's practice stops are cleared). Now a refusal is said plainly, with
+ * the way to the concept's practice, and a failure to reach the server offers
+ * to send the same record again. Re-sending is safe: a concept already
+ * demonstrated answers 200 and records nothing new.
  */
+
+/** Why the record was not made, and whether sending it again could help. */
+interface NotRecorded {
+    message: string;
+    retryable: boolean;
+}
+
+function notRecorded(err: unknown): NotRecorded {
+    // The server answered and said no (not open, evidence missing): sending
+    // the same thing again would get the same answer.
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+        return { message: err.message, retryable: false };
+    }
+
+    // No answer, or the server failing: the practice is done, only the record
+    // is missing.
+    return {
+        message: "Your practice could not be saved just now. Nothing is lost: try again in a moment.",
+        retryable: true
+    };
+}
 export function PracticePage() {
     const { concept } = useParams<{ concept: string }>();
     const practice = practiceFor(concept ?? null);
 
     const [busy, setBusy] = useState(false);
     const [done, setDone] = useState(false);
+    const [failed, setFailed] = useState<NotRecorded | null>(null);
+    /** One request at a time: a second click while one is in flight sends nothing. */
+    const sending = useRef(false);
+    /** What the practice finished with, so a retry sends the same record. */
+    const retried = useRef(false);
 
     const finish = useCallback(
         async (neededRetry: boolean) => {
-            if (!practice) return;
+            if (!practice || sending.current) return;
 
+            sending.current = true;
+            retried.current = neededRetry;
+            // `failed` is left as it is: on a retry the panel stays up (saying
+            // "Saving…") rather than remounting the practice at its first step.
             setBusy(true);
 
             try {
@@ -45,13 +83,13 @@ export function PracticePage() {
                     // movement, which is the deepest thing they did.
                     demand: practice.movements[practice.movements.length - 1]!.demand
                 });
-            } catch {
-                // They still did the work. Losing the record is worth a silent
-                // retry next time, not an error page over finished practice.
+                setDone(true);
+            } catch (err) {
+                setFailed(notRecorded(err));
+            } finally {
+                sending.current = false;
+                setBusy(false);
             }
-
-            setDone(true);
-            setBusy(false);
         },
         [practice]
     );
@@ -68,6 +106,35 @@ export function PracticePage() {
     }
 
     if (done) return <ConceptComplete concept={practice.concept} />;
+
+    if (failed) {
+        return (
+            <section className="panel narrow">
+                <h1>Not recorded yet</h1>
+                <p className="form-error" role="alert">
+                    {failed.message}
+                </p>
+                <div className="checkpoint-actions">
+                    {failed.retryable ? (
+                        <button
+                            className="button primary"
+                            disabled={busy}
+                            onClick={() => void finish(retried.current)}
+                        >
+                            {busy ? "Saving…" : "Try again"}
+                        </button>
+                    ) : (
+                        <Link className="button primary" to={`/concept/${practice.concept}`}>
+                            Go to the practice
+                        </Link>
+                    )}
+                    <Link className="button ghost" to="/journey">
+                        {ACTION.seeJourney}
+                    </Link>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <MissionScene

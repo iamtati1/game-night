@@ -24,10 +24,9 @@ debt** · **deployment requirements**.
 - **The Variables checkpoint's mission half is browser-reported.** The quiz
   half is judged by the server; the launch-check mission runs in the browser's
   interpreter and is accepted on the browser's word, as concept missions are.
-- **`/practise/:concept` shows completion even when the server refuses it.**
-  `PracticePage` posts `/demonstrate`, swallows any refusal and shows the
-  completion screen (`client/src/pages/PracticePage.tsx`). Nothing links to
-  this route; a typed or bookmarked URL reaches it. Roadmap P2.
+- **`/practise/:concept` is routed but not linked.** Nothing in the app links
+  to it; a typed or bookmarked URL reaches it. Since 2026-10-23 it shows
+  completion only when the server records it.
 - **Reaction and Memory pay XP for rounds played, not rounds right.** Their
   `xpForSession` counts resolved rounds (`server/src/reaction/scoring.ts`,
   `server/src/memory/scoring.ts`), so a 0-of-5 run earns the same XP as a
