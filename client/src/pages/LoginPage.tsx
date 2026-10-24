@@ -46,8 +46,9 @@ export function LoginPage() {
                 <label htmlFor="login-email">Email</label>
                 <input
                     id="login-email"
+                    name="email"
                     type="email"
-                    autoComplete="email"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -56,6 +57,7 @@ export function LoginPage() {
                 <label htmlFor="login-password">Password</label>
                 <input
                     id="login-password"
+                    name="password"
                     type="password"
                     autoComplete="current-password"
                     value={password}

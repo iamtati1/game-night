@@ -7,7 +7,12 @@ import { z } from "zod";
 // the thing users actually hit, so they get a 400 naming the field instead of
 // a 500 carrying a Postgres string.
 export const registerSchema = z.object({
-    email: z.string().trim().max(254).toLowerCase().pipe(z.email()),
+    email: z
+        .string()
+        .trim()
+        .max(254, "Email must be at most 254 characters")
+        .toLowerCase()
+        .pipe(z.email("Enter a full email address, like name@example.com")),
     username: z
         .string()
         .trim()

@@ -4177,6 +4177,13 @@ pre.learn-code {
 
 .round-counted strong { color: var(--text); }
 
+/* A form field's own error, under the field it is about. */
+.field-error {
+    margin: -0.35rem 0 0.9rem;
+    font-size: 0.9375rem;
+    color: var(--incorrect);
+}
+
 /* A checkpoint not passed, or refused: try again, or back to the journey. */
 .checkpoint-actions {
     display: flex;
