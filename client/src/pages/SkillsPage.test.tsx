@@ -169,3 +169,141 @@ describe("the Skills hub", () => {
         expect(await screen.findByRole("list", { name: "Skill tree" })).toBeTruthy();
     });
 });
+
+describe("practice on the Skills hub", () => {
+    const RECORD = {
+        window: 5,
+        concepts: [
+            // Declaration: 7 answered, the last five mostly wrong.
+            { slug: "declaration", attempts: 7, correct: 3, recent: { attempts: 5, correct: 1 }, earlier: { attempts: 2, correct: 2 }, lastAt: "2026-10-27T00:00:00.000Z" },
+            // Console output: 3 answered, too few for a percentage.
+            { slug: "console-output", attempts: 3, correct: 3, recent: { attempts: 3, correct: 3 }, earlier: { attempts: 0, correct: 0 }, lastAt: "2026-10-27T00:00:00.000Z" }
+        ]
+    };
+
+    function withRecord(record: unknown) {
+        vi.mocked(api.get).mockImplementation(((p: string) =>
+            p === "/api/curriculum/practice-record"
+                ? record === "fails"
+                    ? Promise.reject(new Error("offline"))
+                    : Promise.resolve(record)
+                : Promise.resolve(PATH)) as never);
+    }
+
+    it("totals real answers across skills", async () => {
+        withRecord(RECORD);
+        renderSkills();
+
+        const line = await screen.findByText(/You have answered/);
+        expect(line.textContent).toBe("You have answered 10 practice questions across 2 skills, 6 of them right.");
+    });
+
+    it("suggests the skill whose recent answers need work first, with the real count", async () => {
+        withRecord(RECORD);
+        renderSkills();
+
+        const card = (await screen.findByRole("heading", { name: "Practise next" })).closest("section")!;
+        const [first] = within(card).getAllByRole("listitem");
+        expect(first!.textContent).toContain("Declaration");
+        expect(first!.textContent).toContain("Needs more practice: 1 of your last 5 right");
+    });
+
+    it("marks that skill in the tree in words, not by colour", async () => {
+        withRecord(RECORD);
+        renderSkills();
+
+        const node = await screen.findByRole("button", { name: /^Declaration, Practised, needs more practice$/ });
+        expect(node.className).toMatch(/needs-practice/);
+    });
+
+    it("gives counts and only gives a percentage from five answers", async () => {
+        withRecord(RECORD);
+        renderSkills();
+
+        fireEvent.click(await screen.findByRole("button", { name: /^Declaration/ }));
+        expect(screen.getByText("Answered 7, 3 right (43%)")).toBeTruthy();
+
+        fireEvent.click(screen.getByRole("button", { name: /^Console output/ }));
+        expect(screen.getByText("Answered 3, 3 right")).toBeTruthy();
+    });
+
+    it("says a skill with no answers is not started", async () => {
+        withRecord({ window: 5, concepts: [] });
+        renderSkills();
+
+        fireEvent.click(await screen.findByRole("button", { name: /^Declaration/ }));
+        expect(screen.getByText("Not started: nothing answered yet.")).toBeTruthy();
+    });
+
+    it("says nothing about answers when the record cannot be loaded, and still shows the skills", async () => {
+        withRecord("fails");
+        renderSkills();
+
+        fireEvent.click(await screen.findByRole("button", { name: /^Declaration/ }));
+        expect(screen.queryByText(/You have answered/)).toBeNull();
+        expect(screen.queryByText(/Answered \d/)).toBeNull();
+        expect(screen.queryByText(/Not started/)).toBeNull();
+        expect(screen.getByText("1 of 3 stops cleared")).toBeTruthy();
+    });
+
+    it("explains how every number is worked out, and that demonstrated is not mastery", async () => {
+        withRecord(RECORD);
+        renderSkills();
+
+        const how = (await screen.findByText("How these are worked out")).closest("details")!;
+        expect(how.open).toBe(false);
+        expect(how.textContent).toMatch(/not long-term mastery/);
+        expect(how.textContent).toMatch(/A percentage appears from 5 answers/);
+    });
+});
+
+describe("a skill's recent form", () => {
+    const form = (recent: number, earlier: number) => ({
+        window: 5,
+        concepts: [{ slug: "declaration", attempts: 10, correct: recent + earlier, recent: { attempts: 5, correct: recent }, earlier: { attempts: 5, correct: earlier }, lastAt: "2026-10-27T00:00:00.000Z" }]
+    });
+    const open = async (record: unknown) => {
+        vi.mocked(api.get).mockImplementation(((p: string) => Promise.resolve(p === "/api/curriculum/practice-record" ? record : PATH)) as never);
+        renderSkills();
+        fireEvent.click(await screen.findByRole("button", { name: /^Declaration/ }));
+    };
+
+    it("says when it is improving, with both counts", async () => {
+        await open(form(4, 1));
+        expect(screen.getByText("Improving: 4 of your last 5 right, up from 1 of the 5 before")).toBeTruthy();
+    });
+
+    it("says a fall once: as needs-practice, not again as a trend", async () => {
+        await open(form(1, 4));
+        expect(screen.getAllByText(/Needs more practice: 1 of your last 5 right/).length).toBeGreaterThan(0);
+        expect(screen.queryByText(/Lower lately/)).toBeNull();
+    });
+
+    it("names a fall that is not yet a need for practice gently", async () => {
+        await open(form(3, 5));
+        expect(screen.getByText("Lower lately: 3 of your last 5 right, down from 5 of the 5 before")).toBeTruthy();
+    });
+});
+
+describe("a locked skill with answers", () => {
+    it("shows its counts and no needs-practice flag, anywhere", async () => {
+        // Assignment is locked in PATH. Code Blitz can deal its questions early.
+        const record = {
+            window: 5,
+            concepts: [{ slug: "assignment", attempts: 6, correct: 1, recent: { attempts: 5, correct: 0 }, earlier: { attempts: 1, correct: 1 }, lastAt: "2026-10-27T00:00:00.000Z" }]
+        };
+        vi.mocked(api.get).mockImplementation(((p: string) => Promise.resolve(p === "/api/curriculum/practice-record" ? record : PATH)) as never);
+        renderSkills();
+
+        const node = await screen.findByRole("button", { name: /^Assignment/ });
+        expect(node.className).not.toMatch(/needs-practice/);
+        expect(node.textContent).not.toContain("!");
+
+        fireEvent.click(node);
+        expect(screen.getByText("Answered 6, 1 right (17%)")).toBeTruthy();
+        // No flag in its detail, and not suggested under "Practise next".
+        expect(document.querySelector(".skill-detail-flag, .skill-node-flag")).toBeNull();
+        const card = screen.getByRole("heading", { name: "Practise next" }).closest("section")!;
+        expect(card.textContent).not.toContain("Assignment");
+    });
+});

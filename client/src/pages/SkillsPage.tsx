@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
-import type { JourneyPathResponse } from "../api/types.js";
+import type { ConceptPracticeRecord, JourneyPathResponse, PracticeRecordResponse } from "../api/types.js";
 import { MissionPanel } from "../components/MissionPanel.js";
 import { withCode } from "../components/CodeText.js";
 import {
+    ACCURACY_FROM,
+    NEEDS_PRACTICE_AT_MOST,
+    RECENT,
     SKILL_STATE_LABEL,
+    TREND_STEP,
     skillSummary,
     skillTopics,
     type Skill,
@@ -46,14 +50,26 @@ const STATE_ICON: Record<SkillState, IconName> = {
 export function SkillsPage() {
     usePageTitle("Skills");
     const [path, setPath] = useState<JourneyPathResponse | null>(null);
+    /** The practice record, or null when it did not load: then the page says
+     *  nothing about attempts rather than showing zeros it does not know. */
+    const [record, setRecord] = useState<ConceptPracticeRecord[] | null>(null);
     const [failed, setFailed] = useState(false);
     const [attempt, setAttempt] = useState(0);
 
     useEffect(() => {
         let active = true;
 
-        api.get<JourneyPathResponse>("/api/curriculum/path")
-            .then((data) => active && setPath(data))
+        // Together, so the page renders once with both: the record is only
+        // ever extra detail, so its failure is not the page's.
+        Promise.all([
+            api.get<JourneyPathResponse>("/api/curriculum/path"),
+            api.get<PracticeRecordResponse>("/api/curriculum/practice-record").catch(() => null)
+        ])
+            .then(([data, practice]) => {
+                if (!active) return;
+                setRecord(practice?.concepts ?? null);
+                setPath(data);
+            })
             .catch(() => active && setFailed(true));
 
         return () => {
@@ -87,12 +103,12 @@ export function SkillsPage() {
         );
     }
 
-    return <SkillsHub path={path} />;
+    return <SkillsHub path={path} record={record} />;
 }
 
-function SkillsHub({ path }: { path: JourneyPathResponse }) {
-    const topics = skillTopics(path);
-    const summary = skillSummary(path);
+function SkillsHub({ path, record }: { path: JourneyPathResponse; record: ConceptPracticeRecord[] | null }) {
+    const topics = skillTopics(path, record);
+    const summary = skillSummary(path, record);
     const [selected, setSelected] = useState<string | null>(null);
     /** Locked topics start folded: a long list of padlocks says nothing. */
     const [unfolded, setUnfolded] = useState<Set<string>>(new Set());
@@ -113,6 +129,14 @@ function SkillsHub({ path }: { path: JourneyPathResponse }) {
                     Every JavaScript skill on the course, in the order you learn them. Pick one to see
                     where it stands.
                 </p>
+                {summary.answered && summary.answered.attempts > 0 && (
+                    <p className="skills-answered">
+                        You have answered <strong>{summary.answered.attempts}</strong> practice{" "}
+                        {summary.answered.attempts === 1 ? "question" : "questions"} across{" "}
+                        <strong>{summary.answered.skills}</strong>{" "}
+                        {summary.answered.skills === 1 ? "skill" : "skills"}, {summary.answered.correct} of them right.
+                    </p>
+                )}
                 <ul className="skills-legend" aria-label="What the states mean">
                     {(["demonstrated", "practised", "learning", "locked"] as const).map((state) => (
                         <li key={state} className={`skill-chip is-${state}`}>
@@ -121,6 +145,7 @@ function SkillsHub({ path }: { path: JourneyPathResponse }) {
                         </li>
                     ))}
                 </ul>
+                <HowWorkedOut />
             </header>
 
             <div className="skills-layout">
@@ -226,7 +251,7 @@ function TopicStop({
                         <li key={skill.slug}>
                             <button
                                 type="button"
-                                className={`skill-node is-${skill.state}${selected === skill.slug ? " is-selected" : ""}`}
+                                className={`skill-node is-${skill.state}${selected === skill.slug ? " is-selected" : ""}${skill.practice?.needsPractice ? " needs-practice" : ""}`}
                                 aria-expanded={selected === skill.slug}
                                 aria-controls={`skill-detail-${topic.slug}`}
                                 onClick={() => onSelect(skill.slug)}
@@ -234,6 +259,12 @@ function TopicStop({
                                 <Icon name={STATE_ICON[skill.state]} size={16} />
                                 <span className="skill-node-name">{withCode(skill.name)}</span>
                                 <span className="visually-hidden">, {SKILL_STATE_LABEL[skill.state]}</span>
+                                {skill.practice?.needsPractice && (
+                                    <span className="skill-node-flag">
+                                        <span aria-hidden="true">!</span>
+                                        <span className="visually-hidden">, needs more practice</span>
+                                    </span>
+                                )}
                             </button>
                         </li>
                     ))}
@@ -279,6 +310,7 @@ function SkillDetail({ skill }: { skill: Skill }) {
             ) : (
                 <p className="skill-detail-stops">Taught in its lesson: no practice stops yet</p>
             )}
+            {skill.practice && <PracticeLines skill={skill} />}
 
             {skill.href ? (
                 <Link className="button primary skill-detail-action" to={skill.href}>
@@ -294,5 +326,78 @@ function SkillDetail({ skill }: { skill: Skill }) {
                 <p className="skill-detail-reason">{skill.reason ?? "Not open yet"}</p>
             )}
         </div>
+    );
+}
+
+/**
+ * How the practice on one skill has gone, from the practice record. Every
+ * line is a count of real answers; a line is left out when there are too few
+ * to say it (games/skills.ts).
+ */
+function PracticeLines({ skill }: { skill: Skill }) {
+    const p = skill.practice!;
+
+    if (p.attempts === 0) {
+        return (
+            <p className="skill-detail-practice">
+                {skill.state === "locked" ? "Nothing answered yet." : "Not started: nothing answered yet."}
+            </p>
+        );
+    }
+
+    return (
+        <div className="skill-detail-practice">
+            <p>
+                Answered {p.attempts}, {p.correct} right
+                {p.accuracy !== null && ` (${p.accuracy}%)`}
+            </p>
+            {p.needsPractice && p.recent && (
+                <p className="skill-detail-flag">
+                    <span aria-hidden="true">!</span> Needs more practice: {p.recent.correct} of your last{" "}
+                    {p.recent.attempts} right
+                </p>
+            )}
+            {/* A fall is not said twice: when the flag above already says the
+                last five need work, the trend would only repeat it. */}
+            {p.trend && !(p.trend.direction === "down" && p.needsPractice) && (
+                <p>
+                    {p.trend.direction === "up" ? "Improving" : "Lower lately"}: {p.trend.recent} of your last {RECENT} right,{" "}
+                    {p.trend.direction === "up" ? "up" : "down"} from {p.trend.earlier} of the {RECENT} before
+                </p>
+            )}
+        </div>
+    );
+}
+
+/** The rules behind every number on this page, in one place. */
+function HowWorkedOut() {
+    return (
+        <details className="skills-how">
+            <summary>How these are worked out</summary>
+            <ul>
+                <li>
+                    <strong>Demonstrated</strong>: every practice stop was cleared, then you showed the
+                    skill in its lesson. It says you could do it then. It is not long-term mastery:
+                    Jolt does not yet check that a skill holds over time.
+                </li>
+                <li>
+                    <strong>Practised</strong>: at least one stop cleared. <strong>Learning now</strong>:
+                    the skill you are on, nothing cleared yet.
+                </li>
+                <li>
+                    <strong>Answered</strong> counts every graded answer on a question, bug or Flush
+                    puzzle tagged to the skill, from Code Blitz, Bug Hunt and Flush. A timed-out
+                    question counts as not right, and a bug counts as right only when your first
+                    patch fixed it. Lessons and Reaction and Memory are not counted.
+                </li>
+                <li>
+                    A percentage appears from {ACCURACY_FROM} answers. <strong>Needs more practice</strong>{" "}
+                    means {NEEDS_PRACTICE_AT_MOST} or fewer of your last {RECENT} were right. A trend
+                    appears once there are {RECENT * 2} answers and the last {RECENT} differ from the{" "}
+                    {RECENT} before by {TREND_STEP} or more. A locked skill shows only its counts:
+                    it cannot be practised yet.
+                </li>
+            </ul>
+        </details>
     );
 }

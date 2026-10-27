@@ -671,6 +671,22 @@ export interface JourneyTopic {
     challenge: { state: "demonstrated" | "current" | "locked" } | null;
 }
 
+/** GET /api/curriculum/practice-record: graded attempts per concept, never evidence. */
+export interface ConceptPracticeRecord {
+    slug: string;
+    attempts: number;
+    correct: number;
+    /** The last `window` attempts, and the `window` before them. */
+    recent: { attempts: number; correct: number };
+    earlier: { attempts: number; correct: number };
+    lastAt: string;
+}
+
+export interface PracticeRecordResponse {
+    window: number;
+    concepts: ConceptPracticeRecord[];
+}
+
 export interface JourneyPathResponse {
     topics: JourneyTopic[];
     /** The one concept the learner is on, or null once everything is done. */

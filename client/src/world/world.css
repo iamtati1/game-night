@@ -3303,6 +3303,73 @@ pre.learn-code {
     color: var(--text-2);
 }
 
+/* How the practice has gone (SkillsPage PracticeLines). */
+.skill-detail-practice {
+    margin: 0 0 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--text-2);
+}
+
+.skill-detail-practice p {
+    margin: 0 0 0.25rem;
+}
+
+/* "Needs more practice": a mark and words, in the warning colour, so it does
+   not read as either wrong or as a reward. */
+.skill-detail-flag,
+.skill-node-flag {
+    color: var(--warn);
+    font-weight: 700;
+}
+
+.skill-node-flag {
+    margin-left: 0.1rem;
+}
+
+.skill-node.needs-practice {
+    border-color: var(--warn);
+}
+
+.skills-answered {
+    margin: 0 0 1rem;
+    max-width: 40rem;
+    color: var(--text-2);
+}
+
+.skills-answered strong {
+    color: var(--ember);
+    font-variant-numeric: tabular-nums;
+}
+
+.skills-how {
+    max-width: 40rem;
+    margin: 1rem 0 0;
+    color: var(--text-2);
+    font-size: 0.9375rem;
+}
+
+.skills-how > summary {
+    width: fit-content;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.skills-how > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.skills-how ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.skills-how li + li {
+    margin-top: 0.35rem;
+}
+
 .skill-detail-action {
     margin-top: 0.25rem;
 }

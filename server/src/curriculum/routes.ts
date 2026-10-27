@@ -26,6 +26,7 @@ import {
     findTopicStanding
 } from "./queries.js";
 import { hasCheckpoint, judgeCheckpoint } from "./checkpoints.js";
+import { RECENT_WINDOW, findPracticeRecord } from "./practiceRecord.js";
 
 export const curriculumRouter = Router();
 
@@ -179,6 +180,18 @@ curriculumRouter.get("/path", requireAuth, async (req: Request, res: Response) =
     // the one screen that shows them is the one screen that shows progress, and
     // a second request would only be a second chance for the two to disagree.
     res.status(200).json({ topics, current: current ?? null, points });
+});
+
+/**
+ * GET /api/curriculum/practice-record
+ *
+ * Every graded attempt this learner has made on content tagged to a concept,
+ * counted per concept (practiceRecord.ts). Read only and never evidence: the
+ * path above is what says what is cleared or demonstrated. The Skills page
+ * reads it to show attempts, accuracy and recent form.
+ */
+curriculumRouter.get("/practice-record", requireAuth, async (req: Request, res: Response) => {
+    res.status(200).json({ window: RECENT_WINDOW, concepts: await findPracticeRecord(req.user!.id) });
 });
 
 /**
