@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { withCode } from "../components/CodeText.js";
 import { Link, useParams } from "react-router-dom";
 import { splitPrompt } from "../games/prompt.js";
 import { ApiError, api } from "../api/client.js";
@@ -13,6 +12,7 @@ import { useRunContext } from "../games/useRunContext.js";
 
 import { usePageTitle } from "../usePageTitle.js";
 import { ACTION } from "../vocabulary.js";
+import { Explanation } from "../components/Explanation.js";
 interface RoundCurriculum {
     /** `topic` is the world the concept sits in; null when the path cannot say. */
     concept: { slug: string; name: string; topic?: { slug: string; name: string } | null } | null;
@@ -347,7 +347,7 @@ export function ResultsPage() {
                         {/* The reason, not just the answer. Naming the right
                             option tells a player they were wrong; this is the
                             only thing on the page that tells them why. */}
-                        {q.explanation && <p className="review-why">{withCode(q.explanation)}</p>}
+                        {q.explanation && <Explanation className="review-why" text={q.explanation} />}
                     </li>
                 ))}
             </ol>

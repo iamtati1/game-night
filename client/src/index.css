@@ -1025,6 +1025,22 @@ input:focus:not(:focus-visible) {
     cursor: default;
 }
 
+/* Sent, not yet judged. The answer takes a moment to come back and every
+   option is disabled meanwhile, so the one that was taken stays seated, with
+   a heavier edge and a filled number -- a change of shape as well as colour.
+   Static on purpose: nothing here needs to move, so reduced motion has
+   nothing to remove. */
+.option.picked {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    transform: translateY(var(--press-y));
+}
+
+.option.picked kbd {
+    background: var(--accent);
+    color: var(--bg);
+}
+
 .option-text {
     flex: 1;
 }
@@ -1498,6 +1514,11 @@ input:focus:not(:focus-visible) {
     font-weight: 600;
 }
 
+.seq-mark {
+    margin-left: 0.5em;
+    font-weight: 700;
+}
+
 @media (max-width: 560px) {
     .sequences {
         grid-template-columns: 1fr;
@@ -1855,7 +1876,7 @@ input:focus:not(:focus-visible) {
 .board-count {
     letter-spacing: 0.04em;
     text-transform: none;
-    color: var(--accent);
+    color: var(--ember);
     font-variant-numeric: tabular-nums;
 }
 
@@ -2986,8 +3007,45 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     display: inline-block;
     padding: 0.3rem 0.7rem;
     border-radius: 999px;
-    background: var(--accent);
-    color: #0b0d13;
+    background: var(--ember);
+    color: var(--ember-ink);
+    animation: milestone-in 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+/* A milestone arrives once: a small rise and settle, movement only, so the
+   words are never hidden by a paused or skipped animation. */
+@keyframes milestone-in {
+    from {
+        transform: translateY(4px) scale(0.92);
+    }
+
+    to {
+        transform: none;
+    }
+}
+
+/* A counter that just changed ("2 left", "3 / 5") gives one small pulse. It
+   is keyed on the count in the page, so it plays on change and never loops. */
+.count-tick {
+    display: inline-block;
+    animation: count-tick 260ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes count-tick {
+    from {
+        transform: scale(1.18);
+    }
+
+    to {
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .verdict.is-best,
+    .count-tick {
+        animation: none;
+    }
 }
 
 /* Three figures at most, on one line, in the readout language the HUD uses. */
@@ -3081,8 +3139,8 @@ a.card-body:focus-visible .preview-line:nth-of-type(2) {
     margin: -1rem 0 1rem;
     padding: 0.35rem 0.8rem;
     border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: color-mix(in srgb, var(--ember) 10%, transparent);
+    color: var(--ember);
     font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.16em;
@@ -3693,7 +3751,7 @@ a.card-body:focus-visible .preview-dot {
 }
 
 .mem-count {
-    color: var(--muted);
+    color: var(--ember);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.08em;
 }
@@ -4071,40 +4129,45 @@ a.card-body:focus-visible .preview-chip {
 }
 
 .bh-tagline {
-    margin: 0.5rem 0 2rem;
+    margin: 0.5rem 0 1rem;
     color: var(--muted);
     font-size: 1.05rem;
 }
 
-.bh-brief-stats {
-    display: flex;
-    justify-content: center;
-    gap: 2.5rem;
-    margin: 0 0 2rem;
-    flex-wrap: wrap;
+/* The one visible instruction, then optional detail (BugHuntPage Briefing). */
+.bh-instruction {
+    max-width: 30rem;
+    margin: 0 auto 1rem;
+    font-size: 1.05rem;
 }
 
-.bh-brief-stats div {
-    text-align: center;
+.bh-howto {
+    max-width: 30rem;
+    margin: 0 auto 1.75rem;
+    text-align: left;
 }
 
-.bh-brief-stats dt {
-    color: var(--muted);
-    font-size: 0.8125rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+.bh-howto > summary {
+    width: fit-content;
+    margin: 0 auto;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
 }
 
-.bh-brief-stats dd {
-    margin: 0.3rem 0 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+.bh-howto > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.bh-howto[open] > summary {
+    margin-bottom: 0.75rem;
 }
 
 .bh-rules {
     max-width: 30rem;
-    margin: 0 auto 2rem;
+    margin: 0 auto;
     padding: 0;
     list-style: none;
     text-align: left;
@@ -4632,6 +4695,12 @@ a.card-body:focus-visible .preview-chip {
     font-weight: 800;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+}
+
+/* The shared XP line tucks up under a "points" score; this score stands on
+   its own line, so the line sits below it instead. */
+.bh-results-head .xp-earned {
+    margin: 0.75rem 0 0.5rem;
 }
 
 .bh-results-stats {
@@ -5819,6 +5888,41 @@ pre {
     color: var(--muted);
     font-size: 1rem;
     line-height: 1.45;
+}
+
+/* Every game's answer explanation (components/Explanation.tsx): the rule
+   first, in the body colour and a heavier weight, then the reasoning in the
+   container's own quieter colour, then optional detail. */
+.explain > p,
+.explain-more > p {
+    margin: 0;
+}
+
+.explain > * + * {
+    margin-top: 0.35em;
+}
+
+.explain-lead {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.explain-more > summary {
+    width: fit-content;
+    color: var(--accent);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.explain-more > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.explain-more[open] > summary {
+    margin-bottom: 0.25em;
 }
 
 /* ---------- the station's window ----------

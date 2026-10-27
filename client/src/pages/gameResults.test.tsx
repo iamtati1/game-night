@@ -264,6 +264,43 @@ describe.each(GAMES)("$name results", (game) => {
 
         expect(container.textContent).not.toMatch(/stops? (cleared|done)|demonstrat|completed? (the|this) concept|counts? toward/i);
     });
+
+    it("shows the XP the server recorded, once, as its own line", async () => {
+        const { container } = open(game, CONCEPT_NEXT);
+        const xp = (game.session as { xpEarned: number }).xpEarned;
+
+        await screen.findByText(game.rendered);
+
+        // One place for it, the same place in every game: Bug Hunt had it as
+        // the eighth cell of its stats grid.
+        expect(screen.getAllByText(`+${xp}`)).toHaveLength(1);
+        expect(container.querySelector(".xp-earned")?.textContent).toBe(`XP +${xp}`);
+    });
+});
+
+describe("what a run counted for, beside its XP", () => {
+    const byName = (name: string) => GAMES.find((g) => g.name === name)!;
+
+    it.each(["Reaction", "Memory"])("%s says it is just for fun and leaves the course as it was", async (name) => {
+        open(byName(name), CONCEPT_NEXT);
+
+        expect(await screen.findByText(/just for fun: this run earned XP and does not change your course/i)).toBeTruthy();
+    });
+
+    it("Flush says what its XP pays for, and that course progress was given on each reveal", async () => {
+        open(byName("Flush"), CONCEPT_NEXT);
+
+        expect(await screen.findByText(/XP is for finishing the game and every order you complete/)).toBeTruthy();
+        expect(screen.getByText(/course progress was shown round by round, on each reveal/i)).toBeTruthy();
+    });
+
+    it("Bug Hunt keeps its own course-practice block and gains no second note", async () => {
+        open(byName("Bug Hunt"), CONCEPT_NEXT);
+
+        await screen.findByText("410");
+
+        expect(document.querySelector(".course-note")).toBeNull();
+    });
 });
 
 describe("a short Flush game's results", () => {

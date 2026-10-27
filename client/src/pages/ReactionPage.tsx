@@ -246,7 +246,10 @@ export function ReactionPage() {
             setScore(res.scoreSoFar);
             setOutcome({ reactionMs: res.reactionMs, tier: res.tier, points: res.pointsAwarded });
             setPhase(phaseFor[outcome]);
-            if (outcome === "false_start") play("early");
+            // Every outcome has its cue, as in the other games; a false start
+            // used to be the only one, so a landed press was the silent one.
+            // Unkeyed: a re-dealt round keeps its id (see play()).
+            play(outcome === "reacted" ? "correct" : outcome === "false_start" ? "early" : "incorrect");
 
             later(() => {
                 if (res.complete && res.session) {

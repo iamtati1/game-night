@@ -436,7 +436,7 @@ export function MemoryPage() {
                     <>
                         <p className="mem-state mem-recall-cue">
                             Play it back
-                            <span className="mem-count">
+                            <span className="mem-count count-tick" key={picks.length}>
                                 {picks.length} / {round.sequence.length}
                             </span>
                         </p>

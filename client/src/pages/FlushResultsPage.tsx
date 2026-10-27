@@ -4,6 +4,7 @@ import { ApiError, api } from "../api/client.js";
 import type { FlushSessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
 import { NextStepActions } from "../components/NextStepActions.js";
+import { CourseNote } from "../components/CourseNote.js";
 import { useRunContext } from "../games/useRunContext.js";
 
 import { usePageTitle } from "../usePageTitle.js";
@@ -76,6 +77,7 @@ export function FlushResultsPage() {
             <p className="xp-earned">
                 XP <strong>+{session.xpEarned}</strong>
             </p>
+            <CourseNote kind="flush" />
 
             <RunVerdict
                 score={session.score}

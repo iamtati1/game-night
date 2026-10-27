@@ -11,6 +11,7 @@ import { useRunContext } from "../games/useRunContext.js";
 
 import { usePageTitle } from "../usePageTitle.js";
 import { ACTION } from "../vocabulary.js";
+import { Explanation } from "../components/Explanation.js";
 /** Bug categories as a player would say them, not as the column stores them. */
 const CATEGORY_LABELS: Record<string, string> = {
     "array-access": "Array access",
@@ -150,6 +151,11 @@ export function BugHuntResultsPage() {
                 </p>
 
                 <p className="bh-results-score">{session.score}</p>
+                {/* XP where every other game's results put it, under the score.
+                    It was the eighth cell of the stats grid. */}
+                <p className="xp-earned">
+                    XP <strong>+{session.xpEarned}</strong>
+                </p>
                 <RunVerdict
                     score={session.score}
                     previousBest={previousBest}
@@ -200,10 +206,6 @@ export function BugHuntResultsPage() {
                 <div>
                     <dt>Final integrity</dt>
                     <dd>{session.systemIntegrity}%</dd>
-                </div>
-                <div>
-                    <dt>XP earned</dt>
-                    <dd>+{session.xpEarned}</dd>
                 </div>
             </dl>
 
@@ -301,7 +303,7 @@ export function BugHuntResultsPage() {
                             </p>
                         )}
                         {entry.explanation && (
-                            <p className="bh-log-why">{entry.explanation}</p>
+                            <Explanation className="bh-log-why" text={entry.explanation} />
                         )}
                     </li>
                 ))}

@@ -110,8 +110,8 @@ describe("the briefings say what the player is in for", () => {
 
     it("gives every game the shape of a run", () => {
         // Stated per game rather than by one loose pattern, because they say it
-        // in different shapes: four use a single `shape` line, and Bug Hunt puts
-        // its numbers in a definition list beside integrity and attempts.
+        // in different shapes: four use a single `shape` line, and Bug Hunt
+        // says it in its tagline (its stats table repeated that and was removed).
         const SAYS_ITS_LENGTH: Record<string, RegExp> = {
             "Code Blitz": /10 questions/,
             Flush: /5 rounds/,
@@ -119,7 +119,7 @@ describe("the briefings say what the player is in for", () => {
             // BugHuntPage.test.tsx -- the literal "10" here was itself wrong
             // (the server deals six), which is how the briefing drifted.
             // "Up to": a learner with fewer bugs open is dealt a shorter run.
-            "Bug Hunt": /<dt>Incidents<\/dt>[\s\S]{0,40}<dd>Up to \{INCIDENTS_PER_HUNT\}<\/dd>/,
+            "Bug Hunt": /Up to \{INCIDENTS_PER_HUNT\} incidents/,
             Reaction: /5 rounds/,
             Memory: /5 rounds/
         };

@@ -4,6 +4,7 @@ import { ApiError, api } from "../api/client.js";
 import type { ReactionSessionSummary } from "../api/types.js";
 import { RunVerdict } from "../components/RunVerdict.js";
 import { NextStepActions } from "../components/NextStepActions.js";
+import { CourseNote } from "../components/CourseNote.js";
 import { REACTION } from "../games/catalog.js";
 import { useRunContext } from "../games/useRunContext.js";
 
@@ -72,6 +73,7 @@ export function ReactionResultsPage() {
             <p className="xp-earned">
                 XP <strong>+{session.xpEarned}</strong>
             </p>
+            <CourseNote kind="fun" />
 
             <RunVerdict
                 score={session.score}

@@ -3,7 +3,7 @@ import { plainIdea } from "../games/lessons.js";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BugHuntIncident, BugHuntSessionSummary } from "../api/types.js";
-import { ALERT_MS, BugHuntPage, CHECK_STEP_MS, INCIDENTS_PER_HUNT, RECOVERY_MS, linesIdentifyOptions } from "./BugHuntPage.js";
+import { ALERT_MS, BOSS_ALERT_MS, BugHuntPage, CHECK_STEP_MS, INCIDENTS_PER_HUNT, RECOVERY_MS, linesIdentifyOptions } from "./BugHuntPage.js";
 import { BUG_HUNT_INCIDENTS_PER_SESSION } from "../../../server/src/bugHunt/scoring.js";
 import { alertLine, severityLabel } from "../games/bugHuntVoice.js";
 import { BugHuntResultsPage } from "./BugHuntResultsPage.js";
@@ -292,6 +292,25 @@ describe("the briefing", () => {
         expect(rule).not.toMatch(/costs points, not your attempt/);
     });
 
+    it("gets to the hunt with one instruction, and keeps the rules one click away", async () => {
+        stubApi();
+        renderGame();
+
+        await waitFor(() => expect(screen.queryByText(/system alert/i)).not.toBeNull());
+
+        expect(screen.getByText("Read the failing code and find what is actually wrong. Two attempts per incident.")).toBeTruthy();
+        // The stats table repeated the tagline; it is gone, not restyled.
+        expect(document.querySelector(".bh-brief-stats")).toBeNull();
+
+        const howTo = screen.getByText("How Bug Hunt works").closest("details")!;
+        expect(howTo.open).toBe(false);
+        // Folded, not removed: the rules are still in the page for anyone who opens it.
+        expect(howTo.textContent).toMatch(/pull a trace/i);
+        expect(howTo.textContent).toMatch(/A failed patch costs 3%, a lost incident 10%/);
+        fireEvent.click(screen.getByText("How Bug Hunt works"));
+        expect(howTo.open).toBe(true);
+    });
+
     it("shows a loading state before it knows anything", () => {
         stubApi();
         renderGame();
@@ -340,6 +359,24 @@ describe("the alert beat", () => {
 
         await waitFor(() => expect(screen.queryByText(/^System$/)).not.toBeNull());
         expect(screen.queryByText(alertLine(1, false))).not.toBeNull();
+    });
+
+    it("is short for an ordinary incident and full length only for the critical one", async () => {
+        expect(ALERT_MS).toBeLessThan(BOSS_ALERT_MS);
+
+        const api = stubApi();
+        renderGame();
+        await waitFor(() => expect(screen.queryByRole("button", { name: /start bug hunt/i })).not.toBeNull());
+        fireEvent.click(screen.getByRole("button", { name: /start bug hunt/i }));
+        await waitFor(() => expect(screen.queryByText(/incident 1 incoming/i)).not.toBeNull());
+
+        const served = () => api.calls.filter((c) => c.path === "/api/bug-hunt/sessions").length;
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(ALERT_MS - 300);
+        });
+        expect(served()).toBe(0);
+        await skipBeat(300);
+        await waitFor(() => expect(served()).toBe(1));
     });
 
     it("marks the last incident as a critical failure, not just number five", async () => {

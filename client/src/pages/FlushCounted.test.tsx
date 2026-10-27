@@ -105,3 +105,27 @@ describe("whether a Flush round counted", { timeout: 20000 }, () => {
         expect(screen.queryByText(/practised/)).toBeNull();
     });
 });
+
+describe("the reveal's 'You said' list", { timeout: 20000 }, () => {
+    const saidRows = () => [...document.querySelectorAll(".sequences > div:first-child .seq li")];
+
+    it("marks the wrong placement with a mark and words, not colour alone", async () => {
+        await playRoundEnding("wrong", false);
+
+        const [first, second] = saidRows();
+        expect(first!.className).toBe("ok");
+        expect(first!.querySelector(".seq-mark")?.textContent).toBe("✓");
+        expect(first!.textContent).toContain(", right");
+        expect(second!.className).toBe("bad");
+        expect(second!.querySelector(".seq-mark")?.textContent).toBe("✕");
+        expect(second!.textContent).toContain(", wrong");
+        // The mark is for the eye; the words carry it for a screen reader.
+        expect(second!.querySelector(".seq-mark")?.getAttribute("aria-hidden")).toBe("true");
+    });
+
+    it("marks every placement right on a flushed round", async () => {
+        await playRoundEnding("round_complete", true);
+
+        expect(saidRows().map((li) => li.querySelector(".seq-mark")?.textContent)).toEqual(["✓", "✓"]);
+    });
+});

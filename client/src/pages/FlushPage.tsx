@@ -11,7 +11,6 @@ import type {
     ResumableResponse
 } from "../api/types.js";
 import { ActiveGameConflict } from "../components/ActiveGameConflict.js";
-import { withCode } from "../components/CodeText.js";
 import { Countdown } from "../components/Countdown.js";
 import { GameIntro } from "../components/GameIntro.js";
 import { PaceChoice } from "../components/PaceChoice.js";
@@ -26,6 +25,7 @@ import { NotReady, readinessFrom, type Readiness } from "../components/NotReady.
 
 import { usePageTitle } from "../usePageTitle.js";
 import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
+import { Explanation } from "../components/Explanation.js";
 /** Fallback only. The real limit varies with the round's output count and comes
  *  from the served round, so the countdown bar is sized by the same number the
  *  deadline was computed from. */
@@ -746,7 +746,7 @@ export function FlushPage() {
                     <div className="board-panel">
                         <span className="board-label">
                             Output
-                            <span className="board-count">{remaining} left</span>
+                            <span className="board-count count-tick" key={remaining}>{remaining} left</span>
                         </span>
 
                         {/* The console being built. Filled lines read as printed
@@ -909,11 +909,21 @@ export function FlushPage() {
                         <div>
                             <span className="muted">You said</span>
                             <ol className="seq">
-                                {reveal.yourSequence.map((t, i) => (
-                                    <li key={i} className={t === reveal.correctSequence[i] ? "ok" : "bad"}>
-                                        {t}
-                                    </li>
-                                ))}
+                                {/* Right and wrong were colour alone: a mark for
+                                    the eye, words for a screen reader. */}
+                                {reveal.yourSequence.map((t, i) => {
+                                    const ok = t === reveal.correctSequence[i];
+
+                                    return (
+                                        <li key={i} className={ok ? "ok" : "bad"}>
+                                            {t}
+                                            <span className="seq-mark" aria-hidden="true">
+                                                {ok ? "✓" : "✕"}
+                                            </span>
+                                            <span className="visually-hidden">{ok ? ", right" : ", wrong"}</span>
+                                        </li>
+                                    );
+                                })}
                             </ol>
                         </div>
                         <div>
@@ -932,7 +942,7 @@ export function FlushPage() {
                         names what decided the order rather than restating the
                         order, so it is useful on the NEXT snippet too. */}
                     {reveal.explanation && (
-                        <p className="reveal-why">{withCode(reveal.explanation)}</p>
+                        <Explanation className="reveal-why" text={reveal.explanation} />
                     )}
 
                     {/* The learner moves on when they have read it. */}

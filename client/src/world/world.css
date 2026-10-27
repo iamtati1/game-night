@@ -101,6 +101,13 @@
     --incorrect: #ff8098;
     --warn: #ffd166;
 
+    /* Ember: the one warm accent. Spent only on what was just earned or is
+       counting down -- XP, a new best, the "N left" counters -- never on
+       correct, wrong, locked or a control, which keep their own colours.
+       --ember-ink is the text that sits on an ember fill. */
+    --ember: #f6ad55;
+    --ember-ink: #1c1206;
+
     /* Per-game accents, retuned for the brighter ground. */
     --blitz: #b9a7ff;
     --flush: #ffb86b;
@@ -2711,7 +2718,6 @@ pre.code {
 .ask-practising,
 .playground-value-tag,
 .playground-trace,
-.bh-brief-stats dt,
 .bh-results-stats dt,
 .bh-integrity-label,
 .bh-theme,
@@ -2862,6 +2868,14 @@ pre.code {
     font-size: 0.9375rem;
 }
 
+/* What the run counted for, under its XP (components/CourseNote.tsx). */
+.course-note {
+    max-width: 40rem;
+    margin: 0 0 1rem;
+    color: var(--muted);
+    font-size: 0.9375rem;
+}
+
 /* Experiment's quiet way back to the journey was 13.8px. */
 .playground-back {
     font-size: 0.9375rem;
@@ -2931,11 +2945,12 @@ pre.learn-code {
     text-wrap: balance;
 }
 
-/* The XP pill was the accent on its own soft tint: 4.3-4.5:1 depending on the
-   sky behind it. Same lighter tint as the in-progress pill. */
+/* The XP pill is ember, the one warm accent (see the token), in both themes.
+   It was the game's accent lightened for the dark sky, which read 4.3-4.5:1
+   there and about 2:1 once it reached cream. */
 .xp-earned,
 .xp-earned strong {
-    color: color-mix(in srgb, var(--accent) 70%, #ffffff);
+    color: var(--ember);
 }
 
 /* Upcoming steps were dimmed with opacity too (4.1:1). Muted ink marks them as
@@ -4316,6 +4331,10 @@ pre.learn-code {
     --incorrect: #b23a3a;
     --warn: #8a5a00;
 
+    /* Ember on cream: 5.6:1 on the ground, 6.4:1 on white. */
+    --ember: #9a4708;
+    --ember-ink: #ffffff;
+
     --blitz: #6248c4;
     --flush: #a95c0e;
     --reaction: #7a5d22;
@@ -4389,12 +4408,30 @@ pre.learn-code {
     color: color-mix(in srgb, var(--accent) 55%, #000000);
 }
 
+/* Reaction's tier words and times (cyan, mint, lime, amber literals) measured
+   1.7-1.9:1 on cream. Half-darkened, each clears 4.5:1 and keeps its hue. */
+:root[data-theme="cream"] .tier-lightning { color: color-mix(in srgb, #22d3ee 50%, #000000); }
+:root[data-theme="cream"] .tier-incredible { color: color-mix(in srgb, #34d399 50%, #000000); }
+:root[data-theme="cream"] .tier-fast { color: color-mix(in srgb, #a3e635 50%, #000000); }
+:root[data-theme="cream"] .tier-solid { color: color-mix(in srgb, #fbbf24 50%, #000000); }
+
+/* Flush and Memory set --accent to a dark-ground literal (#f0a94a, #a78bfa),
+   so their HUD title, "N left" and "doubles" read at about 2:1 on cream
+   during play. Their own cream tokens hold AA and keep the hue. */
+:root[data-theme="cream"] :is(.game.flush, .results.flush) {
+    --accent: var(--flush);
+}
+
+:root[data-theme="cream"] :is(.game.memory, .results.memory) {
+    --accent: var(--memory);
+}
+
 :root[data-theme="cream"] .game-chip {
     color: color-mix(in srgb, var(--game-accent, var(--muted)) 55%, #000000);
 }
 
 /* Tinted pills (counts, in progress, completed, XP): dark ink on the tint. */
-:root[data-theme="cream"] :is(.game-intro-counts, .tag.correct, .tag.in-progress, .xp-earned, .xp-earned strong) {
+:root[data-theme="cream"] :is(.game-intro-counts, .tag.correct, .tag.in-progress) {
     color: var(--forest-deep);
 }
 
@@ -4467,6 +4504,4 @@ pre.learn-code {
 
 /* "New best" set near-black on the cream accent (#b4501b): 3.8:1 at 17px.
    White on the same pill is 5.1:1. */
-:root[data-theme="cream"] .verdict.is-best {
-    color: #ffffff;
-}
+

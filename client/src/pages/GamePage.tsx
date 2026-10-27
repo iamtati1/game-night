@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { play } from "../games/sound.js";
-import { withCode } from "../components/CodeText.js";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, api } from "../api/client.js";
 import { activeGameFrom } from "../api/types.js";
@@ -32,6 +31,7 @@ import { HighlightedCode } from "../components/HighlightedCode.js";
 
 import { usePageTitle } from "../usePageTitle.js";
 import { usePauseOnLeave } from "../games/usePauseOnLeave.js";
+import { Explanation } from "../components/Explanation.js";
 const QUESTION_TIME_LIMIT_MS = 18_000;
 /**
  * A lapse still auto-advances, and only a lapse.
@@ -60,6 +60,15 @@ const LAPSE_DWELL_MS = 1400;
 
 /** Exit animation. Short enough to read as one motion with the entrance. */
 const EXIT_MS = 170;
+
+/** The OS asks for less motion; then the exit animation is off (index.css). */
+function reducedMotion(): boolean {
+    try {
+        return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    } catch {
+        return false;
+    }
+}
 
 interface Feedback {
     outcome: "correct" | "incorrect" | "timed_out";
@@ -368,6 +377,12 @@ export function GamePage() {
     const [attempt, setAttempt] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    /**
+     * The option sent and not yet judged. The answer request takes a moment,
+     * and every option is disabled while it runs, so without this the screen
+     * gave no sign which answer had been taken.
+     */
+    const [pickedId, setPickedId] = useState<string | null>(null);
     /** A hint request is in flight. */
     const [hinting, setHinting] = useState(false);
     /** Bumped once per adjudicated question. Used purely as a React key so the
@@ -714,9 +729,11 @@ export function GamePage() {
             setQuestion(data.question ?? null);
             setRunningScore(data.scoreSoFar ?? 0);
             setPlaced([]);
+            setLeaving(false);
             settling.current = false;
         } catch (err) {
             settling.current = false;
+            setLeaving(false);
             setError(err instanceof ApiError ? err.detailText : "Lost track of the game");
         }
     }, [finish]);
@@ -727,10 +744,13 @@ export function GamePage() {
 
         const pending = pendingAdvance;
         setPendingAdvance(null);
+
+        // The outgoing question stays hidden (`leaving`) until the next one is
+        // in: advanceToNext clears it. Clearing it here, before the request,
+        // put the answered question back on screen unanswered for a round trip.
         setLeaving(true);
 
-        later(() => {
-            setLeaving(false);
+        const next = () => {
             setFeedback(null);
 
             if (pending.complete) {
@@ -740,7 +760,18 @@ export function GamePage() {
             }
 
             void advanceToNext();
-        }, EXIT_MS);
+        };
+
+        // Measured: Next to the next question took ~215ms locally, 170 of it
+        // this wait. With reduced motion the exit animation does not run, so
+        // the wait was for nothing. The request still starts only once the
+        // exit is over, because it stamps served_at (the clock).
+        if (reducedMotion()) {
+            next();
+            return;
+        }
+
+        later(next, EXIT_MS);
     }, [pendingAdvance, finish, advanceToNext]);
 
     /**
@@ -790,6 +821,7 @@ export function GamePage() {
 
         settling.current = true;
         setBusy(true);
+        setPickedId(optionId);
 
         try {
             const result = await api.post<AnswerResponse>(`/api/sessions/${sessionId}/answers`, {
@@ -822,6 +854,7 @@ export function GamePage() {
             setError(err instanceof ApiError ? err.detailText : "Could not submit your answer");
         } finally {
             setBusy(false);
+            setPickedId(null);
         }
     }
 
@@ -959,6 +992,13 @@ export function GamePage() {
             // that moves on. Enter and Space both, because both are what people
             // reach for, and neither should scroll the page instead.
             if (pendingAdvance) {
+                // Except on another control: Enter on the explanation's "More
+                // on why" must open it, not skip past the explanation.
+                const target = event.target instanceof Element ? event.target : null;
+                if (target && target !== nextRef.current && target.closest("summary, a, button, input, select, textarea")) {
+                    return;
+                }
+
                 if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     advance();
@@ -1242,7 +1282,7 @@ export function GamePage() {
                     <Assembly
                         question={question}
                         placed={placed}
-                        locked={busy || feedback !== null}
+                        locked={busy || leaving || feedback !== null}
                         onPlace={(id) => setPlaced((ids) => [...ids, id])}
                         onRemove={(at) => setPlaced((ids) => ids.filter((_, i) => i !== at))}
                         onSubmit={() => void submitAssembly()}
@@ -1253,13 +1293,14 @@ export function GamePage() {
                         const state = optionStateFor(feedback, option);
                         const glyph = OPTION_GLYPH[state];
                         const struck = !feedback && (question.struckOptionIds ?? []).includes(option.id);
+                        const picked = !feedback && pickedId === option.id;
 
                         return (
                             <li key={option.id}>
                                 <button
-                                    className={`option${state ? ` ${state}` : ""}${struck ? " struck" : ""}`}
+                                    className={`option${state ? ` ${state}` : ""}${struck ? " struck" : ""}${picked ? " picked" : ""}`}
                                     onClick={() => void submit(option.id)}
-                                    disabled={busy || feedback !== null || struck}
+                                    disabled={busy || leaving || feedback !== null || struck}
                                     aria-label={struck ? `${option.text}, ruled out by a hint` : undefined}
                                 >
                                     <kbd>{index + 1}</kbd>
@@ -1340,7 +1381,7 @@ export function GamePage() {
                     />
                 )}
                 {feedback?.explanation && (
-                    <p className="feedback-why">{withCode(feedback.explanation)}</p>
+                    <Explanation className="feedback-why" text={feedback.explanation} />
                 )}
                 {pendingAdvance && (
                     <button type="button" ref={nextRef} className="button primary next-beat" onClick={advance}>

@@ -34,6 +34,7 @@ import {
     retryLine,
     severityLabel
 } from "../games/bugHuntVoice.js";
+import { Explanation } from "../components/Explanation.js";
 
 /**
  * How long the outcome of an incident stays on screen before the next one is
@@ -70,7 +71,10 @@ export const INCIDENTS_PER_HUNT = 6;
  * incident it is announcing; the incident screen's own header does that, for
  * free, once the clock is legitimately running.
  */
-export const ALERT_MS = 1900;
+export const ALERT_MS = 1100;
+
+/** The last incident's beat keeps its full length: it is the one moment of drama. */
+export const BOSS_ALERT_MS = 1900;
 
 /** One step of the diagnostic run. Three of these, so ~1.1s total. */
 export const CHECK_STEP_MS = 380;
@@ -184,7 +188,7 @@ export function BugHuntPage() {
             setIncoming({ number, isBoss });
             setFeedback(null);
             setPhase("alert");
-            later(then, ALERT_MS);
+            later(then, isBoss ? BOSS_ALERT_MS : ALERT_MS);
         },
         [later]
     );
@@ -703,35 +707,33 @@ function Briefing({
             <p className="game-intro-counts course">Counts toward your course</p>
             <p className="bh-tagline">Up to {INCIDENTS_PER_HUNT} incidents detected across production.</p>
 
-            <dl className="bh-brief-stats">
-                <div>
-                    <dt>Incidents</dt>
-                    <dd>Up to {INCIDENTS_PER_HUNT}</dd>
-                </div>
-                <div>
-                    <dt>System integrity</dt>
-                    <dd>100%</dd>
-                </div>
-                <div>
-                    <dt>Per incident</dt>
-                    <dd>2 attempts</dd>
-                </div>
-            </dl>
+            {/* One instruction, then the game. The stats table repeated the
+                tagline (incidents) and a starting 100% that the meter shows
+                on the first incident; the rules a first hunt can do without
+                are one click away, and the trace's cost is also on its
+                button at the moment it is spent. */}
+            <p className="bh-instruction">
+                Read the failing code and find what is actually wrong. Two attempts per incident.
+            </p>
 
-            {/* Three lines. Anything longer is a manual, and nobody reads a
-                manual to start a game they can learn by playing one round of. */}
-            <ol className="bh-rules">
-                <li>Read the failing code and find what is actually wrong.</li>
-                {/* Relaxed needs no line of its own: the pace choice below
-                    already says "No timer". */}
-                {timed && <li>The first incidents are untimed. Later ones are not.</li>}
-                {/* What a trace really costs: the server takes points off
-                    the incident's score AND integrity -- never an attempt. */}
-                <li>
-                    Stuck? Pull a trace: it costs a little score and{" "}
-                    {INTEGRITY_COSTS[2]!.cost}% integrity, never an attempt.
-                </li>
-            </ol>
+            <details className="bh-howto">
+                <summary>How Bug Hunt works</summary>
+                <ol className="bh-rules">
+                    {/* Relaxed needs no line of its own: the pace choice below
+                        already says "No timer". */}
+                    {timed && <li>The first incidents are untimed. Later ones are not.</li>}
+                    {/* What a trace really costs: the server takes points off
+                        the incident's score AND integrity -- never an attempt. */}
+                    <li>
+                        Stuck? Pull a trace: it costs a little score and{" "}
+                        {INTEGRITY_COSTS[2]!.cost}% integrity, never an attempt.
+                    </li>
+                    <li>
+                        System integrity starts at 100%. A failed patch costs{" "}
+                        {INTEGRITY_COSTS[1]!.cost}%, a lost incident {INTEGRITY_COSTS[0]!.cost}%.
+                    </li>
+                </ol>
+            </details>
 
             <PaceChoice timed={timed} onChange={onTimedChange} clock="later incidents have a time limit" />
 
@@ -1345,7 +1347,7 @@ function FeedbackPanel({
                 </p>
             )}
 
-            {feedback.explanation && <p className="bh-explanation">{feedback.explanation}</p>}
+            {feedback.explanation && <Explanation className="bh-explanation" text={feedback.explanation} />}
 
             {/* A timeout has no explanation to show here: the server reveals
                 the fix only for an incident it has closed, and closing this one
