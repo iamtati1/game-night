@@ -9,10 +9,20 @@
 #
 # Optional: if the service is created by hand in the dashboard this file is not
 # read. It is here so the deployment is described in the repository.
+#
+# TWO REGIONS, ON PURPOSE (2026-10). The web service is in Ohio and the database
+# in Oregon, and a region cannot be changed after creation. Render's private
+# network only spans one region, so the database's internal URL does not resolve
+# from the service (getaddrinfo ENOTFOUND). The service therefore connects over
+# the database's External URL, which always uses TLS: DATABASE_URL is set by hand
+# in the dashboard and is not managed here (sync: false), and DATABASE_SSL is on.
+# Do not switch DATABASE_URL back to fromDatabase: that yields the internal URL
+# and would take the app offline on the next Blueprint sync.
 services:
   - type: web
     name: jolt
     runtime: node
+    region: ohio
     plan: free
     # Repo root, not server/: the build has to reach both workspaces.
     rootDir: .
@@ -31,20 +41,24 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # The Oregon database's External URL, set in the dashboard. Never committed.
       - key: DATABASE_URL
-        fromDatabase:
-          name: jolt-db
-          property: connectionString
+        sync: false
+      # The External URL requires TLS (db.ts: ssl with rejectUnauthorized false).
+      - key: DATABASE_SSL
+        value: "true"
       - key: SESSION_SECRET
         generateValue: true
       # Not set on purpose:
       #   CLIENT_ORIGIN / COOKIE_SAMESITE - no cross-origin request exists here.
       #   VITE_API_URL                    - unset means relative /api, same origin.
-      #   DATABASE_SSL                    - the internal database URL needs no TLS.
       #   PORT                            - Render assigns it; the server reads it.
       # The conditional CORS block in app.ts stays dormant while CLIENT_ORIGIN is
       # unset, so splitting the client out later is two env vars, not a rewrite.
 
 databases:
+  # The existing database. Free Render Postgres expires 30 days after creation
+  # and has no Render-side backups: pg_dump from a trusted machine is the only one.
   - name: jolt-db
+    region: oregon
     plan: free

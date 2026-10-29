@@ -61,8 +61,9 @@ These must be resolved before a production deploy. Each is its own slice.
 | # | Blocker | Evidence | Acceptance | Slice type |
 |---|---|---|---|---|
 | R1 | ✅ **Resolved 2026-10-23.** Server production dependencies had advisories: `proxy-addr` (critical), `qs` and `ip-address` (moderate) | Lockfile-only update to `proxy-addr` 2.0.8, `qs` 6.16.1, `ip-address` 10.7.4 (`npm audit fix` hit an npm 10.9.3 bug, so the three were updated directly). `npm audit --omit=dev` reports 0 in `server/` and `client/`. Four advisories remain in dev-only test tooling (vitest, vite, source-map-js); the running service never loads them. | Met: production audit 0; 1654 server tests, typecheck and build pass; Render's build command passed on a clean export | Security |
-| R2 | **Production database state is unknown.** Render runs no migrations or seeds (`render.yaml` has no pre-deploy step; free plan has no shell). | `render.yaml` | Backup taken; `migrate:prod` and `seed:prod` run from a trusted machine **with explicit approval**; seeds 083–087 confirmed present | Deployment (needs approval) |
-| R3 | **Which branch Render deploys.** `render.yaml` names none, so Render uses the repository's default branch. | `render.yaml` | The intended branch is merged or selected on purpose | Deployment (needs approval) |
+| R2 | **Production database initialized 2026-10-26** (reported) from a trusted machine after a verified backup of the then-empty database. Render runs no migrations or seeds (`render.yaml` has no pre-deploy step; free plan has no shell). Whether it was changed by hand since is unknown. | `setup-oregon-db.sh` run | A read-only check of the migration ledger, schema and content counts matches the repository, and a fresh `pg_dump` is verified | Deployment (needs approval) |
+| R3 | ✅ **Answered 2026-10-25: Render deploys `pre-jolt-visual-redesign`** (deploy log; deployed commit `cf96277`). `render.yaml` names no branch; the branch is set on the service. | Render deploy log | Confirm before each push | Deployment |
+| R4 | ✅ **Resolved 2026-10-26: the service reaches its database across regions.** `jolt` (Ohio) uses `jolt-db`'s (Oregon) External URL with `DATABASE_SSL=true`; `/api/ready` returns 200. `render.yaml` still says `fromDatabase` until the reconciled version is approved. | Render dashboard; `/api/ready` 2026-10-27 | `render.yaml` describes the dashboard setup (`sync: false`, `DATABASE_SSL`, both regions) | Deployment (needs approval) |
 
 ## 4. Prioritised next work
 
@@ -133,6 +134,26 @@ between slices.
 | `GameCard` used only for its `GameStatus` type; dead `.play-focus` CSS | 🔴 tech debt | `client/src/games/islands.ts`, `client/src/index.css` |
 | Bug Hunt content thin | ⚪ re-count needed | 2026-10-02: 39/64 untagged |
 | `() => console.log(x)` unsupported | ⚪ re-check | 2026-10-02 interpreter gap |
+
+### P6 — American English in learner-facing text 🔴 (queued 2026-10-27)
+- **Problem:** learner-facing text mixes British spellings ("Practise next",
+  `practising`, `colour`, `personalised`) into an otherwise American app.
+- **Scope:** every string a learner reads or hears: Home, Learn, Skills, the
+  five games, feedback, results, progress, navigation, tooltips and
+  accessibility labels (`aria-label`, visually hidden text, page titles).
+  Seeded content (questions, explanations, lessons) counts too, but changing
+  it is a seed change and needs its own approval.
+- **How:** natural American English, not mechanical replacement. In American
+  English *practice* is both noun and verb ("Practice next", "Keep
+  practicing"), so each hit is read in context.
+- **Leave alone:** technical identifiers, routes (`/practise/:concept`), API
+  names, database fields and other code references, unless a separate
+  technical change is explicitly justified.
+- **Acceptance:** a final search for remaining British spellings (`-ise`,
+  `-ising`, `-isation`, `-our`, `-yse`, `-re` endings and similar), each
+  remaining hit reviewed in context and either changed or noted as a code
+  reference; tests that assert on visible text are updated deliberately.
+- **Slice type:** copy (client text; seed text separately, with approval).
 
 ---
 

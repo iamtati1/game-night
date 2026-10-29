@@ -164,8 +164,14 @@ Production runs on Render from `render.yaml`: one web service serving the
 client and the API, plus a free Postgres. Every step marked **(approval)**
 needs explicit approval at the time.
 
-1. **Branch.** `render.yaml` names no branch, so Render deploys the
-   repository's default branch. Merge or select the intended branch on purpose
+1. **Branch and region.** The `jolt` service deploys the branch chosen when it
+   was set up; Render's deploy log (2026-10-25) shows `pre-jolt-visual-redesign`.
+   Confirm it before pushing. `jolt` is in Ohio and `jolt-db` in Oregon, so the
+   service connects over the database's External URL (`DATABASE_URL` set in the
+   dashboard, `DATABASE_SSL=true`); the internal URL only resolves within one
+   region. A Blueprint manages these resources: a push that changes
+   `render.yaml` triggers a sync that creates any added resource and rewrites
+   the env vars it declares, so push such a change on its own and on purpose
    **(approval)**.
 2. **Release blockers.** Everything under "Release blockers" in `ROADMAP.md` is
    resolved, including `npm audit --omit=dev` reporting 0 in `server/` and

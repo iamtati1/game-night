@@ -169,8 +169,16 @@ be true:
   and the free plan has no shell, so `migrate:prod` and `seed:prod` must be run
   from a trusted machine, after a backup, with approval. Seeds 083–087 are the
   most recent; confirm each one's content after applying. Release blocker R2.
-- **Render deploys the default branch.** `render.yaml` names no branch. Release
-  blocker R3.
+- **Render deploys `pre-jolt-visual-redesign`** (deploy log, 2026-10-25).
+  `render.yaml` names no branch; the branch is set on the service.
+- **The web service and database are in different regions.** `jolt` is in
+  Ohio and `jolt-db` in Oregon, and a region cannot be changed. The internal
+  URL only resolves within one region, so `DATABASE_URL` is the database's
+  External URL, set in the dashboard, with `DATABASE_SSL=true`. Every query
+  crosses regions over TLS, which adds latency. `render.yaml` must never point
+  `DATABASE_URL` back at `fromDatabase`.
+- **Free Render Postgres expires 30 days after creation** and has no backups on
+  Render's side; `pg_dump` from a trusted machine is the only backup.
 - **Node 22.19.0** (`.node-version`); the server requires `>=22.9.0`.
 - **Single origin.** The web service serves the client and the API;
   `CLIENT_ORIGIN` and `COOKIE_SAMESITE` stay unset. `app.set("trust proxy", 1)`
