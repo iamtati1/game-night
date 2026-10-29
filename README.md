@@ -1,54 +1,151 @@
-# game-night
+# Jolt
 
-A gamified software engineering learning platform built with React, TypeScript, Express, PostgreSQL, and AI.
+**PLAY. GET BETTER.** Jolt is a full-stack learning platform that turns software engineering practice into short, replayable games. Instead of only reading lessons, learners can practice concepts through interactive challenges and build momentum one round at a time.
 
-## Local setup
+<p align="center">
+  <a href="https://jolt-4mjc.onrender.com/"><strong>▶ Try the live demo</strong></a>
+  &nbsp; · &nbsp;
+  <a href="#getting-started">Run locally</a>
+</p>
 
-Requires Node 22+ and a running PostgreSQL.
+> **Project focus:** Make learning feel like play while giving learners a clearer path from practice to progress.
+
+## What you can do
+
+- **Practice through games:** Play Code Blitz, Flush, Reaction, Memory, and Bug Hunt.
+- **Learn by doing:** Work through interactive challenges built around software engineering concepts.
+- **Create an account:** Use session-based authentication to keep account access and learning activity tied to a learner.
+- **Build momentum:** Earn XP and use practice results to understand progress and what to work on next.
+- **Practice in a full-stack app:** Experience a React and TypeScript client backed by an Express API and PostgreSQL database.
+
+## Built with
+
+| Area | Technologies |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, React Router |
+| Backend | Node.js, Express, TypeScript |
+| Database | PostgreSQL |
+| Authentication & sessions | Argon2 password hashing, express-session, connect-pg-simple |
+| Validation & testing | Zod, Vitest, Testing Library, Supertest |
+| Deployment | Render |
+
+## How it fits together
+
+Jolt is organized as two applications in one repository. The client provides the interactive learning and game experience. The server exposes API routes, handles authentication and game logic, and reads and writes persistent data in PostgreSQL. In production, the Express server serves the built client from the same origin.
+
+```text
+Jolt
+├── client/   React + TypeScript + Vite UI
+└── server/   Express + TypeScript API
+             └── PostgreSQL database
+```
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 22 or later
+- PostgreSQL
+- npm
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/iamtati1/game-night.git
+cd game-night
+```
+
+### 2. Create a database and configure the server
+
+Create a local PostgreSQL database:
 
 ```bash
 createdb code_blitz_dev
-cp server/.env.example server/.env   # then set DATABASE_URL and SESSION_SECRET
 ```
 
-Install each app separately — there is no root package.
+Copy the example environment file:
+
+```bash
+cp server/.env.example server/.env
+```
+
+Update `server/.env` with your local database connection string and a strong session secret:
+
+```env
+DATABASE_URL=postgresql://YOUR_USER@localhost:5432/code_blitz_dev
+SESSION_SECRET=replace-with-a-long-random-string
+```
+
+The optional `QUIZAPI_KEY` enables the QuizAPI integration. Without it, the game can use question content already stored in PostgreSQL.
+
+### 3. Install dependencies
+
+The client and server have separate package files, so install dependencies in each directory:
 
 ```bash
 cd server && npm install
 cd ../client && npm install
 ```
 
-### Database
+### 4. Set up the database
 
-Both commands live in `server/` and read `DATABASE_URL` from `server/.env`, so
-there is one connection target and no chance of applying SQL to whichever
-database your shell happened to default to.
+From the repository root:
 
 ```bash
 cd server
-npm run migrate    # bring the schema up to date
-npm run seed       # load the question, snippet and incident banks
+npm run migrate
+npm run seed
 ```
 
-`npm run migrate` records what it has applied in a `schema_migrations` table, so
-it is safe to run repeatedly — already-applied migrations are skipped. Add
-`-- --dry-run` to list what would run without touching the database. It refuses
-to continue if a migration that has already run has since been edited.
-
-`npm run seed` is safe to re-run too: each seed file skips content that is
-already present, so the command converges on the same banks rather than
-duplicating them.
-
-### Running
+The migration runner records applied migrations and skips those already applied. You can preview pending migrations with:
 
 ```bash
-cd server && npm run dev     # http://localhost:3000
-cd client && npm run dev     # http://localhost:5173
+npm run migrate -- --dry-run
 ```
 
-### Tests
+### 5. Run the app
+
+Open two terminal windows from the repository root.
+
+**Terminal 1 — API server**
 
 ```bash
-cd server && npm test        # scoring, routes, registry, migration runner
-cd client && npm test        # component and page tests
+cd server
+npm run dev
 ```
+
+**Terminal 2 — Vite client**
+
+```bash
+cd client
+npm run dev
+```
+
+Open the local client URL printed by Vite (typically `http://localhost:5173`). The client development server proxies API requests to the local Express server.
+
+## Run tests
+
+Run the client and server test suites separately:
+
+```bash
+cd client && npm test
+cd ../server && npm test
+```
+
+The client suite covers UI and page behavior; the server suite covers backend behavior such as routes, game logic, and database migration tooling.
+
+## Engineering highlights
+
+- Separated client and server applications with TypeScript across the stack.
+- Session-based authentication with password hashing and PostgreSQL-backed session storage.
+- Database migrations and seed scripts designed to be repeatable.
+- Game logic and API behavior covered by automated tests.
+- A single-origin production setup where Express serves the built frontend and API.
+
+## Project status
+
+Jolt is an evolving portfolio project. The live demo and repository may not always be on the same revision; use the code and setup instructions here to explore the current default branch.
+
+---
+
+Built by [Tatiana Barmer](https://github.com/iamtati1).
