@@ -10,6 +10,20 @@
 
 > **Project focus:** Make learning feel like play while giving learners a clearer path from practice to progress.
 
+## Product Screenshots
+
+![Jolt home page showing the current mission, Identifying Primitive Types, with a Continue learning button and stop progress](screenshots/jolt-home-dashboard.png)
+
+*Home: the learner's current mission, how many of its stops are done, and a single next step.*
+
+![Jolt Games page showing five game islands: Code Blitz (recommended), Flush, Bug Hunt, Reaction and Memory](screenshots/jolt-games-islands.png)
+
+*Games: five islands, five games, with Code Blitz recommended.*
+
+![Jolt Skills page showing demonstrated, practised, learning and locked skill counts, the Values and Types skills, and a Practise next list](screenshots/jolt-skills-progress.png)
+
+*Skills: every skill on the course with its status, plus what to practise next and why.*
+
 ## What you can do
 
 - **Practice through games:** Play Code Blitz, Flush, Reaction, Memory, and Bug Hunt.
